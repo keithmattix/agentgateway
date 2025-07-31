@@ -242,7 +242,7 @@ impl LocalBackend {
 					};
 					targets.push(Arc::new(t));
 				}
-				let m = McpBackend { targets };
+				let m = McpBackend { targets, stateful: tgt.stateful };
 				backends.push(Backend::MCP(name, m));
 				(backends, policies)
 			},
@@ -253,8 +253,9 @@ impl LocalBackend {
 }
 
 #[apply(schema!)]
-pub struct LocalMcpBackend {
+pub struct LocalMcpBackend { // keithmattix: Is this used??
 	pub targets: Vec<Arc<LocalMcpTarget>>,
+	pub stateful: bool
 }
 
 #[apply(schema!)]

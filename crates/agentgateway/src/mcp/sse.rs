@@ -97,14 +97,14 @@ impl App {
 		&self,
 		pi: Arc<ProxyInputs>,
 		name: BackendName,
-		backends: McpBackend,
+		backend: McpBackend,
 		mut req: Request,
 		log: AsyncLog<MCPInfo>,
 	) -> Response {
 		let (backends, authorization_policies, authn) = {
 			let binds = self.state.read_binds();
 			let (authorization_policies, authn) = binds.mcp_policies(name.clone());
-			let nt = backends
+			let nt = backend
 				.targets
 				.iter()
 				.map(|t| {
@@ -158,6 +158,7 @@ impl App {
 					metrics.clone(),
 					authorization_policies.clone(),
 					client.clone(),
+					backend.stateful,
 				),
 			)
 			.await
@@ -193,10 +194,12 @@ impl App {
 							metrics.clone(),
 							authorization_policies.clone(),
 							client.clone(),
+							backend.stateful,
 						))
 					},
 					sm,
 					StreamableHttpServerConfig {
+						stateful_mode: backend.stateful,
 						..Default::default()
 					},
 				);

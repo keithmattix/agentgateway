@@ -490,6 +490,7 @@ pub type BackendName = Strng;
 #[cfg_attr(feature = "schema", derive(JsonSchema))]
 pub struct McpBackend {
 	pub targets: Vec<Arc<McpTarget>>,
+	pub stateful: bool,
 }
 
 impl McpBackend {
