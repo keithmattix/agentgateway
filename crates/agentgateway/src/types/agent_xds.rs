@@ -312,6 +312,10 @@ impl TryFrom<&proto::agent::Backend> for Backend {
 						.iter()
 						.map(|t| McpTarget::try_from(t).map(Arc::new))
 						.collect::<Result<Vec<_>, _>>()?,
+					stateful: match m.stateful_mode() {
+						proto::agent::mcp_backend::StatefulMode::Stateful => true,
+						proto::agent::mcp_backend::StatefulMode::Stateless => false,
+					},
 				},
 			),
 			_ => {

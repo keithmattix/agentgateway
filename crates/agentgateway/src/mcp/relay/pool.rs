@@ -25,6 +25,7 @@ use sse_stream::{Error as SseError, Sse, SseStream};
 use super::*;
 use crate::client::Client;
 use crate::http::{Body, Error as HttpError, Response, auth};
+use crate::mcp::relay::upstream::UpstreamTargetSpec;
 use crate::mcp::sse::McpTarget;
 use crate::proxy::ProxyError;
 use crate::proxy::httpproxy::PolicyClient;
@@ -39,15 +40,22 @@ pub(crate) struct ConnectionPool {
 	backend: McpBackendGroup,
 	client: PolicyClient,
 	by_name: HashMap<Strng, upstream::UpstreamTarget>,
+	stateful: bool,
 }
 
 impl ConnectionPool {
-	pub(crate) fn new(pi: Arc<ProxyInputs>, client: PolicyClient, backend: McpBackendGroup) -> Self {
+	pub(crate) fn new(
+		pi: Arc<ProxyInputs>,
+		client: PolicyClient,
+		backend: McpBackendGroup,
+		stateful: bool,
+	) -> Self {
 		Self {
 			backend,
 			client,
 			pi,
 			by_name: HashMap::new(),
+			stateful,
 		}
 	}
 
@@ -57,6 +65,15 @@ impl ConnectionPool {
 		peer: &Peer<RoleServer>,
 		name: &str,
 	) -> anyhow::Result<&upstream::UpstreamTarget> {
+		if !self.stateful {
+			return Err(
+				McpError::invalid_request(
+					"stateful mode is disabled, cannot get connection by name",
+					None,
+				)
+				.into(),
+			);
+		}
 		// If it doesn't exist, they haven't initialized yet
 		if !self.by_name.contains_key(name) {
 			return Err(anyhow::anyhow!(
@@ -71,6 +88,9 @@ impl ConnectionPool {
 	}
 
 	pub(crate) async fn remove(&mut self, name: &str) -> Option<upstream::UpstreamTarget> {
+		if !self.stateful {
+			return None; // In stateless mode, we don't remove connections
+		}
 		self.by_name.remove(name)
 	}
 
@@ -81,7 +101,7 @@ impl ConnectionPool {
 		request: InitializeRequestParam,
 	) -> anyhow::Result<Vec<(Strng, &upstream::UpstreamTarget)>> {
 		for tgt in self.backend.targets.clone() {
-			if self.by_name.contains_key(&tgt.name) {
+			if self.stateful && self.by_name.contains_key(&tgt.name) {
 				anyhow::bail!("connection {} already initialized", tgt.name);
 			}
 			let ct = tokio_util::sync::CancellationToken::new(); //TODO
@@ -94,10 +114,18 @@ impl ConnectionPool {
 					e // Propagate error
 				})?;
 		}
-		self.list().await
+		if self.stateful {
+			return self.list().await;
+		}
+
+		// Use list_from_by_name since external calls to list() will run the initialize
+		// flow on each invocation when in stateless mode.
+		self.list_from_by_name()
 	}
 
-	pub(crate) async fn list(&mut self) -> anyhow::Result<Vec<(Strng, &upstream::UpstreamTarget)>> {
+	// This function should only be called by initialize() and list() methods.
+	fn list_from_by_name(&self) -> anyhow::Result<Vec<(Strng, &upstream::UpstreamTarget)>> {
+		// In stateless mode, we return all targets from the backend
 		let results = self
 			.backend
 			.targets
@@ -109,31 +137,56 @@ impl ConnectionPool {
 					.map(|target: &upstream::UpstreamTarget| (tgt.name.clone(), target))
 			})
 			.collect();
-
 		Ok(results)
+	}
+
+	pub(crate) async fn list(&mut self) -> anyhow::Result<Vec<(Strng, &upstream::UpstreamTarget)>> {
+		if !self.stateful {
+			return Err(
+				McpError::invalid_request("stateful mode is disabled, cannot list connections", None)
+					.into(),
+			);
+		}
+		self.list_from_by_name()
 	}
 
 	#[instrument(
         level = "debug",
         skip_all,
         fields(
-        name=%target.name,
+        name=%service_name,
         ),
     )]
-	pub(crate) async fn connect(
-		&mut self,
+	pub(crate) async fn stateless_connect(
+		&self,
+		rq_ctx: &RqCtx,
+		ct: &tokio_util::sync::CancellationToken,
+		service_name: &str,
+		peer: &Peer<RoleServer>,
+		init_request: InitializeRequestParam,
+	) -> Result<upstream::UpstreamTarget, anyhow::Error> {
+		let target = self
+			.backend
+			.targets
+			.iter()
+			.find(|tgt| tgt.name == service_name)
+			.ok_or_else(|| McpError::invalid_request(format!("Target {service_name} not found"), None))?;
+
+		self
+			.inner_connect(rq_ctx, ct, target, peer, init_request)
+			.await
+	}
+
+	async fn inner_connect(
+		&self,
 		rq_ctx: &RqCtx,
 		ct: &tokio_util::sync::CancellationToken,
 		target: &McpTarget,
 		peer: &Peer<RoleServer>,
 		init_request: InitializeRequestParam,
-	) -> Result<(), anyhow::Error> {
-		// Already connected
-		if let Some(_transport) = self.by_name.get(&target.name) {
-			return Ok(());
-		}
+	) -> Result<upstream::UpstreamTarget, anyhow::Error> {
 		trace!("connecting to target: {}", target.name);
-		let transport: upstream::UpstreamTarget = match &target.spec {
+		let target = match &target.spec {
 			McpTargetSpec::Sse(sse) => {
 				debug!("starting sse transport for target: {}", target.name);
 				let path = match sse.path.as_str() {
@@ -257,7 +310,32 @@ impl ConnectionPool {
 				}
 			},
 		};
+
+		Ok(target)
+	}
+
+	pub(crate) async fn connect(
+		&mut self,
+		rq_ctx: &RqCtx,
+		ct: &tokio_util::sync::CancellationToken,
+		target: &McpTarget,
+		peer: &Peer<RoleServer>,
+		init_request: InitializeRequestParam,
+	) -> Result<(), anyhow::Error> {
+		// Already connected
+		if self.stateful
+			&& let Some(_transport) = self.by_name.get(&target.name)
+		{
+			return Ok(());
+		}
+
+		let transport = self
+			.inner_connect(rq_ctx, ct, target, peer, init_request)
+			.await?;
+
+		// In stateless mode, this just overwrites the existing entry
 		self.by_name.insert(target.name.clone(), transport);
+
 		Ok(())
 	}
 }
