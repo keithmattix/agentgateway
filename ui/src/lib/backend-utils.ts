@@ -1,4 +1,4 @@
-import { Backend, Route, Listener, Bind } from "@/lib/types";
+import { Backend, Route, Listener, Bind, McpStatefulMode } from "@/lib/types";
 import { DEFAULT_BACKEND_FORM, BACKEND_TYPE_COLORS } from "./backend-constants";
 import { POLICY_TYPES, BACKEND_POLICY_KEYS } from "./policy-constants";
 
@@ -50,7 +50,7 @@ export const MCP_TARGET_TYPES = [
 /**
  * Backend policy keys (subset of PolicyType that apply to backends)
  */
-export type BackendPolicyKey = typeof BACKEND_POLICY_KEYS[number];
+export type BackendPolicyKey = (typeof BACKEND_POLICY_KEYS)[number];
 
 /**
  * Default ports for different protocols
@@ -78,7 +78,7 @@ export function ensurePortInAddress(
 export const getBackendName = (backend: Backend): string => {
   if (backend.mcp) {
     if (backend.mcp.targets && backend.mcp.targets.length > 0) {
-      const targetNames = backend.mcp.targets.map(t => t.name).join(", ");
+      const targetNames = backend.mcp.targets.map((t) => t.name).join(", ");
       return `MCP: ${targetNames}`;
     }
     return "MCP Backend";
@@ -193,7 +193,7 @@ export const validateCommonFields = (
   backendType?: string
 ): boolean => {
   if (backendType !== "ai" && backendType !== "mcp" && !form.name.trim()) return false;
-  
+
   // Only validate route selection when adding (not editing)
   if (!editingBackend && (!form.selectedBindPort || form.selectedRouteIndex === "")) return false;
 
@@ -325,8 +325,14 @@ export const createMcpTarget = (target: any) => {
         stdio: {
           cmd: target.cmd,
           args: Array.isArray(target.args) ? target.args.filter((arg: string) => arg.trim()) : [],
-          env: typeof target.env === 'object' && target.env !== null && !Array.isArray(target.env) ? 
-            Object.fromEntries(Object.entries(target.env).filter(([key, value]) => typeof key === 'string' && key.trim() && String(value).trim())) : {},
+          env:
+            typeof target.env === "object" && target.env !== null && !Array.isArray(target.env)
+              ? Object.fromEntries(
+                  Object.entries(target.env).filter(
+                    ([key, value]) => typeof key === "string" && key.trim() && String(value).trim()
+                  )
+                )
+              : {},
         },
       };
     case "openapi":
@@ -349,6 +355,7 @@ export const createMcpBackend = (form: typeof DEFAULT_BACKEND_FORM, weight: numb
     {
       mcp: {
         targets,
+        statefulMode: form.mcpStateful ? McpStatefulMode.STATEFUL : McpStatefulMode.STATELESS,
       },
     },
     weight
@@ -486,7 +493,7 @@ export const populateFormFromBackend = (
   const backendType = getBackendType(backend);
 
   return {
-    name: (backendType === "ai" || backendType === "mcp") ? "" : getBackendName(backend) || "",
+    name: backendType === "ai" || backendType === "mcp" ? "" : getBackendName(backend) || "",
     weight: String(backend.weight || 1),
     selectedBindPort: String(bind.port),
     selectedListenerName: listener.name || "",
@@ -567,6 +574,10 @@ export const populateFormFromBackend = (
         }
         return baseTarget;
       }) || [],
+    mcpStateful:
+      backend.mcp?.statefulMode == undefined
+        ? true
+        : backend.mcp?.statefulMode == McpStatefulMode.STATEFUL, // Default to stateful if not specified
     // AI backend
     aiProvider: backend.ai?.provider ? (Object.keys(backend.ai.provider)[0] as any) : "openAI",
     aiModel: backend.ai?.provider ? Object.values(backend.ai.provider)[0]?.model || "" : "",
@@ -595,9 +606,9 @@ export const hasBackendPolicies = (route: Route) => {
  */
 export const getBackendPolicyKeys = (route: Route): BackendPolicyKey[] => {
   if (!route?.policies) return [];
-  
-  return BACKEND_POLICY_KEYS.filter(policyKey => 
-    route.policies![policyKey] !== undefined && route.policies![policyKey] !== null
+
+  return BACKEND_POLICY_KEYS.filter(
+    (policyKey) => route.policies![policyKey] !== undefined && route.policies![policyKey] !== null
   );
 };
 
@@ -606,31 +617,39 @@ export const getBackendPolicyKeys = (route: Route): BackendPolicyKey[] => {
  */
 export const getBackendPolicyTypes = (route: Route): string[] => {
   const policyKeys = getBackendPolicyKeys(route);
-  return policyKeys.map(key => POLICY_TYPES[key].name);
+  return policyKeys.map((key) => POLICY_TYPES[key].name);
 };
 
 /**
  * Check if a backend can be deleted based on backend policy constraints
  */
-export const canDeleteBackend = (route: Route, currentBackendCount: number): { canDelete: boolean; reason: string } => {
+export const canDeleteBackend = (
+  route: Route,
+  currentBackendCount: number
+): { canDelete: boolean; reason: string } => {
   if (!hasBackendPolicies(route)) {
     return { canDelete: true, reason: "" };
   }
-  
+
   // If there are backend policies, we need exactly 1 backend after deletion
   const remainingBackends = currentBackendCount - 1;
   if (remainingBackends !== 1) {
     const policyTypes = getBackendPolicyTypes(route);
-    const action = remainingBackends === 0 ? "remove all backends" : 
-                  remainingBackends > 1 ? "have multiple backends" : "have this configuration";
-    
+    const action =
+      remainingBackends === 0
+        ? "remove all backends"
+        : remainingBackends > 1
+          ? "have multiple backends"
+          : "have this configuration";
+
     return {
       canDelete: false,
-      reason: `Cannot ${action} when backend policies are configured. ` +
-              `The following policies require exactly 1 backend: ${policyTypes.join(", ")}. ` +
-              `Please remove these policies first.`
+      reason:
+        `Cannot ${action} when backend policies are configured. ` +
+        `The following policies require exactly 1 backend: ${policyTypes.join(", ")}. ` +
+        `Please remove these policies first.`,
     };
   }
-  
+
   return { canDelete: true, reason: "" };
 };

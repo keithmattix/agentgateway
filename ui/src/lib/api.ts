@@ -1,4 +1,4 @@
-import { Target, Listener, LocalConfig, Bind, Backend, Route } from "./types";
+import { Target, Listener, LocalConfig, Bind, Backend, Route, McpStatefulMode } from "./types";
 
 const API_URL = process.env.NODE_ENV === "production" ? "" : "http://localhost:15000";
 
@@ -267,6 +267,7 @@ export async function createMcpTarget(
         mcp: {
           name: "mcp-backend",
           targets: [],
+          statefulMode: McpStatefulMode.STATEFUL, // Default to stateful
         },
       };
       route.backends.push(newMcpBackend);

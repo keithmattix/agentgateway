@@ -13,7 +13,7 @@ import { AgentgatewayLogo } from "@/components/agentgateway-logo";
 import { ArrowLeft, ArrowRight, Globe, Server, MessageSquare } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { LocalConfig, Backend, McpBackend, McpTarget } from "@/lib/types";
+import { LocalConfig, Backend, McpBackend, McpTarget, McpStatefulMode } from "@/lib/types";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -27,6 +27,7 @@ interface BackendStepProps {
 export function BackendStep({ onNext, onPrevious, config, onConfigChange }: BackendStepProps) {
   const [backendType, setBackendType] = useState<"mcp" | "host" | "service">("mcp");
   const [mcpName, setMcpName] = useState("default-mcp");
+  const [mcpStateful, setMcpStateful] = useState(true); // Default to stateful
   const [targetType, setTargetType] = useState<"mcp" | "stdio" | "sse" | "openapi">("mcp");
   const [targetName, setTargetName] = useState("default-target");
 
@@ -133,6 +134,7 @@ export function BackendStep({ onNext, onPrevious, config, onConfigChange }: Back
         const mcpBackend: McpBackend = {
           name: mcpName,
           targets: [target],
+          statefulMode: mcpStateful ? McpStatefulMode.STATEFUL : McpStatefulMode.STATELESS,
         };
 
         backend = {
@@ -225,6 +227,21 @@ export function BackendStep({ onNext, onPrevious, config, onConfigChange }: Back
               onChange={(e) => setTargetName(e.target.value)}
               placeholder="e.g., default-target"
             />
+          </div>
+
+          <div className="space-y-1">
+            <Label>
+              <input
+                type="checkbox"
+                checked={mcpStateful}
+                onChange={(e) => setMcpStateful(e.target.checked)}
+                className="mr-2"
+              />
+              Enable Stateful MCP
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              If enabled, the MCP backend will maintain state across requests.
+            </p>
           </div>
 
           {targetType === "mcp" && (

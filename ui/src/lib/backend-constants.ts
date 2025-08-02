@@ -31,6 +31,7 @@ export const DEFAULT_BACKEND_FORM = {
     // OpenAPI schema placeholder
     schema: boolean;
   }>,
+  mcpStateful: true,
   // AI backend fields
   aiProvider: "openAI" as "openAI" | "gemini" | "vertex" | "anthropic" | "bedrock",
   aiModel: "",
