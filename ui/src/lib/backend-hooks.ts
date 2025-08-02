@@ -147,6 +147,13 @@ export const useBackendFormState = () => {
     }));
   };
 
+  const updateMcpStateful = (stateful: boolean) => {
+    setBackendForm((prev) => ({
+      ...prev,
+      mcpStateful: stateful,
+    }));
+  };
+
   const parseAndUpdateUrl = (index: number, url: string) => {
     const { host, port, path } = parseUrl(url);
 
@@ -177,6 +184,7 @@ export const useBackendFormState = () => {
     removeMcpTarget,
     updateMcpTarget,
     parseAndUpdateUrl,
+    updateMcpStateful,
   };
 };
 

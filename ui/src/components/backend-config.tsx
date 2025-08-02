@@ -33,6 +33,7 @@ export function BackendConfig() {
     removeMcpTarget,
     updateMcpTarget,
     parseAndUpdateUrl,
+    updateMcpStateful,
   } = useBackendFormState();
 
   const {
@@ -139,6 +140,7 @@ export function BackendConfig() {
         removeMcpTarget={removeMcpTarget}
         updateMcpTarget={updateMcpTarget}
         parseAndUpdateUrl={parseAndUpdateUrl}
+        updateMcpStateful={updateMcpStateful}
       />
     </div>
   );

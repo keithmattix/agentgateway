@@ -1,4 +1,4 @@
-import { Backend, Route, Listener, Bind } from "@/lib/types";
+import { Backend, Route, Listener, Bind, McpStatefulMode } from "@/lib/types";
 import { DEFAULT_BACKEND_FORM, BACKEND_TYPE_COLORS } from "./backend-constants";
 import { POLICY_TYPES, BACKEND_POLICY_KEYS } from "./policy-constants";
 
@@ -356,6 +356,7 @@ export const createMcpBackend = (form: typeof DEFAULT_BACKEND_FORM, weight: numb
     {
       mcp: {
         targets,
+        statefulMode: form.mcpStateful ? McpStatefulMode.STATEFUL : McpStatefulMode.STATELESS,
       },
     },
     weight
@@ -574,6 +575,10 @@ export const populateFormFromBackend = (
         }
         return baseTarget;
       }) || [],
+    mcpStateful:
+      backend.mcp?.statefulMode === undefined
+        ? true
+        : backend.mcp?.statefulMode === McpStatefulMode.STATEFUL, // Default to stateful if not specified
     // AI backend
     aiProvider: backend.ai?.provider ? (Object.keys(backend.ai.provider)[0] as any) : "openAI",
     aiModel: backend.ai?.provider ? Object.values(backend.ai.provider)[0]?.model || "" : "",

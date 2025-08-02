@@ -1,4 +1,4 @@
-import { Target, Listener, LocalConfig, Bind, Backend, Route } from "./types";
+import { Target, Listener, LocalConfig, Bind, Backend, Route, McpStatefulMode } from "./types";
 
 // Mapping utilities are centralized in configMapper
 import { configDumpToLocalConfig } from "./configMapper";
@@ -297,6 +297,7 @@ export async function createMcpTarget(
         mcp: {
           name: "mcp-backend",
           targets: [],
+          statefulMode: McpStatefulMode.STATEFUL, // Default to stateful
         },
       };
       route.backends.push(newMcpBackend);

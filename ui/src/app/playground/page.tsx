@@ -442,6 +442,7 @@ export default function PlaygroundPage() {
       if (backendType === "mcp") {
         setConnectionState((prev) => ({ ...prev, connectionType: "mcp" }));
 
+        // TODO: Support acting as a stateless client
         const client = new McpClient(
           { name: "agentgateway-dashboard", version: "0.1.0" },
           { capabilities: {} }

@@ -242,7 +242,14 @@ impl LocalBackend {
 					};
 					targets.push(Arc::new(t));
 				}
-				let m = McpBackend { targets, stateful: tgt.stateful };
+				let stateful = match &tgt.stateful_mode {
+					None => true, // Default to stateful if not specified
+					Some(mcp_stateful) => match mcp_stateful {
+						McpStatefulMode::Stateless => false,
+						McpStatefulMode::Stateful => true,
+					},
+				};
+				let m = McpBackend { targets, stateful };
 				backends.push(Backend::MCP(name, m));
 				(backends, policies)
 			},
@@ -253,9 +260,15 @@ impl LocalBackend {
 }
 
 #[apply(schema!)]
-pub struct LocalMcpBackend { // keithmattix: Is this used??
+pub enum McpStatefulMode {
+	Stateless,
+	Stateful,
+}
+
+#[apply(schema!)]
+pub struct LocalMcpBackend {
 	pub targets: Vec<Arc<LocalMcpTarget>>,
-	pub stateful: bool
+	pub stateful_mode: Option<McpStatefulMode>
 }
 
 #[apply(schema!)]

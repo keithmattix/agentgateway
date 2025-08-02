@@ -335,6 +335,7 @@ interface AddBackendDialogProps {
   removeMcpTarget: (index: number) => void;
   updateMcpTarget: (index: number, field: string, value: any) => void;
   parseAndUpdateUrl: (index: number, url: string) => void;
+  updateMcpStateful: (stateful: boolean) => void;
 }
 
 export const AddBackendDialog: React.FC<AddBackendDialogProps> = ({
@@ -353,6 +354,7 @@ export const AddBackendDialog: React.FC<AddBackendDialogProps> = ({
   removeMcpTarget,
   updateMcpTarget,
   parseAndUpdateUrl,
+  updateMcpStateful,
 }) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -506,6 +508,7 @@ export const AddBackendDialog: React.FC<AddBackendDialogProps> = ({
               removeMcpTarget={removeMcpTarget}
               updateMcpTarget={updateMcpTarget}
               parseAndUpdateUrl={parseAndUpdateUrl}
+              updateMcpStateful={updateMcpStateful}
             />
           )}
 
@@ -657,6 +660,7 @@ interface McpBackendFormProps {
   removeMcpTarget: (index: number) => void;
   updateMcpTarget: (index: number, field: string, value: any) => void;
   parseAndUpdateUrl: (index: number, url: string) => void;
+  updateMcpStateful: (stateful: boolean) => void;
 }
 
 const McpBackendForm: React.FC<McpBackendFormProps> = ({
@@ -665,6 +669,7 @@ const McpBackendForm: React.FC<McpBackendFormProps> = ({
   removeMcpTarget,
   updateMcpTarget,
   parseAndUpdateUrl,
+  updateMcpStateful,
 }) => (
   <div className="space-y-4">
     <div className="flex items-center justify-between">
@@ -913,6 +918,19 @@ const McpBackendForm: React.FC<McpBackendFormProps> = ({
         </p>
       </div>
     )}
+
+    <div className="flex items-center space-x-2">
+      <input
+        type="checkbox"
+        id="mcp-stateful"
+        checked={!!backendForm.mcpStateful}
+        onChange={(e) => updateMcpStateful(e.target.checked)}
+        className="form-checkbox h-4 w-4"
+      />
+      <Label htmlFor="mcp-stateful" className="cursor-pointer">
+        Enable stateful mode
+      </Label>
+    </div>
   </div>
 );
 

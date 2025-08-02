@@ -258,6 +258,7 @@ export interface DynamicBackend {
 export interface McpBackend {
   name: string;
   targets: McpTarget[];
+  statefulMode?: McpStatefulMode; // "stateless" or "stateful"
 }
 
 export interface AiBackend {
@@ -272,6 +273,11 @@ export interface AiProvider {
   vertex?: { model?: string | null; region?: string | null; projectId: string };
   anthropic?: { model?: string | null };
   bedrock?: { model: string; region: string };
+}
+
+export enum McpStatefulMode {
+  STATELESS = "stateless",
+  STATEFUL = "stateful",
 }
 
 export interface McpTarget {
