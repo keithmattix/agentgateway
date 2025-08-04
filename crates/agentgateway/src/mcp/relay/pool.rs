@@ -126,7 +126,10 @@ impl ConnectionPool {
 		self.list_from_by_name()
 	}
 
-	// This function should only be called by initialize() and list() methods.
+	// This function should only be called by the `initialize()` and `list()` methods.
+	// In stateless mode, `list_from_by_name` is called directly from `initialize()` to
+	// return the current targets, since external calls to `list()` will re-run the
+	// initialize flow each time. In stateful mode, it is called from `list()`.
 	fn list_from_by_name(&self) -> anyhow::Result<Vec<(Strng, &upstream::UpstreamTarget)>> {
 		// In stateless mode, we return all targets from the backend
 		let results = self
