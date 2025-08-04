@@ -245,7 +245,7 @@ pub enum McpStatefulMode {
 #[apply(schema!)]
 pub struct LocalMcpBackend {
 	pub targets: Vec<Arc<LocalMcpTarget>>,
-	pub stateful_mode: Option<McpStatefulMode>
+	pub stateful_mode: Option<McpStatefulMode>,
 }
 
 #[apply(schema!)]

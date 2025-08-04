@@ -1,19 +1,5 @@
 use std::convert::Infallible;
 
-use crate::client::{Client, Transport};
-use crate::control::AuthSource;
-use crate::http::backendtls::BackendTLS;
-use crate::http::ext_proc::proto::{
-	BodyMutation, BodyResponse, HeadersResponse, HttpBody, HttpHeaders, HttpTrailers,
-	ProcessingRequest, ProcessingResponse,
-};
-use crate::http::{HeaderName, HeaderValue};
-use crate::proxy::ProxyError;
-use crate::proxy::httpproxy::PolicyClient;
-use crate::types::agent;
-use crate::types::agent::{Backend, SimpleBackendReference, Target};
-use crate::types::discovery::NamespacedHostname;
-use crate::*;
 use ::http::Uri;
 use ::http::uri::Authority;
 use anyhow::anyhow;
@@ -30,6 +16,21 @@ use tokio::sync::mpsc::{Receiver, Sender};
 use tokio_stream::StreamExt;
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::Status;
+
+use crate::client::{Client, Transport};
+use crate::control::AuthSource;
+use crate::http::backendtls::BackendTLS;
+use crate::http::ext_proc::proto::{
+	BodyMutation, BodyResponse, HeadersResponse, HttpBody, HttpHeaders, HttpTrailers,
+	ProcessingRequest, ProcessingResponse,
+};
+use crate::http::{HeaderName, HeaderValue};
+use crate::proxy::ProxyError;
+use crate::proxy::httpproxy::PolicyClient;
+use crate::types::agent;
+use crate::types::agent::{Backend, SimpleBackendReference, Target};
+use crate::types::discovery::NamespacedHostname;
+use crate::*;
 
 #[allow(warnings)]
 #[allow(clippy::derive_partial_eq_without_eq)]
