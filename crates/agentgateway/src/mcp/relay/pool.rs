@@ -118,8 +118,11 @@ impl ConnectionPool {
 			return self.list().await;
 		}
 
-		// Use list_from_by_name since external calls to list() will run the initialize
-		// flow on each invocation when in stateless mode.
+		// Use list_from_by_name here because, in stateless mode, external calls to list()
+		// would re-run the initialize flow on each invocation. However, after running
+		// initialization, we want to return the results from this initialization without
+		// triggering it again. Therefore, we use list_from_by_name to return the current
+		// results from initialization.
 		self.list_from_by_name()
 	}
 
