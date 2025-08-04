@@ -3,9 +3,11 @@ use std::borrow::Cow;
 use std::collections::{BTreeSet, HashMap};
 use std::fmt::{Debug, Formatter};
 use std::hash::BuildHasherDefault;
+use std::ops::DerefMut;
 use std::sync::{Arc, LazyLock};
 use std::time::Duration;
 
+use agent_core::bow::OwnedOrBorrowed;
 use agent_core::metrics::Recorder;
 use agent_core::prelude::Strng;
 use agent_core::trcng;
@@ -22,13 +24,16 @@ use rmcp::service::{RequestContext, RunningService};
 use rmcp::transport::child_process::TokioChildProcess;
 use rmcp::{RoleClient, RoleServer, ServerHandler, model};
 use tokio::process::Command;
-use tokio::sync::RwLock;
+use tokio::sync::{RwLock, RwLockWriteGuard};
+use tokio_util::sync::CancellationToken;
 use tracing::instrument;
 
 use crate::cel::ContextBuilder;
 use crate::http::jwt::Claims;
 use crate::mcp::rbac;
 use crate::mcp::rbac::{Identity, RuleSets};
+use crate::mcp::relay::pool::ConnectionPool;
+use crate::mcp::relay::upstream::UpstreamTarget;
 use crate::mcp::sse::{MCPInfo, McpBackendGroup};
 use crate::proxy::httpproxy::PolicyClient;
 use crate::store::Stores;
@@ -107,10 +112,7 @@ impl Relay {
 		};
 		Self {
 			pool: Arc::new(RwLock::new(pool::ConnectionPool::new(
-				pi,
-				client,
-				backend,
-				stateful,
+				pi, client, backend, stateful,
 			))),
 			metrics,
 			policies,
@@ -196,6 +198,72 @@ impl Relay {
 			.start_with_context(tracer, &rq_ctx.context);
 		Ok((_span, rq_ctx, log, cel))
 	}
+
+	async fn list_conns<'a>(
+		&self,
+		context: &RequestContext<RoleServer>,
+		rq_ctx: &RqCtx,
+		pool: &'a mut ConnectionPool,
+	) -> Result<Vec<(Strng, &'a upstream::UpstreamTarget)>, McpError> {
+		Ok(match self.stateful {
+			true => pool
+				.list()
+				.await
+				.map_err(|e| McpError::internal_error(format!("Failed to list connections: {e}"), None))?,
+			false => {
+				// In stateless mode, we want to initialize the connects to the backend each time.
+				// Since we're not proxying the downstream client's initialize capabilities, we use
+				// agentgateway's capabilities instead.
+				pool
+					.initialize(rq_ctx, &context.peer, AGW_INITIALIZE.clone())
+					.await
+					.map_err(|e| {
+						McpError::internal_error(
+							format!("Failed to initialize connections for stateless backend: {e}"),
+							None,
+						)
+					})?
+			},
+		})
+	}
+
+	async fn get_conn<'a>(
+		&self,
+		context: &RequestContext<RoleServer>,
+		rq_ctx: &RqCtx,
+		pool: &'a mut ConnectionPool,
+		service_name: &str,
+	) -> Result<OwnedOrBorrowed<'a, UpstreamTarget>, McpError> {
+		Ok(match self.stateful {
+			true => OwnedOrBorrowed::Borrowed(
+				pool
+					.get(rq_ctx, &context.peer, service_name)
+					.await
+					.map_err(|_e| {
+						McpError::invalid_request(format!("Service {service_name} not found"), None)
+					})?,
+			),
+			false => {
+				// In stateless mode, we want to initialize the connects to the backend each time.
+				// Since we're not proxying the downstream client's initialize capabilities, we use
+				// agentgateway's capabilities instead.
+				let ct = tokio_util::sync::CancellationToken::new(); //TODO
+				let svc = pool
+					.stateless_connect(
+						rq_ctx,
+						&ct,
+						service_name,
+						&context.peer,
+						AGW_INITIALIZE.clone(),
+					)
+					.await
+					.map_err(|_e| {
+						McpError::invalid_request(format!("Service {service_name} not found"), None)
+					})?;
+				OwnedOrBorrowed::Owned(svc)
+			},
+		})
+	}
 }
 
 impl Relay {
@@ -229,20 +297,20 @@ impl ServerHandler for Relay {
 	#[instrument(level = "debug", skip_all)]
 	fn get_info(&self) -> ServerInfo {
 		ServerInfo {
-            protocol_version: ProtocolVersion::V_2025_03_26,
-            capabilities: ServerCapabilities {
-                completions: None,
-                experimental: None,
-                logging: None,
-                prompts: Some(PromptsCapability::default()),
-                resources: Some(ResourcesCapability::default()),
-                tools: Some(ToolsCapability::default()),
-            },
-            server_info: Implementation::from_build_env(),
-            instructions: Some(
-                "This server is a gateway to a set of mcp servers. It is responsible for routing requests to the correct server and aggregating the results.".to_string(),
-            ),
-        }
+                protocol_version: ProtocolVersion::V_2025_03_26,
+                capabilities: ServerCapabilities {
+                    completions: None,
+                    experimental: None,
+                    logging: None,
+                    prompts: Some(PromptsCapability::default()),
+                    resources: Some(ResourcesCapability::default()),
+                    tools: Some(ToolsCapability::default()),
+                },
+                server_info: Implementation::from_build_env(),
+                instructions: Some(
+                    "This server is a gateway to a set of mcp servers. It is responsible for routing requests to the correct server and aggregating the results.".to_string(),
+                ),
+            }
 	}
 
 	// The client will send an initialize request with their parameters. We will return our own static support
@@ -275,26 +343,7 @@ impl ServerHandler for Relay {
 	) -> std::result::Result<ListResourcesResult, McpError> {
 		let (_span, ref rq_ctx) = Self::setup_request(&context.extensions, "list_resources")?;
 		let mut pool = self.pool.write().await;
-		let connections = match self.stateful {
-			true => pool
-				.list()
-				.await
-				.map_err(|e| McpError::internal_error(format!("Failed to list connections: {e}"), None))?,
-			false => {
-				// In stateless mode, we want to initialize the connects to the backend each time.
-				// Since we're not proxying the downstream client's initialize capabilities, we use
-				// agentgateway's capabilities instead.
-				pool
-					.initialize(rq_ctx, &context.peer, AGW_INITIALIZE.clone())
-					.await
-					.map_err(|e| {
-						McpError::internal_error(
-							format!("Failed to initialize connections for stateless backend: {e}"),
-							None,
-						)
-					})?
-			},
-		};
+		let connections = self.list_conns(&context, rq_ctx, pool.deref_mut()).await?;
 		let all = connections.into_iter().map(|(_name, svc)| {
 			let request = request.clone();
 			async move {
@@ -326,26 +375,7 @@ impl ServerHandler for Relay {
 		let (_span, ref rq_ctx) = Self::setup_request(&context.extensions, "list_resource_templates")?;
 
 		let mut pool = self.pool.write().await;
-		let connections = match self.stateful {
-			true => pool
-				.list()
-				.await
-				.map_err(|e| McpError::internal_error(format!("Failed to list connections: {e}"), None))?,
-			false => {
-				// In stateless mode, we want to initialize the connects to the backend each time.
-				// Since we're not proxying the downstream client's initialize capabilities, we use
-				// agentgateway's capabilities instead.
-				pool
-					.initialize(rq_ctx, &context.peer, AGW_INITIALIZE.clone())
-					.await
-					.map_err(|e| {
-						McpError::internal_error(
-							format!("Failed to initialize connections for stateless backend: {e}"),
-							None,
-						)
-					})?
-			},
-		};
+		let connections = self.list_conns(&context, rq_ctx, pool.deref_mut()).await?;
 		let all = connections.into_iter().map(|(_name, svc)| {
 			let request = request.clone();
 			async move {
@@ -443,12 +473,12 @@ impl ServerHandler for Relay {
 	}
 
 	#[instrument(
-        level = "debug",
-        skip_all,
-        fields(
+            level = "debug",
+            skip_all,
+            fields(
         name=%request.uri,
-        ),
-    )]
+            ),
+        )]
 	async fn read_resource(
 		&self,
 		request: ReadResourceRequestParam,
@@ -472,57 +502,21 @@ impl ServerHandler for Relay {
 			uri: resource.to_string(),
 		};
 		let mut pool = self.pool.write().await;
-		match self.stateful {
-			true => {
-				let service_arc = pool
-					.get(rq_ctx, &context.peer, service_name)
-					.await
-					.map_err(|_e| {
-						McpError::invalid_request(format!("Service {service_name} not found"), None)
-					})?;
-				self.metrics.clone().record(
-					metrics::GetResourceCall {
-						server: service_name.to_string(),
-						uri: resource.to_string(),
-						params: vec![],
-					},
-					(),
-				);
-				match service_arc.read_resource(req, rq_ctx).await {
-					Ok(r) => Ok(r),
-					Err(e) => Err(e.into()),
-				}
+		let service = self
+			.get_conn(&context, rq_ctx, pool.deref_mut(), service_name)
+			.await?;
+
+		self.metrics.clone().record(
+			metrics::GetResourceCall {
+				server: service_name.to_string(),
+				uri: resource.to_string(),
+				params: vec![],
 			},
-			false => {
-				// In stateless mode, we want to initialize the connects to the backend each time.
-				// Since we're not proxying the downstream client's initialize capabilities, we use
-				// agentgateway's capabilities instead.
-				let ct = tokio_util::sync::CancellationToken::new(); //TODO
-				let service_arc = pool
-					.stateless_connect(
-						rq_ctx,
-						&ct,
-						service_name,
-						&context.peer,
-						AGW_INITIALIZE.clone(),
-					)
-					.await
-					.map_err(|_e| {
-						McpError::invalid_request(format!("Service {service_name} not found"), None)
-					})?;
-				self.metrics.clone().record(
-					metrics::GetResourceCall {
-						server: service_name.to_string(),
-						uri: resource.to_string(),
-						params: vec![],
-					},
-					(),
-				);
-				match service_arc.read_resource(req, rq_ctx).await {
-					Ok(r) => Ok(r),
-					Err(e) => Err(e.into()),
-				}
-			},
+			(),
+		);
+		match service.read_resource(req, rq_ctx).await {
+			Ok(r) => Ok(r),
+			Err(e) => Err(e.into()),
 		}
 	}
 
@@ -556,58 +550,21 @@ impl ServerHandler for Relay {
 			name: prompt.to_string(),
 			arguments: request.arguments,
 		};
+		let svc = self
+			.get_conn(&context, rq_ctx, pool.deref_mut(), service_name)
+			.await?;
 
-		match self.stateful {
-			true => {
-				let svc = pool
-					.get(rq_ctx, &context.peer, service_name)
-					.await
-					.map_err(|_e| {
-						McpError::invalid_request(format!("Service {service_name} not found"), None)
-					})?;
-				self.metrics.clone().record(
-					metrics::GetPromptCall {
-						server: service_name.to_string(),
-						name: prompt.to_string(),
-						params: vec![],
-					},
-					(),
-				);
-				match svc.get_prompt(req, rq_ctx).await {
-					Ok(r) => Ok(r),
-					Err(e) => Err(e.into()),
-				}
+		self.metrics.clone().record(
+			metrics::GetPromptCall {
+				server: service_name.to_string(),
+				name: prompt.to_string(),
+				params: vec![],
 			},
-			false => {
-				// In stateless mode, we want to initialize the connects to the backend each time.
-				// Since we're not proxying the downstream client's initialize capabilities, we use
-				// agentgateway's capabilities instead.
-				let ct = tokio_util::sync::CancellationToken::new(); //TODO
-				let svc = pool
-					.stateless_connect(
-						rq_ctx,
-						&ct,
-						service_name,
-						&context.peer,
-						AGW_INITIALIZE.clone(),
-					)
-					.await
-					.map_err(|_e| {
-						McpError::invalid_request(format!("Service {service_name} not found"), None)
-					})?;
-				self.metrics.clone().record(
-					metrics::GetPromptCall {
-						server: service_name.to_string(),
-						name: prompt.to_string(),
-						params: vec![],
-					},
-					(),
-				);
-				match svc.get_prompt(req, rq_ctx).await {
-					Ok(r) => Ok(r),
-					Err(e) => Err(e.into()),
-				}
-			},
+			(),
+		);
+		match svc.get_prompt(req, rq_ctx).await {
+			Ok(r) => Ok(r),
+			Err(e) => Err(e.into()),
 		}
 	}
 
@@ -690,12 +647,12 @@ impl ServerHandler for Relay {
 	}
 
 	#[instrument(
-        level = "debug",
-        skip_all,
-        fields(
+            level = "debug",
+            skip_all,
+            fields(
         name=%request.name,
-        ),
-    )]
+            ),
+        )]
 	fn call_tool(
 		&self,
 		request: CallToolRequestParam,
