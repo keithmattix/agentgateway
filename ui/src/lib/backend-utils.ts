@@ -575,9 +575,9 @@ export const populateFormFromBackend = (
         return baseTarget;
       }) || [],
     mcpStateful:
-      backend.mcp?.statefulMode == undefined
+      backend.mcp?.statefulMode === undefined
         ? true
-        : backend.mcp?.statefulMode == McpStatefulMode.STATEFUL, // Default to stateful if not specified
+        : backend.mcp?.statefulMode === McpStatefulMode.STATEFUL, // Default to stateful if not specified
     // AI backend
     aiProvider: backend.ai?.provider ? (Object.keys(backend.ai.provider)[0] as any) : "openAI",
     aiModel: backend.ai?.provider ? Object.values(backend.ai.provider)[0]?.model || "" : "",
