@@ -220,8 +220,8 @@ export function renderDirectResponseForm({ data, onChange }: FormRendererProps) 
           type="number"
           min="100"
           max="599"
-          value={data.status || "200"}
-          onChange={(e) => onChange({ ...data, status: e.target.value || "200" })}
+          value={data.status || 200}
+          onChange={(e) => onChange({ ...data, status: parseInt(e.target.value || "200") })}
         />
       </div>
       <div className="space-y-3">
