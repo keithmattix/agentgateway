@@ -60,7 +60,7 @@ static AGW_INITIALIZE: LazyLock<InitializeRequestParam> =
 		},
 		client_info: Implementation {
 			name: "agentgateway".to_string(),
-			version: BuildInfo::new().version,
+			version: BuildInfo::new().version.to_string(),
 		},
 	});
 
@@ -414,26 +414,7 @@ impl ServerHandler for Relay {
 		let (_span, ref rq_ctx) = Self::setup_request(&context.extensions, "list_prompts")?;
 
 		let mut pool = self.pool.write().await;
-		let connections = match self.stateful {
-			true => pool
-				.list()
-				.await
-				.map_err(|e| McpError::internal_error(format!("Failed to list connections: {e}"), None))?,
-			false => {
-				// In stateless mode, we want to initialize the connects to the backend each time.
-				// Since we're not proxying the downstream client's initialize capabilities, we use
-				// agentgateway's capabilities instead.
-				pool
-					.initialize(rq_ctx, &context.peer, AGW_INITIALIZE.clone())
-					.await
-					.map_err(|e| {
-						McpError::internal_error(
-							format!("Failed to initialize connections for stateless backend: {e}"),
-							None,
-						)
-					})?
-			},
-		};
+		let connections = self.list_conns(&context, rq_ctx, pool.deref_mut()).await?;
 
 		let all = connections.into_iter().map(|(_name, svc)| {
 			let request = request.clone();
@@ -576,26 +557,7 @@ impl ServerHandler for Relay {
 	) -> std::result::Result<ListToolsResult, McpError> {
 		let (_span, ref rq_ctx, _, cel) = Self::setup_request_log(&context.extensions, "list_tools")?;
 		let mut pool = self.pool.write().await;
-		let connections = match self.stateful {
-			true => pool
-				.list()
-				.await
-				.map_err(|e| McpError::internal_error(format!("Failed to list connections: {e}"), None))?,
-			false => {
-				// In stateless mode, we want to initialize the connects to the backend each time.
-				// Since we're not proxying the downstream client's initialize capabilities, we use
-				// agentgateway's capabilities instead.
-				pool
-					.initialize(rq_ctx, &context.peer, AGW_INITIALIZE.clone())
-					.await
-					.map_err(|e| {
-						McpError::internal_error(
-							format!("Failed to initialize connections for stateless backend: {e}"),
-							None,
-						)
-					})?
-			},
-		};
+		let connections = self.list_conns(&context, rq_ctx, pool.deref_mut()).await?;
 		let multi = connections.len() > 1;
 		let all = connections.into_iter().map(|(_name, svc_arc)| {
 			let request = request.clone();
@@ -681,78 +643,30 @@ impl ServerHandler for Relay {
 				name: Cow::Owned(tool.to_string()),
 				arguments: request.arguments,
 			};
-			match self.stateful {
-				true => {
-					let svc = pool
-						.get(rq_ctx, &context.peer, service_name)
-						.await
-						.map_err(|_e| {
-							McpError::invalid_request(format!("Service {service_name} not found"), None)
-						})?;
-					self.metrics.record(
-						metrics::ToolCall {
-							server: service_name.to_string(),
-							name: tool.to_string(),
-							params: vec![],
-						},
-						(),
-					);
-					match svc.call_tool(req, rq_ctx).await {
-						Ok(r) => Ok(r),
-						Err(e) => {
-							self.metrics.record(
-								metrics::ToolCallError {
-									server: service_name.to_string(),
-									name: tool.to_string(),
-									error_type: e.error_code(),
-									params: vec![],
-								},
-								(),
-							);
-							Err(e.into())
-						},
-					}
+			let svc = self
+				.get_conn(&context, rq_ctx, pool.deref_mut(), service_name)
+				.await?;
+			self.metrics.record(
+				metrics::ToolCall {
+					server: service_name.to_string(),
+					name: tool.to_string(),
+					params: vec![],
 				},
-				false => {
-					// In stateless mode, we want to initialize the connects to the backend each time.
-					// Since we're not proxying the downstream client's initialize capabilities, we use
-					// agentgateway's capabilities instead.
-					let ct = tokio_util::sync::CancellationToken::new(); //TODO
-					let svc = pool
-						.stateless_connect(
-							rq_ctx,
-							&ct,
-							service_name,
-							&context.peer,
-							AGW_INITIALIZE.clone(),
-						)
-						.await
-						.map_err(|_e| {
-							McpError::invalid_request(format!("Service {service_name} not found"), None)
-						})?;
+				(),
+			);
+			match svc.call_tool(req, rq_ctx).await {
+				Ok(r) => Ok(r),
+				Err(e) => {
 					self.metrics.record(
-						metrics::ToolCall {
+						metrics::ToolCallError {
 							server: service_name.to_string(),
 							name: tool.to_string(),
+							error_type: e.error_code(),
 							params: vec![],
 						},
 						(),
 					);
-					match svc.call_tool(req, rq_ctx).await {
-						Ok(r) => Ok(r),
-						Err(e) => {
-							self.metrics.record(
-								metrics::ToolCallError {
-									server: service_name.to_string(),
-									name: tool.to_string(),
-									error_type: e.error_code(),
-									params: vec![],
-								},
-								(),
-							);
-							Err(e.into())
-						},
-					}
+					Err(e.into())
 				},
 			}
 		})

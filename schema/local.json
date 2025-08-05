@@ -1828,6 +1828,13 @@
                                           }
                                         ]
                                       }
+                                    },
+                                    "statefulMode": {
+                                      "type": "string",
+                                      "enum": [
+                                        "stateless",
+                                        "stateful"
+                                      ]
                                     }
                                   },
                                   "additionalProperties": false,

@@ -216,6 +216,7 @@ This defaults to 'true'.|
 |`binds[].listeners[].routes[].backends[].(1)mcp.targets[].(1)openapi.port`||
 |`binds[].listeners[].routes[].backends[].(1)mcp.targets[].(1)openapi.path`||
 |`binds[].listeners[].routes[].backends[].(1)mcp.targets[].(1)openapi.schema`||
+|`binds[].listeners[].routes[].backends[].(1)mcp.statefulMode`||
 |`binds[].listeners[].routes[].backends[].(1)ai`||
 |`binds[].listeners[].routes[].backends[].(1)ai.provider`||
 |`binds[].listeners[].routes[].backends[].(1)ai.provider.(1)openAI`||
