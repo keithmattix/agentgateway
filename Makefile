@@ -33,6 +33,10 @@ lint:
 	cargo fmt --check
 	cargo clippy --all-targets -- -D warnings
 
+fix-lint:
+	cargo clippy --fix --allow-staged --allow-dirty --workspace
+	cargo fmt
+
 # test
 .PHONY: test
 test:
@@ -54,7 +58,7 @@ check-clean-repo:
 	@common/scripts/check_clean_repo.sh
 
 .PHONY: gen
-gen: generate-apis generate-schema lint
+gen: generate-apis generate-schema fix-lint
 	@:
 
 .PHONY: generate-schema
