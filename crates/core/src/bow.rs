@@ -10,7 +10,7 @@ impl<'a, T> std::ops::Deref for OwnedOrBorrowed<'a, T> {
 	fn deref(&self) -> &T {
 		match self {
 			Self::Borrowed(v) => v,
-			Self::Owned(v) => &v,
+			Self::Owned(v) => v,
 		}
 	}
 }

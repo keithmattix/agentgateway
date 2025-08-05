@@ -54,7 +54,7 @@ check-clean-repo:
 	@common/scripts/check_clean_repo.sh
 
 .PHONY: gen
-gen: generate-apis generate-schema
+gen: generate-apis generate-schema lint
 	@:
 
 .PHONY: generate-schema
