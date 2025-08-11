@@ -399,7 +399,7 @@ impl<K: Key> WorkloadHBONEPool<K> {
 			.pool_global_conn_count
 			.fetch_add(1, Ordering::SeqCst);
 		#[cfg(target_os = "windows")]
-		let id = id.try_into().unwrap(); // id is usize on windows so try and convert
+		let id = id.try_into()?; // id is usize on windows so try and convert
 		let pool_key = pingora_pool::ConnectionMeta::new(hash_key, id);
 
 		// First, see if we can naively take an inner lock for our specific key, and get a connection.
