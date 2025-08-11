@@ -12,6 +12,7 @@ use futures_util::FutureExt;
 use http::StatusCode;
 use hyper_util::rt::TokioIo;
 use hyper_util::server::conn::auto;
+#[cfg(target_family = "unix")]
 use net2::unix::UnixTcpBuilderExt;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::watch;
@@ -144,7 +145,9 @@ impl Gateway {
 			} else {
 				net2::TcpBuilder::new_v6()
 			};
-			let listener = builder?.reuse_port(true)?.bind(b.address)?.listen(1024)?;
+			#[cfg(target_family = "unix")]
+			let builder = builder.reuse_port(true)?;
+			let listener = builder?.bind(b.address)?.listen(1024)?;
 			listener.set_nonblocking(true)?;
 			let listener = tokio::net::TcpListener::from_std(listener)?;
 			(pi, listener)

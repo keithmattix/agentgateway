@@ -265,7 +265,13 @@ impl ConnectionPool {
 			},
 			McpTargetSpec::Stdio { cmd, args, env } => {
 				debug!("starting stdio transport for target: {}", target.name);
-				let mut c = Command::new(cmd);
+				#[cfg(target_os = "windows")]
+				// Command has some weird behavior on Windows where it expects the executable extension to be
+				// .exe. The which create will resolve the actual command for us.
+				// See https://github.com/rust-lang/rust/issues/37519#issuecomment-1694507663
+				// for more context.
+				let cmd = which::which(cmd)?;
+				let mut c = Command::new(&cmd);
 				c.args(args);
 				for (k, v) in env {
 					c.env(k, v);
@@ -278,7 +284,7 @@ impl ConnectionPool {
 								peer_client: None,
 								init_request,
 							},
-							TokioChildProcess::new(c).context(format!("failed to run command '{cmd}'"))?,
+							TokioChildProcess::new(c).context(format!("failed to run command '{:?}'", &cmd))?,
 							ct.child_token(),
 						)
 						.await?,
