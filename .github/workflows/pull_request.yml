@@ -27,7 +27,7 @@ jobs:
           - os: macos-latest
             target: aarch64-apple-darwin
             features: default
-          - os: windows-latest
+          - os: windows-2025
             target: x86_64-pc-windows-msvc
             features: default
 
@@ -87,9 +87,6 @@ jobs:
     - name: Install jq on Windows
       if: runner.os == 'Windows'
       run: choco install jq -y
-    - name: Install wsl on Windows
-      if: runner.os == 'Windows'
-      uses: Vampire/setup-wsl@v6
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
     - name: Add Go bin to PATH
