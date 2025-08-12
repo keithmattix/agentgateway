@@ -10,11 +10,10 @@ fn main() {
 		.unwrap();
 	let target = env::var("TARGET").unwrap();
 
-
 	let output = if cfg!(target_os = "windows") {
 		Command::new("powershell.exe")
-		.arg("../../common/scripts/report_build_info.ps1")
-		.output()
+			.arg("../../common/scripts/report_build_info.ps1")
+			.output()
 	} else {
 		Command::new("../../common/scripts/report_build_info.sh").output()
 	};

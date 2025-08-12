@@ -271,6 +271,9 @@ impl ConnectionPool {
 				// See https://github.com/rust-lang/rust/issues/37519#issuecomment-1694507663
 				// for more context.
 				let cmd = which::which(cmd)?;
+				#[cfg(target_family = "unix")]
+				let mut c = Command::new(cmd);
+				#[cfg(target_os = "windows")]
 				let mut c = Command::new(&cmd);
 				c.args(args);
 				for (k, v) in env {
