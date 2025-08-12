@@ -84,6 +84,9 @@ jobs:
           ~/.cargo/git/db/
           target/
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    - name: Install jq on Windows
+      if: runner.os == 'Windows'
+      run: choco install jq -y
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
     - name: Add Go bin to PATH
