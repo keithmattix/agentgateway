@@ -1,7 +1,7 @@
 use std::io::Write;
 
 use agentgateway::cel;
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use schemars::JsonSchema;
 
 pub fn generate_schema() -> Result<()> {
@@ -28,19 +28,22 @@ This folder contains JSON schemas for various parts of the project
 		let rule_path = format!("{xtask_path}/../../schema/{file}");
 		let o = if cfg!(target_os = "windows") {
 			let cmd_path: String = format!("{xtask_path}/../../common/scripts/schema-to-md.ps1");
-			 std::process::Command::new("powershell")
+			std::process::Command::new("powershell")
 				.arg("-Command")
 				.arg(cmd_path)
 				.arg(&rule_path)
 				.output()?
 		} else {
-		let cmd_path: String = format!("{xtask_path}/../../common/scripts/schema-to-md.sh");
-		std::process::Command::new(cmd_path)
-			.arg(&rule_path)
-			.output()?
+			let cmd_path: String = format!("{xtask_path}/../../common/scripts/schema-to-md.sh");
+			std::process::Command::new(cmd_path)
+				.arg(&rule_path)
+				.output()?
 		};
 		if !o.stderr.is_empty() {
-			bail!("schema documentation generation failed: {}", String::from_utf8_lossy(&o.stderr));
+			bail!(
+				"schema documentation generation failed: {}",
+				String::from_utf8_lossy(&o.stderr)
+			);
 		}
 		readme.push_str(&format!("## {name}\n\n"));
 		readme.push_str(&String::from_utf8_lossy(&o.stdout));

@@ -15,8 +15,6 @@ if (-not (Get-Command $jq -ErrorAction SilentlyContinue)) { $jq = "jq" }
 
 # Run jq and process output in PowerShell
 $jqlines = & $jq -r -f $PSScriptRoot/schema_paths.jq $SchemaFile
-foreach ($line in $jqlines -split ",") {
-    # Replace .[]. with []. using PowerShell
-    $fixed = $line -replace '\.\[\]\.', '[].'
-    Write-Output $fixed
-}
+# Global replace .[]. with []. for all lines
+$jqlines = $jqlines -replace '\.\[\]\.', '[].'
+Write-Output $jqlines

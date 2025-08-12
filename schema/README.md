@@ -7,8 +7,7 @@ This folder contains JSON schemas for various parts of the project
 |-|-|
 |`config`||
 |`config.enableIpv6`||
-|`config.localXdsPath`|Local XDS path. If not specified
- the current configuration file will be used.|
+|`config.localXdsPath`|Local XDS path. If not specified, the current configuration file will be used.|
 |`config.caAddress`||
 |`config.xdsAddress`||
 |`config.namespace`||
@@ -265,8 +264,7 @@ This defaults to 'true'.|
 |`binds[].listeners[].routes[].backends[].(1)ai.provider.(1)bedrock.guardrailIdentifier`||
 |`binds[].listeners[].routes[].backends[].(1)ai.provider.(1)bedrock.guardrailVersion`||
 |`binds[].listeners[].routes[].backends[].(1)ai.hostOverride`||
-|`binds[].listeners[].routes[].backends[].(1)ai.tokenize`|Whether to tokenize on the request flow. This enables us to do more accurate rate limits
-
+|`binds[].listeners[].routes[].backends[].(1)ai.tokenize`|Whether to tokenize on the request flow. This enables us to do more accurate rate limits,
 since we know (part of) the cost of the request upfront.
 This comes with the cost of an expensive operation.|
 |`binds[].listeners[].tcpRoutes`||
