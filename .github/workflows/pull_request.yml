@@ -28,7 +28,7 @@ jobs:
           - os: macos-latest
             target: aarch64-apple-darwin
             features: default
-          - os: windows-2025
+          - os: windows-latest
             target: x86_64-pc-windows-msvc
             features: default
 
@@ -71,7 +71,7 @@ jobs:
   test:
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-2025]
+        os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -107,6 +107,7 @@ jobs:
         os:
         - ubuntu-latest
         - ubuntu-22.04-arm
+        - windows-latest
     runs-on: ${{ matrix.os }}
 
     steps:
