@@ -69,7 +69,11 @@ generate-schema:
 # Code generation for xds apis
 .PHONY: generate-apis
 generate-apis:
+ifeq ($(OS),Windows_NT)
+	@powershell -ExecutionPolicy Bypass -Command ./common/scripts/buf.ps1 generate --path crates/agentgateway/proto/resource.proto --path crates/agentgateway/proto/workload.proto
+else
 	@PATH=./common/tools:$(PATH) buf generate --path crates/agentgateway/proto/resource.proto --path crates/agentgateway/proto/workload.proto
+endif
 
 .PHONY: run-validation-deps
 run-validation-deps:
