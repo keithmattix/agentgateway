@@ -95,7 +95,7 @@ jobs:
     - name: Test
       run: make test
     - name: Validate
-      run: make validate
+      run: git config --global core.autocrlf true; make validate
     - name: Generation
       run: make gen check-clean-repo
     - name: Lint
@@ -121,6 +121,7 @@ jobs:
   docker-windows:
     runs-on: windows-2025 # So we get docker automatically
     steps:
+    - uses: actions/checkout@v4
     - name: Build
       env:
         DOCKER_BUILDER: "docker buildx"
