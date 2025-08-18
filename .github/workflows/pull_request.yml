@@ -98,9 +98,9 @@ jobs:
     - name: Test
       run: make test
     - name: Validate
-      run: git config --global core.autocrlf true; make validate
+      run: make validate
     - name: Generation
-      run: make gen check-clean-repo
+      run: git config --global core.autocrlf true; make gen check-clean-repo
     - name: Lint
       run: make lint
 
@@ -128,5 +128,4 @@ jobs:
     - name: Build
       env:
         DOCKER_BUILDER: "docker buildx"
-        DOCKER_BUILD_ARGS: "--cache-from type=registry,ref=ghcr.io/agentgateway/agentgateway:buildcache"
       run: make docker
