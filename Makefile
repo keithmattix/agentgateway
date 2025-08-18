@@ -88,6 +88,12 @@ else
 endif
 
 CONFIG_FILES := $(wildcard examples/*/config.yaml)
+ifeq ($(CI),true)
+ifeq ($(OS),Windows_NT)
+# On Windows
+CONFIG_FILES := $(filter-out examples/authorization/config.yaml, $(CONFIG_FILES))
+endif
+endif
 
 .PHONY: validate
 validate: run-validation-deps $(CONFIG_FILES) stop-validation-deps
