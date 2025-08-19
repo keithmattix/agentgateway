@@ -12,7 +12,11 @@ KIND_CLUSTER_NAME ?= agentgateway
 # docker
 .PHONY: docker
 docker:
+ifeq ($(OS),Windows_NT)
+	$(DOCKER_BUILDER) build $(DOCKER_BUILD_ARGS) -f Dockerfile.windows -t $(IMAGE_FULL_NAME) .
+else
 	$(DOCKER_BUILDER) build $(DOCKER_BUILD_ARGS) -t $(IMAGE_FULL_NAME) . --progress=plain
+endif
 
 .PHONY: docker-musl
 docker-musl:
@@ -51,7 +55,12 @@ objects := $(wildcard examples/*/config.json)
 
 .PHONY: check-clean-repo
 check-clean-repo:
+ifeq ($(OS),Windows_NT)
+	@powershell -ExecutionPolicy Bypass -Command common/scripts/check_clean_repo.ps1
+else
 	@common/scripts/check_clean_repo.sh
+endif
+
 
 .PHONY: gen
 gen: generate-apis generate-schema fix-lint
@@ -64,17 +73,35 @@ generate-schema:
 # Code generation for xds apis
 .PHONY: generate-apis
 generate-apis:
+ifeq ($(OS),Windows_NT)
+	@powershell -ExecutionPolicy Bypass -Command common/tools/buf.ps1 generate --path crates/agentgateway/proto/resource.proto --path crates/agentgateway/proto/workload.proto
+else
 	@PATH=./common/tools:$(PATH) buf generate --path crates/agentgateway/proto/resource.proto --path crates/agentgateway/proto/workload.proto
+endif
 
 .PHONY: run-validation-deps
 run-validation-deps:
+ifeq ($(OS),Windows_NT)
+	@powershell -ExecutionPolicy Bypass -Command common/scripts/manage-validation-deps.ps1 start
+else
 	@common/scripts/manage-validation-deps.sh start
+endif
 
 .PHONY: stop-validation-deps
 stop-validation-deps:
+ifeq ($(OS),Windows_NT)
+	@powershell -ExecutionPolicy Bypass -Command common/scripts/manage-validation-deps.ps1 stop
+else
 	@common/scripts/manage-validation-deps.sh stop
+endif
 
 CONFIG_FILES := $(wildcard examples/*/config.yaml)
+ifeq ($(CI),true)
+ifeq ($(OS),Windows_NT)
+# On Windows
+CONFIG_FILES := $(filter-out examples/mcp-authentication/config.yaml, $(CONFIG_FILES))
+endif
+endif
 
 .PHONY: validate
 validate: run-validation-deps $(CONFIG_FILES) stop-validation-deps
