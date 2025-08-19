@@ -145,9 +145,9 @@ impl Gateway {
 				net2::TcpBuilder::new_v6()
 			};
 			#[cfg(target_family = "unix")]
-			let mut builder = builder?;
+			let builder = builder?;
 			#[cfg(target_family = "unix")]
-			let mut builder = builder.reuse_port(true);
+			let builder = builder.reuse_port(true);
 			let listener = builder?.bind(b.address)?.listen(1024)?;
 			listener.set_nonblocking(true)?;
 			let listener = tokio::net::TcpListener::from_std(listener)?;
