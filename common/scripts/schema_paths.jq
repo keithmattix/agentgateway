@@ -8,7 +8,7 @@ def schema_paths(prefix):
   elif (.type // [] | if type == "array" then . else [.] end | contains(["object"])) and .properties then
     .properties | to_entries[] |
     (prefix + .key) as $path |
-    [$path, (.value.description? // "")] as $entry |
+    [$path, (.value.description? // "" | sub("\n"; "<br>"; "g"))] as $entry |
     $entry,
     (.value | select(type != "boolean") | schema_paths($path + "."))
   elif (.type // [] | if type == "array" then . else [.] end | contains(["array"])) and .items then
@@ -16,7 +16,7 @@ def schema_paths(prefix):
   elif .properties then
     .properties | to_entries[] |
     (prefix + .key) as $path |
-    [$path, (.value.description? // "")] as $entry |
+    [$path, (.value.description? // "" | sub("\n"; "<br>"; "g"))] as $entry |
     $entry,
     (.value | schema_paths($path + "."))
   else

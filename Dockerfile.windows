@@ -3,6 +3,8 @@
 # Use Windows Server Core as the base for building
 FROM mcr.microsoft.com/windows/servercore:ltsc2022 AS builder
 
+ARG PROFILE=release
+
 SHELL ["powershell", "-Command", "$ErrorActionPreference = 'Stop'; $ProgressPreference = 'SilentlyContinue';"]
 
 WORKDIR C:/app
