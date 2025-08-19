@@ -15,7 +15,7 @@ RUN Set-ExecutionPolicy Bypass -Scope Process -Force; \
 
 
 # Install build tools
-RUN choco install visualstudio2022buildtools --package-parameters "--add Microsoft.VisualStudio.Workload.MSBuildTools;includeRecommended --add Microsoft.VisualStudio.Workload.VCTools;includeRecommended --quiet" -y
+RUN choco install visualstudio2022buildtools --package-parameters "--add Microsoft.VisualStudio.Workload.MSBuildTools --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended --quiet" -y
 # Build UI
 WORKDIR C:/app/ui
 COPY ui .
