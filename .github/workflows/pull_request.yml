@@ -94,6 +94,7 @@ jobs:
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
     - name: Add Go bin to PATH
+      shell: bash
       run: echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
     - name: Test
       run: make test
@@ -127,5 +128,5 @@ jobs:
     - uses: actions/checkout@v4
     - name: Build
       env:
-        DOCKER_BUILDER: "docker buildx"
+        DOCKER_BUILDER: "docker"
       run: make docker

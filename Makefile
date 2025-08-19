@@ -12,7 +12,11 @@ KIND_CLUSTER_NAME ?= agentgateway
 # docker
 .PHONY: docker
 docker:
+ifeq ($(OS),Windows_NT)
+	$(DOCKER_BUILDER) build $(DOCKER_BUILD_ARGS) -f Dockerfile.windows -t $(IMAGE_FULL_NAME) .
+else
 	$(DOCKER_BUILDER) build $(DOCKER_BUILD_ARGS) -t $(IMAGE_FULL_NAME) . --progress=plain
+endif
 
 .PHONY: docker-musl
 docker-musl:
