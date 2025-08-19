@@ -2,6 +2,7 @@
 # Usage: .\check_clean_repo.ps1
 
 # Check for uncommitted changes
+git add --all
 $gitStatus = git status --porcelain
 
 if ($gitStatus) {

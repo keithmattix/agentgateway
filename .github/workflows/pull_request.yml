@@ -8,6 +8,7 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  CI: true
 
 jobs:
   build:
@@ -27,7 +28,7 @@ jobs:
           - os: macos-latest
             target: aarch64-apple-darwin
             features: default
-          - os: windows-2025
+          - os: windows-latest
             target: x86_64-pc-windows-msvc
             features: default
 
@@ -52,7 +53,7 @@ jobs:
         targets: ${{ matrix.target }}
 
     - name: Build UI
-      run: | 
+      run: |
         cd ui
         npm install
         npm run build
@@ -85,9 +86,13 @@ jobs:
     - name: Install jq on Windows
       if: runner.os == 'Windows'
       run: choco install jq -y
+    - name: Install protoc-gen-go on Windows
+      if: runner.os == 'Windows'
+      run: go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.6
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
     - name: Add Go bin to PATH
+      shell: bash
       run: echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
     - name: Test
       run: make test
@@ -113,7 +118,7 @@ jobs:
     - name: Add Go bin to PATH
       run: echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
     - name: Generation
-      run: make gen check-clean-repo
+      run: git config --global core.autocrlf true; make gen check-clean-repo
     - name: Lint
       run: make lint
 
@@ -133,4 +138,12 @@ jobs:
       env:
         DOCKER_BUILDER: "docker buildx"
         DOCKER_BUILD_ARGS: "--cache-from type=registry,ref=ghcr.io/agentgateway/agentgateway:buildcache --build-arg PROFILE=quick-release"
+      run: make docker
+  docker-windows:
+    runs-on: windows-2025 # So we get docker automatically
+    steps:
+    - uses: actions/checkout@v4
+    - name: Build
+      env:
+        DOCKER_BUILDER: "docker"
       run: make docker

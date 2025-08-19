@@ -5,7 +5,7 @@ param(
     [string]$SchemaFile
 )
 
-Write-Output "|Field|Column|"
+Write-Output "|Field|Description|"
 Write-Output "|-|-|"
 
 # Use jq for consistent output with bash version

@@ -35,6 +35,11 @@ function Wait-ForHttpOk {
     }
 }
 
+if ($env:CI -eq "true") {
+    Write-Host "Nested virtualization isn't supported in Windows CI; skipping setup..."
+    exit 0
+}
+
 switch ($Action) {
     "start" {
         Write-Host "Starting MCP authentication server..."
