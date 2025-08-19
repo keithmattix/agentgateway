@@ -73,7 +73,6 @@ fn bench_native(b: Bencher) {
 }
 
 #[divan::bench]
-#[cfg(target_family = "unix")]
 fn bench_native_map(b: Bencher) {
 	let req = ::http::Request::builder()
 		.method(Method::GET)
@@ -105,7 +104,6 @@ macro_rules! function {
 	}};
 }
 
-#[cfg(target_family = "unix")]
 fn with_profiling(name: &str, f: impl FnOnce()) {
 	use pprof::protos::Message;
 	let guard = pprof::ProfilerGuardBuilder::default()
@@ -127,7 +125,6 @@ fn with_profiling(name: &str, f: impl FnOnce()) {
 }
 
 #[divan::bench]
-#[cfg(target_family = "unix")]
 fn bench_lookup(b: Bencher) {
 	let expr = Arc::new(Expression::new(r#"request.method"#).unwrap());
 	let ctx = root_context();
@@ -171,7 +168,6 @@ fn bench_with_response(b: Bencher) {
 }
 
 #[divan::bench]
-#[cfg(target_family = "unix")]
 fn benchmark_register_build(b: Bencher) {
 	let expr = Arc::new(Expression::new(r#"1 + 2 == 3"#).unwrap());
 	with_profiling("full", || {
