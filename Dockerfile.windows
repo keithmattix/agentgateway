@@ -27,7 +27,6 @@ WORKDIR C:/app
 COPY Makefile Cargo.toml Cargo.lock ./
 COPY crates ./crates
 COPY common ./common
-COPY ui/out ./ui/out
 
 # Build the Rust project for Windows
 RUN $env:TARGET=\"x86_64-pc-windows-msvc\"; \
