@@ -139,11 +139,11 @@ jobs:
         DOCKER_BUILDER: "docker buildx"
         DOCKER_BUILD_ARGS: "--cache-from type=registry,ref=ghcr.io/agentgateway/agentgateway:buildcache --build-arg PROFILE=quick-release"
       run: make docker
-  docker-windows:
-    runs-on: windows-2025 # So we get docker automatically
-    steps:
-    - uses: actions/checkout@v4
-    - name: Build
-      env:
-        DOCKER_BUILDER: "docker"
-      run: make docker
+  # docker-windows: # TODO: Move windows builds to release.yaml since it takes 40min
+  #   runs-on: windows-2025 # So we get docker automatically
+  #   steps:
+  #   - uses: actions/checkout@v4
+  #   - name: Build
+  #     env:
+  #       DOCKER_BUILDER: "docker"
+  #     run: make docker
