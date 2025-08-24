@@ -217,12 +217,14 @@ struct RequestDump {
 	body: Bytes,
 }
 
-async fn basic_setup() -> (MockServer, TestBind, Client<MemoryConnector, Body>) {
+async fn basic_setup() -> (&'static MockServer, TestBind, Client<MemoryConnector, Body>) {
 	let mock = simple_mock().await;
 	setup_mock(mock)
 }
 
-fn setup_mock(mock: MockServer) -> (MockServer, TestBind, Client<MemoryConnector, Body>) {
+fn setup_mock(
+	mock: &'static MockServer,
+) -> (&'static MockServer, TestBind, Client<MemoryConnector, Body>) {
 	let t = setup("{}")
 		.unwrap()
 		.with_backend(*mock.address())
@@ -232,11 +234,11 @@ fn setup_mock(mock: MockServer) -> (MockServer, TestBind, Client<MemoryConnector
 }
 
 fn setup_llm_mock(
-	mock: MockServer,
+	mock: &'static MockServer,
 	provider: AIProvider,
 	tokenize: bool,
 	config: &str,
-) -> (MockServer, TestBind, Client<MemoryConnector, Body>) {
+) -> (&'static MockServer, TestBind, Client<MemoryConnector, Body>) {
 	let t = setup(config).unwrap();
 	let b = Backend::AI(
 		strng::format!("{}", mock.address()),
@@ -292,9 +294,9 @@ fn simple_bind(route: Route) -> Bind {
 	}
 }
 
-async fn body_mock(body: &[u8]) -> MockServer {
+async fn body_mock(body: &[u8]) -> &'static MockServer {
 	let body = Arc::new(body.to_vec());
-	let mock = wiremock::MockServer::start().await;
+	let mock = Box::leak(Box::new(MockServer::start().await));
 	Mock::given(wiremock::matchers::path_regex("/.*"))
 		.respond_with(move |_: &wiremock::Request| {
 			ResponseTemplate::new(200).set_body_raw(body.clone().to_vec(), "application/json")
@@ -304,8 +306,8 @@ async fn body_mock(body: &[u8]) -> MockServer {
 	mock
 }
 
-async fn simple_mock() -> MockServer {
-	let mock = wiremock::MockServer::start().await;
+async fn simple_mock() -> &'static MockServer {
+	let mock = Box::leak(Box::new(MockServer::start().await));
 	Mock::given(wiremock::matchers::path_regex("/.*"))
 		.respond_with(|req: &wiremock::Request| {
 			let r = RequestDump {
