@@ -16,8 +16,8 @@ use crate::types::agent::Target;
 use crate::{ProxyInputs, client, mcp};
 
 // Helper to create a handler and mock server for tests
-async fn setup() -> (&'static MockServer, Handler) {
-	let server = Box::leak(Box::new(MockServer::start().await));
+async fn setup() -> (MockServer, Handler) {
+	let server = MockServer::start().await;
 	let host = server.uri();
 	let parsed = reqwest::Url::parse(&host).unwrap();
 	let config = crate::config::parse_config("{}".to_string(), None).unwrap();
