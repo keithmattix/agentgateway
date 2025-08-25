@@ -222,9 +222,7 @@ async fn basic_setup() -> (MockServer, TestBind, Client<MemoryConnector, Body>) 
 	setup_mock(mock)
 }
 
-fn setup_mock(
-	mock: MockServer,
-) -> (MockServer, TestBind, Client<MemoryConnector, Body>) {
+fn setup_mock(mock: MockServer) -> (MockServer, TestBind, Client<MemoryConnector, Body>) {
 	let t = setup("{}")
 		.unwrap()
 		.with_backend(*mock.address())
@@ -296,7 +294,7 @@ fn simple_bind(route: Route) -> Bind {
 
 async fn body_mock(body: &[u8]) -> MockServer {
 	let body = Arc::new(body.to_vec());
-	let mock = MockServer::start().await;
+	let mock = wiremock::MockServer::start().await;
 	Mock::given(wiremock::matchers::path_regex("/.*"))
 		.respond_with(move |_: &wiremock::Request| {
 			ResponseTemplate::new(200).set_body_raw(body.clone().to_vec(), "application/json")
@@ -307,7 +305,7 @@ async fn body_mock(body: &[u8]) -> MockServer {
 }
 
 async fn simple_mock() -> MockServer {
-	let mock = MockServer::start().await;
+	let mock = wiremock::MockServer::start().await;
 	Mock::given(wiremock::matchers::path_regex("/.*"))
 		.respond_with(|req: &wiremock::Request| {
 			let r = RequestDump {
