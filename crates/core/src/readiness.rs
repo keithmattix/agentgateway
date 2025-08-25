@@ -56,8 +56,8 @@ impl Drop for BlockReady {
 			);
 		} else {
 			info!(
-				"Task '{}' complete ({dur:?}), still awaiting {left} tasks",
-				self.name
+				"Task '{}' complete ({dur:?}), still awaiting {left} tasks: {pending:?}",
+				self.name,
 			);
 		}
 	}
