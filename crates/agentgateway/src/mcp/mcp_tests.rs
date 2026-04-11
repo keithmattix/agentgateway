@@ -141,6 +141,44 @@ async fn stream_to_multiplex() {
 }
 
 #[tokio::test]
+async fn stateless_multiplex_tool_call_initializes_only_target() {
+	let mock_a = mock_streamable_http_server(true).await;
+	let mock_b = mock_streamable_http_server(true).await;
+	let t = setup_proxy_test("{}")
+		.unwrap()
+		.with_multiplex_mcp_backend(
+			"mcp",
+			vec![("a", mock_a.addr, false), ("b", mock_b.addr, false)],
+			false,
+		)
+		.with_bind(simple_bind(basic_named_route(strng::new("/mcp"))));
+	let io = t.serve_real_listener(strng::new("bind")).await;
+	let client = mcp_streamable_client(io).await;
+
+	// A direct tool call to one target should initialize only that target.
+	let _ = client
+		.call_tool(
+			rmcp::model::CallToolRequestParams::new("a_echo").with_arguments(
+				serde_json::json!({"hi": "world"})
+					.as_object()
+					.cloned()
+					.unwrap(),
+			),
+		)
+		.await
+		.unwrap();
+
+	// Calling b_get_init_count itself performs one initialize for target b.
+	// If target b had already been initialized by fanout, this would return 2.
+	let b_init_count = client
+		.call_tool(rmcp::model::CallToolRequestParams::new("b_get_init_count"))
+		.await
+		.unwrap();
+	let b_init_count_text = &b_init_count.content[0].raw.as_text().unwrap().text;
+	assert_eq!(b_init_count_text, "1");
+}
+
+#[tokio::test]
 async fn stateless_to_stateful() {
 	let mock = mock_streamable_http_server(true).await;
 	let (_bind, io) = setup_proxy(&mock, false, false).await;
@@ -970,6 +1008,7 @@ mod mockserver {
 	#[derive(Clone)]
 	pub struct Counter {
 		counter: Arc<Mutex<i32>>,
+		init_counter: Arc<Mutex<i32>>,
 		tool_router: ToolRouter<Counter>,
 		prompt_router: PromptRouter<Counter>,
 	}
@@ -980,6 +1019,7 @@ mod mockserver {
 		pub fn new() -> Self {
 			Self {
 				counter: Arc::new(Mutex::new(0)),
+				init_counter: Arc::new(Mutex::new(0)),
 				tool_router: Self::tool_router(),
 				prompt_router: Self::prompt_router(),
 			}
@@ -1047,6 +1087,14 @@ mod mockserver {
 					.get("authorization")
 					.map(|s| String::from_utf8_lossy(s.as_bytes()))
 					.unwrap_or_default(),
+			)]))
+		}
+
+		#[tool(description = "Get initialize call count")]
+		async fn get_init_count(&self) -> Result<CallToolResult, McpError> {
+			let init_counter = self.init_counter.lock().await;
+			Ok(CallToolResult::success(vec![Content::text(
+				init_counter.to_string(),
 			)]))
 		}
 	}
@@ -1176,6 +1224,8 @@ mod mockserver {
 			_request: InitializeRequestParams,
 			_: RequestContext<RoleServer>,
 		) -> Result<InitializeResult, McpError> {
+			let mut init_counter = self.init_counter.lock().await;
+			*init_counter += 1;
 			Ok(self.get_info())
 		}
 	}

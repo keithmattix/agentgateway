@@ -486,6 +486,22 @@ impl Relay {
 
 		Ok(accepted_response())
 	}
+
+	pub async fn send_notification_single(
+		&self,
+		r: ClientNotification,
+		ctx: IncomingRequestContext,
+		service_name: &str,
+	) -> Result<Response, UpstreamError> {
+		let Ok(us) = self.upstreams.get(service_name) else {
+			return Err(UpstreamError::InvalidRequest(format!(
+				"unknown service {service_name}"
+			)));
+		};
+		us.generic_notification(r, &ctx).await?;
+		Ok(accepted_response())
+	}
+
 	fn get_info(
 		pv: ProtocolVersion,
 		multiplexing: bool,
