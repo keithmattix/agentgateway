@@ -57,7 +57,6 @@ impl Session {
 		parts: Parts,
 		message: ClientJsonRpcMessage,
 	) -> Result<Response, ProxyError> {
-		let mut init_target: Option<String> = None;
 		let (req_id, request_type) = match &message {
 			ClientJsonRpcMessage::Request(r) => (Some(r.id.clone()), Some(&r.request)),
 			_ => (None, None),
@@ -75,7 +74,6 @@ impl Session {
 						Ok(target) => target,
 						Err(err) => return Self::handle_error(req_id.clone(), Err(err)).await,
 					};
-					init_target = Some(service_name.to_string());
 					let res = self
 						.send_init_single(parts.clone(), init_request, service_name)
 						.await;
@@ -87,7 +85,15 @@ impl Session {
 							self.id = id.into();
 						}
 					}
-					Self::handle_error(req_id, res).await?;
+					Self::handle_error(Some(RequestId::Number(0)), res).await?;
+					// Now send the initialized notification
+					let _ = Self::handle_error(
+						None,
+						self
+							.send_initialized_notification_single(parts.clone(), service_name)
+							.await,
+					)
+					.await?;
 				},
 				_ => {
 					// We should fan out the initialize request to all MCP servers
@@ -97,29 +103,18 @@ impl Session {
 							ClientJsonRpcMessage::request(init_request.into(), RequestId::Number(0)),
 						)
 						.await?;
+					let notification = ClientJsonRpcMessage::notification(
+						rmcp::model::InitializedNotification {
+							method: Default::default(),
+							extensions: Default::default(),
+						}
+						.into(),
+					);
+					let _ = self.send(parts.clone(), notification).await?;
 				},
 			}
-			// And we need to notify as well.
-			if let Some(service_name) = init_target.as_deref() {
-				let _ = Self::handle_error(
-					None,
-					self
-						.send_initialized_single(parts.clone(), service_name)
-						.await,
-				)
-				.await?;
-			} else {
-				let notification = ClientJsonRpcMessage::notification(
-					rmcp::model::InitializedNotification {
-						method: Default::default(),
-						extensions: Default::default(),
-					}
-					.into(),
-				);
-				let _ = self.send(parts.clone(), notification).await?;
-			}
 		}
-		// Now we can send the message like normal
+		// Now we can send the message like normal (if it's tools/call, it'll go to the initialized target)
 		self.send(parts, message).await
 	}
 
@@ -248,7 +243,7 @@ impl Session {
 			.await
 	}
 
-	async fn send_initialized_single(
+	async fn send_initialized_notification_single(
 		&self,
 		parts: Parts,
 		service_name: &str,
