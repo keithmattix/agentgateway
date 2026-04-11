@@ -66,10 +66,14 @@ impl Session {
 			let init_request = rmcp::model::InitializeRequest::new(get_client_info());
 			// first, determine how widely to send the initialize
 			match request_type {
-				Some(ClientRequest::CallToolRequest(ctr)) => {
-					// Only one MCP server will respond to this request, so we can just send an initialize to that one
-					// instead of fanning out.
-					let name = ctr.params.name.clone();
+				Some(ClientRequest::CallToolRequest(_)) | Some(ClientRequest::GetPromptRequest(_)) => {
+					// Single-target methods only hit one backend, so initialize/initialized should be scoped
+					// to that backend rather than fanning out.
+					let name = match request_type {
+						Some(ClientRequest::CallToolRequest(ctr)) => ctr.params.name.to_string(),
+						Some(ClientRequest::GetPromptRequest(gpr)) => gpr.params.name.clone(),
+						_ => unreachable!("match arm guarantees single-target request type"),
+					};
 					let (service_name, _) = match self.relay.parse_resource_name(&name) {
 						Ok(target) => target,
 						Err(err) => return Self::handle_error(req_id.clone(), Err(err)).await,

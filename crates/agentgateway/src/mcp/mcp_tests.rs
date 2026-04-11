@@ -154,6 +154,7 @@ async fn stateless_multiplex_tool_call_initializes_only_target() {
 		.with_bind(simple_bind(basic_named_route(strng::new("/mcp"))));
 	let io = t.serve_real_listener(strng::new("bind")).await;
 	let client = mcp_streamable_client(io).await;
+	let a_init_before = mock_a.init_count().await;
 	let b_init_before = mock_b.init_count().await;
 
 	// A direct tool call to one target should initialize only that target.
@@ -168,7 +169,44 @@ async fn stateless_multiplex_tool_call_initializes_only_target() {
 		)
 		.await
 		.unwrap();
+	let a_init_after = mock_a.init_count().await;
 	let b_init_after = mock_b.init_count().await;
+	assert_eq!(a_init_after, a_init_before + 1);
+	assert_eq!(b_init_after, b_init_before);
+}
+
+#[tokio::test]
+async fn stateless_multiplex_get_prompt_initializes_only_target() {
+	let mock_a = mock_streamable_http_server(true).await;
+	let mock_b = mock_streamable_http_server(true).await;
+	let t = setup_proxy_test("{}")
+		.unwrap()
+		.with_multiplex_mcp_backend(
+			"mcp",
+			vec![("a", mock_a.addr, false), ("b", mock_b.addr, false)],
+			false,
+		)
+		.with_bind(simple_bind(basic_named_route(strng::new("/mcp"))));
+	let io = t.serve_real_listener(strng::new("bind")).await;
+	let client = mcp_streamable_client(io).await;
+	let a_init_before = mock_a.init_count().await;
+	let b_init_before = mock_b.init_count().await;
+
+	let _ = client
+		.get_prompt(
+			rmcp::model::GetPromptRequestParams::new("a_example_prompt").with_arguments(
+				serde_json::json!({"message": "hello"})
+					.as_object()
+					.cloned()
+					.unwrap(),
+			),
+		)
+		.await
+		.unwrap();
+
+	let a_init_after = mock_a.init_count().await;
+	let b_init_after = mock_b.init_count().await;
+	assert_eq!(a_init_after, a_init_before + 1);
 	assert_eq!(b_init_after, b_init_before);
 }
 
