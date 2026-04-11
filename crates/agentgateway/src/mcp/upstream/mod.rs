@@ -134,7 +134,9 @@ impl Upstream {
 				c.stop().await?;
 			},
 			Upstream::McpStreamable(c) => {
-				c.send_delete(ctx).await?;
+				if c.has_session_id() {
+					c.send_delete(ctx).await?;
+				}
 			},
 			Upstream::McpSSE(c) => {
 				c.stop().await?;

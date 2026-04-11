@@ -57,6 +57,7 @@ impl Session {
 		parts: Parts,
 		message: ClientJsonRpcMessage,
 	) -> Result<Response, ProxyError> {
+		let mut init_target: Option<String> = None;
 		let (req_id, request_type) = match &message {
 			ClientJsonRpcMessage::Request(r) => (Some(r.id.clone()), Some(&r.request)),
 			_ => (None, None),
@@ -66,7 +67,6 @@ impl Session {
 			let init_request = rmcp::model::InitializeRequest::new(get_client_info());
 			// first, determine how widely to send the initialize
 			match request_type {
-				// TOOD(keithmattix): what other message types should we handle here? Should we try to define a trait?
 				Some(ClientRequest::CallToolRequest(ctr)) => {
 					// Only one MCP server will respond to this request, so we can just send an initialize to that one
 					// instead of fanning out.
@@ -75,10 +75,10 @@ impl Session {
 						Ok(target) => target,
 						Err(err) => return Self::handle_error(req_id.clone(), Err(err)).await,
 					};
+					init_target = Some(service_name.to_string());
 					let res = self
 						.send_init_single(parts.clone(), init_request, service_name)
 						.await;
-					// N.B - doing this here to avoid a mutable borrow on self (after an immutable borrow in parse_resource_name)
 					if let Some(sessions) = self.relay.get_sessions() {
 						let s = http::sessionpersistence::SessionState::MCP(
 							http::sessionpersistence::MCPSessionState::new(sessions),
@@ -88,13 +88,6 @@ impl Session {
 						}
 					}
 					Self::handle_error(req_id, res).await?;
-					let _ = Self::handle_error(
-						None,
-						self
-							.send_initialized_notification_single(parts.clone(), service_name)
-							.await,
-					)
-					.await?;
 				},
 				_ => {
 					// We should fan out the initialize request to all MCP servers
@@ -104,18 +97,29 @@ impl Session {
 							ClientJsonRpcMessage::request(init_request.into(), RequestId::Number(0)),
 						)
 						.await?;
-					let notification = ClientJsonRpcMessage::notification(
-						rmcp::model::InitializedNotification {
-							method: Default::default(),
-							extensions: Default::default(),
-						}
-						.into(),
-					);
-					let _ = self.send(parts.clone(), notification).await?;
 				},
 			}
+			// And we need to notify as well.
+			if let Some(service_name) = init_target.as_deref() {
+				let _ = Self::handle_error(
+					None,
+					self
+						.send_initialized_single(parts.clone(), service_name)
+						.await,
+				)
+				.await?;
+			} else {
+				let notification = ClientJsonRpcMessage::notification(
+					rmcp::model::InitializedNotification {
+						method: Default::default(),
+						extensions: Default::default(),
+					}
+					.into(),
+				);
+				let _ = self.send(parts.clone(), notification).await?;
+			}
 		}
-		// Now we can send the original message like normal
+		// Now we can send the message like normal
 		self.send(parts, message).await
 	}
 
@@ -244,7 +248,7 @@ impl Session {
 			.await
 	}
 
-	async fn send_initialized_notification_single(
+	async fn send_initialized_single(
 		&self,
 		parts: Parts,
 		service_name: &str,
