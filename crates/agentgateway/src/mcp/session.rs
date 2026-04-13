@@ -10,8 +10,7 @@ use anyhow::anyhow;
 use futures_util::StreamExt;
 use headers::HeaderMapExt;
 use rmcp::model::{
-	ClientInfo, ClientJsonRpcMessage, ClientNotification, ClientRequest, ConstString, Implementation,
-	InitializeRequest, JsonRpcRequest, ProtocolVersion, RequestId, ServerJsonRpcMessage,
+	ClientInfo, ClientJsonRpcMessage, ClientNotification, ClientRequest, ConstString, Implementation, InitializeRequest, JsonRpcRequest, ProtocolVersion, RequestId, RootsCapabilities, ServerJsonRpcMessage
 };
 use rmcp::transport::common::http_header::{EVENT_STREAM_MIME_TYPE, JSON_MIME_TYPE};
 use sse_stream::{KeepAlive, Sse, SseBody, SseStream};
@@ -235,7 +234,7 @@ impl Session {
 			l.session_id = Some(session_id);
 		});
 
-		init_request.params.capabilities.roots = None;
+		init_request.params.capabilities.roots = self.get_roots_capabilities();
 		self
 			.relay
 			.send_single(
@@ -300,7 +299,7 @@ impl Session {
 						// Instead, we hijack this to tell them not to so they do not send requests that we cannot
 						// actually support
 						// This could probably be more easily done without multiplexing but for now neither supports.
-						ir.params.capabilities.roots = None;
+						ir.params.capabilities.roots = self.get_roots_capabilities();
 
 						let pv = ir.params.protocol_version.clone();
 						let res = self
@@ -498,6 +497,10 @@ impl Session {
 				"unsupported message type".to_string(),
 			)),
 		}
+	}
+
+	fn get_roots_capabilities(&self) -> Option<RootsCapabilities> {
+		None
 	}
 }
 
