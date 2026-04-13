@@ -10,7 +10,9 @@ use anyhow::anyhow;
 use futures_util::StreamExt;
 use headers::HeaderMapExt;
 use rmcp::model::{
-	ClientInfo, ClientJsonRpcMessage, ClientNotification, ClientRequest, ConstString, Implementation, InitializeRequest, JsonRpcRequest, ProtocolVersion, RequestId, RootsCapabilities, ServerJsonRpcMessage
+	ClientInfo, ClientJsonRpcMessage, ClientNotification, ClientRequest, ConstString, Implementation,
+	InitializeRequest, JsonRpcRequest, ProtocolVersion, RequestId, RootsCapabilities,
+	ServerJsonRpcMessage,
 };
 use rmcp::transport::common::http_header::{EVENT_STREAM_MIME_TYPE, JSON_MIME_TYPE};
 use sse_stream::{KeepAlive, Sse, SseBody, SseStream};
