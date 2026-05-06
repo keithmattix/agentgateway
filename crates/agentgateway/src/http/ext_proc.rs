@@ -9,6 +9,7 @@ use prost_wkt_types::Struct;
 use proto::body_mutation::Mutation;
 use proto::processing_request::Request;
 use proto::processing_response::Response;
+use protos::envoy::service::ext_proc::v3::{BodySendMode, ProtocolConfiguration};
 use serde_json::Value as JsonValue;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio_stream::StreamExt;
@@ -331,6 +332,8 @@ struct ExtProcInstance {
 	metadata_context: Option<HashMap<String, HashMap<String, Arc<cel::Expression>>>>,
 	req_attributes: Option<HashMap<String, Arc<cel::Expression>>>,
 	resp_attributes: Option<HashMap<String, Arc<cel::Expression>>>,
+	req_body_mode: Option<BodySendMode>,
+	resp_body_mode: Option<BodySendMode>,
 }
 
 impl ExtProcInstance {
@@ -363,7 +366,7 @@ impl ExtProcInstance {
 			let responses = match c.process(req_stream).await {
 				Ok(r) => r,
 				Err(e) => {
-					warn!(?failure_mode, "failed to initialize endpoint picker: {e:?}");
+					warn!(?failure_mode, "failed to initialize extproc client: {e:?}");
 					return;
 				},
 			};
@@ -408,6 +411,8 @@ impl ExtProcInstance {
 			metadata_context,
 			req_attributes,
 			resp_attributes,
+			req_body_mode: Some(BodySendMode::FullDuplexStreamed),
+			resp_body_mode: Some(BodySendMode::FullDuplexStreamed),
 		}
 	}
 
@@ -447,6 +452,32 @@ impl ExtProcInstance {
 
 		let failure_mode = self.failure_mode;
 		let end_of_stream = req.body().is_end_stream();
+		// Default to FULL_DUPLEX_STREAMED
+		// TODO(keithmattix): As a proxy, we're just going to say we only support a subset of
+		// modes and NONE is not one of them (i.e. we will always send the body).
+		let req_body_mode = self.req_body_mode.unwrap_or_else(|| {
+			// TOOD(keithmattix): should I create a macro for this?
+			#[cfg(debug_assertions)]
+			{
+				panic!("extproc request body mode should not be None!");
+			}
+			#[cfg(not(debug_assertions))]
+			{
+				warn!("extproc request body mode should not be None; defaulting to FULL_DUPLEX_STREAMED");
+				BodySendMode::FullDuplexStreamed
+			}
+		});
+		let resp_body_mode = self.resp_body_mode.unwrap_or_else(|| {
+			#[cfg(debug_assertions)]
+			{
+				panic!("extproc response body mode should not be None!");
+			}
+			#[cfg(not(debug_assertions))]
+			{
+				warn!("extproc response body mode should not be None; defaulting to FULL_DUPLEX_STREAMED");
+				BodySendMode::FullDuplexStreamed
+			}
+		});
 
 		// Send the request headers to ext_proc.
 		if let Err(e) = self
@@ -457,7 +488,11 @@ impl ExtProcInstance {
 				})),
 				metadata_context: metadata_context.as_deref().cloned(),
 				attributes,
-				protocol_config: Default::default(),
+				protocol_config: Some(ProtocolConfiguration {
+					request_body_mode: req_body_mode.into(),
+					response_body_mode: resp_body_mode.into(),
+					..Default::default()
+				}),
 				observability_mode: false,
 			})
 			.await
@@ -573,7 +608,7 @@ impl ExtProcInstance {
 					request,
 					metadata_context: metadata_context.as_deref().cloned(),
 					attributes: Default::default(),
-					protocol_config: Default::default(),
+					protocol_config: None, // Don't send after the first ProcessingRequest
 					observability_mode: false,
 				})
 				.await
@@ -592,7 +627,7 @@ impl ExtProcInstance {
 				})),
 				metadata_context: final_metadata,
 				attributes: Default::default(),
-				protocol_config: Default::default(),
+				protocol_config: None, // Don't send after the first ProcessingRequest
 				observability_mode: false,
 			})
 			.await;
@@ -658,7 +693,7 @@ impl ExtProcInstance {
 				})),
 				metadata_context: metadata_context.as_deref().cloned(),
 				attributes,
-				protocol_config: Default::default(),
+				protocol_config: None, // Don't send after the last ProcessingRequest
 				observability_mode: false,
 			})
 			.await?;
