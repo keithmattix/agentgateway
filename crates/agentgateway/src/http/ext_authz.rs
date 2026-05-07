@@ -10,6 +10,7 @@ use quick_cache::sync::Cache;
 use serde_json::Value as JsonValue;
 
 use crate::cel::{BufferedBody, Expression, Value};
+use crate::http::bufferbody::{self, BodyOptions, BufferRequestBodyError};
 use crate::http::ext_authz::proto::attribute_context::HttpRequest;
 use crate::http::ext_authz::proto::authorization_client::AuthorizationClient;
 use crate::http::ext_authz::proto::check_response::HttpResponse;
@@ -49,29 +50,6 @@ pub mod proto {
 #[apply(schema!)]
 #[derive(Default, ::cel::DynamicType)]
 pub struct ExtAuthzDynamicMetadata(serde_json::Map<String, JsonValue>);
-
-#[apply(schema!)]
-pub struct BodyOptions {
-	/// Maximum size of request body to buffer (default: 8192)
-	#[serde(default)]
-	pub max_request_bytes: u32,
-	/// If true, send partial body when max_request_bytes is reached
-	#[serde(default)]
-	pub allow_partial_message: bool,
-	/// If true, pack body as raw bytes in gRPC
-	#[serde(default)]
-	pub pack_as_bytes: bool,
-}
-
-impl Default for BodyOptions {
-	fn default() -> Self {
-		Self {
-			max_request_bytes: 8192,
-			allow_partial_message: false,
-			pack_as_bytes: false,
-		}
-	}
-}
 
 #[apply(schema!)]
 #[derive(Default)]
@@ -356,7 +334,7 @@ impl ExtAuthz {
 		}
 
 		let (body, raw_body, original_body_size) = if let Some(body_opts) = &self.include_request_body {
-			match Self::buffer_request_body(req, body_opts).await {
+			match bufferbody::buffer_request_body(req, body_opts).await {
 				Ok(buffered) => {
 					let bytes = buffered.body;
 					if body_opts.pack_as_bytes {
@@ -635,7 +613,7 @@ impl ExtAuthz {
 		};
 
 		let (body, is_partial_body) = if let Some(body_opts) = &self.include_request_body {
-			match Self::buffer_request_body(req, body_opts).await {
+			match bufferbody::buffer_request_body(req, body_opts).await {
 				Ok(buffered) => (buffered.body, buffered.is_partial),
 				Err(BufferRequestBodyError::TooLarge) => {
 					return Err(ProxyError::ExternalAuthorizationFailed(Some(

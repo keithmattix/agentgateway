@@ -926,6 +926,13 @@ message TrafficPolicySpec {
       FAIL_CLOSED = 0;
       FAIL_OPEN = 1;
     }
+    // TODO(keithmattix): Should we depend on the actual Envoy types?
+    enum BodySendMode {
+      NONE = 0;
+      reserved 1, 3; // STREAMED and BUFFERED_PARTIAL respectively
+      BUFFERED = 2;
+      FULL_DUPLEX_STREAMED = 4;
+    }
     BackendReference target = 1;
     FailureMode failure_mode = 2;
 
@@ -936,6 +943,8 @@ message TrafficPolicySpec {
       map<string, string> context = 1;
     }
     map<string, NamespacedMetadataContext> metadata_context = 5;
+    BodySendMode request_body_mode = 6;
+    BodySendMode response_body_mode = 7;
   }
   enum PolicyPhase {
     ROUTE = 0;
