@@ -1756,6 +1756,16 @@ fn traffic_policy_from_proto(
 				Ok(tps::ext_proc::FailureMode::FailOpen) => http::ext_proc::FailureMode::FailOpen,
 				_ => http::ext_proc::FailureMode::FailClosed,
 			};
+			let request_body_mode = match ep.request_body_mode() {
+				tps::ext_proc::BodySendMode::None => http::ext_proc::BodySendMode::None,
+				tps::ext_proc::BodySendMode::Buffered => http::ext_proc::BodySendMode::Buffered,
+				tps::ext_proc::BodySendMode::FullDuplexStreamed => http::ext_proc::BodySendMode::FullDuplexStreamed,
+			};
+			let response_body_mode = match ep.response_body_mode() {
+				tps::ext_proc::BodySendMode::None => http::ext_proc::BodySendMode::None,
+				tps::ext_proc::BodySendMode::Buffered => http::ext_proc::BodySendMode::Buffered,
+				tps::ext_proc::BodySendMode::FullDuplexStreamed => http::ext_proc::BodySendMode::FullDuplexStreamed,
+			};
 			fn to_cel_attrs(
 				diagnostics: &mut Diagnostics,
 				context: &str,
