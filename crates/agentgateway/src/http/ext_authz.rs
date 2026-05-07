@@ -8,6 +8,7 @@ use prost_types::Timestamp;
 use serde_json::Value as JsonValue;
 
 use crate::cel::{BufferedBody, Expression, Value};
+use crate::http::bufferbody::{self, BodyOptions, BufferRequestBodyError};
 use crate::http::ext_authz::proto::attribute_context::HttpRequest;
 use crate::http::ext_authz::proto::authorization_client::AuthorizationClient;
 use crate::http::ext_authz::proto::check_response::HttpResponse;
@@ -17,6 +18,7 @@ use crate::http::ext_authz::proto::{
 use crate::http::ext_proc::GrpcReferenceChannel;
 use crate::http::filters::BackendRequestTimeout;
 use crate::http::transformation_cel::SerAsStr;
+
 use crate::http::{
 	HeaderName, HeaderOrPseudo, PolicyResponse, Request, RequestOrResponse, Response,
 	envoy_proto_common, jwt,
@@ -46,29 +48,6 @@ pub mod proto {
 #[apply(schema!)]
 #[derive(Default, ::cel::DynamicType)]
 pub struct ExtAuthzDynamicMetadata(serde_json::Map<String, JsonValue>);
-
-#[apply(schema!)]
-pub struct BodyOptions {
-	/// Maximum size of request body to buffer (default: 8192)
-	#[serde(default)]
-	pub max_request_bytes: u32,
-	/// If true, send partial body when max_request_bytes is reached
-	#[serde(default)]
-	pub allow_partial_message: bool,
-	/// If true, pack body as raw bytes in gRPC
-	#[serde(default)]
-	pub pack_as_bytes: bool,
-}
-
-impl Default for BodyOptions {
-	fn default() -> Self {
-		Self {
-			max_request_bytes: 8192,
-			allow_partial_message: false,
-			pack_as_bytes: false,
-		}
-	}
-}
 
 #[apply(schema!)]
 #[derive(Default)]
@@ -177,39 +156,6 @@ impl ExtAuthz {
 }
 
 impl ExtAuthz {
-	async fn buffer_request_body(
-		req: &mut Request,
-		body_opts: &BodyOptions,
-	) -> Result<BufferedRequestBody, BufferRequestBodyError> {
-		let max_size = body_opts.max_request_bytes as usize;
-
-		let peek_limit = max_size.saturating_add(1);
-		let body = crate::http::inspect_body_with_limit(req.body_mut(), peek_limit)
-			.await
-			.map_err(BufferRequestBodyError::Read)?;
-		let is_partial = body.len() > max_size;
-
-		if is_partial && !body_opts.allow_partial_message {
-			return Err(BufferRequestBodyError::TooLarge);
-		}
-
-		let body = if is_partial {
-			body.slice(0..max_size)
-		} else {
-			body
-		};
-		let original_size = match is_partial {
-			false => i64::try_from(body.len()).unwrap_or(i64::MAX),
-			true => -1,
-		};
-
-		Ok(BufferedRequestBody {
-			body,
-			is_partial,
-			original_size,
-		})
-	}
-
 	/// Handle authorization failure with FailureMode configuration
 	fn handle_auth_failure(&self, error_msg: &str) -> Result<PolicyResponse, ProxyError> {
 		match &self.failure_mode {
@@ -321,7 +267,7 @@ impl ExtAuthz {
 		}
 
 		let (body, raw_body, original_body_size) = if let Some(body_opts) = &self.include_request_body {
-			match Self::buffer_request_body(req, body_opts).await {
+			match bufferbody::buffer_request_body(req, body_opts).await {
 				Ok(buffered) => {
 					let bytes = buffered.body;
 					if body_opts.pack_as_bytes {
@@ -569,7 +515,7 @@ impl ExtAuthz {
 		};
 
 		let (body, is_partial_body) = if let Some(body_opts) = &self.include_request_body {
-			match Self::buffer_request_body(req, body_opts).await {
+			match bufferbody::buffer_request_body(req, body_opts).await {
 				Ok(buffered) => (buffered.body, buffered.is_partial),
 				Err(BufferRequestBodyError::TooLarge) => {
 					return Err(ProxyError::ExternalAuthorizationFailed(Some(
@@ -790,18 +736,6 @@ impl ExtAuthz {
 		let js = res.json().map_err(|_| cel::Error::JsonConvert)?;
 		Ok(js)
 	}
-}
-
-struct BufferedRequestBody {
-	body: Bytes,
-	is_partial: bool,
-	original_size: i64,
-}
-
-#[derive(Debug)]
-enum BufferRequestBodyError {
-	TooLarge,
-	Read(anyhow::Error),
 }
 
 fn apply_query_parameters_to_request(

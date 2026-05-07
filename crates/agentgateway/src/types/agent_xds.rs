@@ -1520,7 +1520,7 @@ fn traffic_policy_from_proto(
 			let include_request_body =
 				ea.include_request_body
 					.as_ref()
-					.map(|body_opts| http::ext_authz::BodyOptions {
+					.map(|body_opts| http::bufferbody::BodyOptions {
 						max_request_bytes: body_opts.max_request_bytes,
 						allow_partial_message: body_opts.allow_partial_message,
 						pack_as_bytes: body_opts.pack_as_bytes,
@@ -1770,6 +1770,16 @@ fn traffic_policy_from_proto(
 				Ok(tps::ext_proc::FailureMode::FailOpen) => http::ext_proc::FailureMode::FailOpen,
 				_ => http::ext_proc::FailureMode::FailClosed,
 			};
+			let request_body_mode = match ep.request_body_mode() {
+				tps::ext_proc::BodySendMode::None => http::ext_proc::BodySendMode::None,
+				tps::ext_proc::BodySendMode::Buffered => http::ext_proc::BodySendMode::Buffered,
+				tps::ext_proc::BodySendMode::FullDuplexStreamed => http::ext_proc::BodySendMode::FullDuplexStreamed,
+			};
+			let response_body_mode = match ep.response_body_mode() {
+				tps::ext_proc::BodySendMode::None => http::ext_proc::BodySendMode::None,
+				tps::ext_proc::BodySendMode::Buffered => http::ext_proc::BodySendMode::Buffered,
+				tps::ext_proc::BodySendMode::FullDuplexStreamed => http::ext_proc::BodySendMode::FullDuplexStreamed,
+			};
 			fn to_cel_attrs(
 				diagnostics: &mut Diagnostics,
 				context: &str,
@@ -1834,6 +1844,8 @@ fn traffic_policy_from_proto(
 							}),
 					)
 				},
+				request_body_mode,
+				response_body_mode,
 			})
 		},
 		Some(tps::Kind::RequestHeaderModifier(rhm)) => {
