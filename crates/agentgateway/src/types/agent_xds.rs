@@ -1806,6 +1806,8 @@ fn traffic_policy_from_proto(
 					"traffic.extProc.responseAttributes",
 					&ep.response_attributes,
 				),
+				request_body_mode: Default::default(),
+				response_body_mode: Default::default(),
 				metadata_context: if ep.metadata_context.is_empty() {
 					None
 				} else {

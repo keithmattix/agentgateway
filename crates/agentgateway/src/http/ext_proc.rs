@@ -77,6 +77,24 @@ pub enum FailureMode {
 
 #[apply(schema!)]
 #[derive(Default, Copy, PartialEq, Eq)]
+pub enum BodyMode {
+	/// Stream body chunks as they arrive. Default behavior.
+	#[default]
+	Streamed,
+	/// Do not send the body to ext_proc. Body flows through unchanged.
+	None,
+	/// Buffer the entire body and send as a single chunk.
+	/// Returns an error if the body exceeds max_bytes.
+	#[serde(rename_all = "camelCase")]
+	Buffered { max_bytes: u32 },
+	/// Buffer up to max_bytes and send the partial body.
+	/// If the body exceeds max_bytes, it is truncated.
+	#[serde(rename_all = "camelCase")]
+	BufferedPartial { max_bytes: u32 },
+}
+
+#[apply(schema!)]
+#[derive(Default, Copy, PartialEq, Eq)]
 /// Controls how an endpoint-picker-selected destination is used.
 pub enum InferenceRoutingDestinationMode {
 	/// Require the selected destination to match agentgateway's local service endpoints.
@@ -154,6 +172,8 @@ impl InferenceRouting {
 				None,
 				None,
 				None,
+				BodyMode::default(),
+				BodyMode::default(),
 			)),
 		}
 	}
@@ -229,6 +249,12 @@ pub struct ExtProc {
 	/// Maps to the response `attributes` field in ProcessingRequest, and allows dynamic CEL expressions.
 	#[serde(default, skip_serializing_if = "Option::is_none")]
 	pub response_attributes: Option<HashMap<String, Arc<cel::Expression>>>,
+	/// How the request body is sent to the ext_proc service
+	#[serde(default, skip_serializing_if = "crate::serdes::is_default")]
+	pub request_body_mode: BodyMode,
+	/// How the response body is sent to the ext_proc service
+	#[serde(default, skip_serializing_if = "crate::serdes::is_default")]
+	pub response_body_mode: BodyMode,
 }
 
 impl ExtProc {
@@ -242,6 +268,8 @@ impl ExtProc {
 				self.metadata_context.clone(),
 				self.request_attributes.clone(),
 				self.response_attributes.clone(),
+				self.request_body_mode,
+				self.response_body_mode,
 			)),
 		}
 	}
@@ -325,6 +353,8 @@ struct ExtProcInstance {
 	metadata_context: Option<HashMap<String, HashMap<String, Arc<cel::Expression>>>>,
 	req_attributes: Option<HashMap<String, Arc<cel::Expression>>>,
 	resp_attributes: Option<HashMap<String, Arc<cel::Expression>>>,
+	request_body_mode: BodyMode,
+	response_body_mode: BodyMode,
 }
 
 impl ExtProcInstance {
@@ -340,6 +370,8 @@ impl ExtProcInstance {
 		metadata_context: Option<HashMap<String, HashMap<String, Arc<cel::Expression>>>>,
 		req_attributes: Option<HashMap<String, Arc<cel::Expression>>>,
 		resp_attributes: Option<HashMap<String, Arc<cel::Expression>>>,
+		request_body_mode: BodyMode,
+		response_body_mode: BodyMode,
 	) -> ExtProcInstance {
 		trace!("connecting to {:?}", target);
 		let chan = GrpcReferenceChannel {
@@ -402,6 +434,8 @@ impl ExtProcInstance {
 			metadata_context,
 			req_attributes,
 			resp_attributes,
+			request_body_mode,
+			response_body_mode,
 		}
 	}
 
@@ -440,7 +474,7 @@ impl ExtProcInstance {
 			.unwrap_or_default();
 
 		let failure_mode = self.failure_mode;
-		let end_of_stream = req.body().is_end_stream();
+		let end_of_stream = req.body().is_end_stream() || self.request_body_mode == BodyMode::None;
 
 		// Send the request headers to ext_proc.
 		if let Err(e) = self
@@ -462,6 +496,37 @@ impl ExtProcInstance {
 				return Ok((req, None));
 			}
 			return Err(e);
+		}
+
+		// For None mode: pass original body through unchanged, only process headers.
+		if self.request_body_mode == BodyMode::None {
+			let (parts, original_body) = req.into_parts();
+			let (mut dummy_tx, _dummy_rx) =
+				tokio::sync::mpsc::channel::<Result<Frame<Bytes>, Infallible>>(1);
+			let mut req = http::Request::from_parts(parts, original_body);
+			let mut rx = self
+				.rx_resp_for_request
+				.take()
+				.expect("mutate_request called twice");
+			loop {
+				let Some(presp) = rx.recv().await else {
+					if failure_mode == FailureMode::FailOpen {
+						trace!("fail open triggered");
+						self.skipped = true;
+						return Ok((req, None));
+					}
+					return Err(Error::NoMoreResponses);
+				};
+				if let Some(resp) = to_immediate_response(&presp) {
+					return Ok((req, Some(resp)));
+				}
+				let (headers_done, _) =
+					handle_response_for_request_mutation(false, Some(&mut req), &mut dummy_tx, presp).await;
+				if headers_done {
+					req.headers_mut().remove(http::header::CONTENT_LENGTH);
+					return Ok((req, None));
+				}
+			}
 		}
 
 		// At this point, we start body handling. Fail open + streaming bodies is a disaster,
@@ -639,7 +704,7 @@ impl ExtProcInstance {
 			})
 			.unwrap_or_default();
 		let (parts, body) = req.into_parts();
-		let end_of_stream = body.is_end_stream();
+		let end_of_stream = body.is_end_stream() || self.response_body_mode == BodyMode::None;
 		let had_body = !end_of_stream;
 
 		// Send the response headers to ext_proc.
@@ -656,6 +721,30 @@ impl ExtProcInstance {
 				observability_mode: false,
 			})
 			.await?;
+
+		// For None mode: pass original body through unchanged, only process headers.
+		if self.response_body_mode == BodyMode::None {
+			let (mut dummy_tx, _) = tokio::sync::mpsc::channel::<Result<Frame<Bytes>, Infallible>>(1);
+			let mut resp = http::Response::from_parts(parts, body);
+			let mut rx = self
+				.rx_resp_for_response
+				.take()
+				.expect("mutate_response called twice");
+			loop {
+				let Some(presp) = rx.recv().await else {
+					return Err(Error::NoMoreResponses);
+				};
+				if let Some(dr) = to_immediate_response(&presp) {
+					return Ok((resp, Some(dr)));
+				}
+				let (headers_done, _) =
+					handle_response_for_response_mutation(false, Some(&mut resp), &mut dummy_tx, presp).await;
+				if headers_done {
+					resp.headers_mut().remove(http::header::CONTENT_LENGTH);
+					return Ok((resp, None));
+				}
+			}
+		}
 
 		// The EPP will await for our headers and body. The body is going to be streaming in.
 		// We will spin off a task that is going to pipe the body to the ext_proc server as we read it.

@@ -17,7 +17,7 @@ use crate::http::ext_proc::proto::{
 	BodyMutation, CommonResponse, HeaderMutation, HeaderValue, HeaderValueOption, HttpHeaders,
 	ProcessingResponse, body_mutation,
 };
-use crate::http::ext_proc::{ExtProcDynamicMetadata, proto};
+use crate::http::ext_proc::{BodyMode, ExtProcDynamicMetadata, proto};
 use crate::http::{Body, ext_proc};
 use crate::test_helpers::MockInstance;
 use crate::test_helpers::extprocmock::{
@@ -288,6 +288,77 @@ pub async fn setup_ext_proc_mock_with_meta<T: Handler + Send + Sync + 'static>(
 		.await;
 	let io = t.serve_http(strng::new("bind"));
 	(mock, ext_proc, t, io)
+}
+
+pub async fn setup_ext_proc_mock_with_body_modes<T: Handler + Send + Sync + 'static>(
+	mock: MockServer,
+	failure_mode: ext_proc::FailureMode,
+	mock_ext_proc: ExtProcMock<T>,
+	request_body_mode: BodyMode,
+	response_body_mode: BodyMode,
+) -> (
+	MockServer,
+	MockInstance,
+	TestBind,
+	Client<MemoryConnector, Body>,
+) {
+	let ext_proc = mock_ext_proc.spawn().await;
+
+	let t = setup_proxy_test("{}")
+		.unwrap()
+		.with_backend(*mock.address())
+		.with_backend(ext_proc.address)
+		.with_bind(simple_bind())
+		.with_route(basic_route(*mock.address()))
+		.attach_route_policy_builder(json!({
+			"extProc": {
+				"host": ext_proc.address,
+				"failureMode": failure_mode,
+				"requestBodyMode": request_body_mode,
+				"responseBodyMode": response_body_mode,
+			}
+		}))
+		.await;
+	let io = t.serve_http(strng::new("bind"));
+	(mock, ext_proc, t, io)
+}
+
+#[tokio::test]
+async fn body_mode_none_skips_body_extproc() {
+	// Mock backend returns a fixed body
+	let mock = body_mock(b"backend_response").await;
+	// ExtProc that panics if it receives a request body - verifying body is never sent
+	let (_mock, _ext_proc, _bind, io) = setup_ext_proc_mock_with_body_modes(
+		mock,
+		ext_proc::FailureMode::FailClosed,
+		ExtProcMock::new(NoneBodyModeExtProc::default),
+		BodyMode::None,
+		BodyMode::Streamed,
+	)
+	.await;
+	// Send a request WITH a body - in None mode the body should NOT be sent to extproc
+	let res = send_request_body(io, Method::POST, "http://lo", b"request_body").await;
+	assert_eq!(res.status(), 200);
+}
+
+#[tokio::test]
+async fn body_mode_none_response_body_passthrough() {
+	// Mock backend returns a specific response body
+	let mock = body_mock(b"original_response_body").await;
+	// ExtProc that panics if it receives a response body
+	let (_mock, _ext_proc, _bind, io) = setup_ext_proc_mock_with_body_modes(
+		mock,
+		ext_proc::FailureMode::FailClosed,
+		ExtProcMock::new(NoneBodyModeExtProc::default),
+		BodyMode::Streamed,
+		BodyMode::None,
+	)
+	.await;
+	let res = send_request(io, Method::GET, "http://lo").await;
+	assert_eq!(res.status(), 200);
+	let body = read_body_raw(res.into_body()).await;
+	// Response body should flow through unchanged
+	assert_eq!(body.as_ref(), b"original_response_body");
 }
 
 const STANDALONE_SERVICE_NAME: &str = "model-service.default.svc.cluster.local";
@@ -810,6 +881,33 @@ impl Handler for FailureExtProcResponse {
 		_: &mpsc::Sender<Result<ProcessingResponse, Status>>,
 	) -> Result<(), Status> {
 		Err(Status::failed_precondition("injected test error"))
+	}
+}
+
+/// Handler for None body mode tests: fails if it receives any body chunks.
+#[derive(Debug, Default)]
+struct NoneBodyModeExtProc {}
+
+#[async_trait::async_trait]
+impl Handler for NoneBodyModeExtProc {
+	async fn handle_request_body(
+		&mut self,
+		_: &proto::HttpBody,
+		_: &mpsc::Sender<Result<ProcessingResponse, Status>>,
+	) -> Result<(), Status> {
+		Err(Status::failed_precondition(
+			"request body should not be sent in None mode",
+		))
+	}
+
+	async fn handle_response_body(
+		&mut self,
+		_: &proto::HttpBody,
+		_: &mpsc::Sender<Result<ProcessingResponse, Status>>,
+	) -> Result<(), Status> {
+		Err(Status::failed_precondition(
+			"response body should not be sent in None mode",
+		))
 	}
 }
 
