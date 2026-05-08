@@ -6933,6 +6933,64 @@ spec:
                                   - message: Must have port for Service reference
                                     rule: '(size(self.group) == 0 && self.kind ==
                                       ''Service'') ? has(self.port) : true'
+                                processingOptions:
+                                  description: processingOptions configures how request
+                                    and response phases are sent to ext_proc.
+                                  properties:
+                                    requestBodyMode:
+                                      default: None
+                                      description: requestBodyMode controls how request
+                                        bodies are sent to the external processor.
+                                      enum:
+                                      - None
+                                      - Buffered
+                                      - FullDuplexStreamed
+                                      type: string
+                                    requestHeaderMode:
+                                      default: Send
+                                      description: requestHeaderMode controls whether
+                                        request headers are sent to the external processor.
+                                      enum:
+                                      - Send
+                                      - Skip
+                                      type: string
+                                    requestTrailerMode:
+                                      default: Skip
+                                      description: requestTrailerMode controls whether
+                                        request trailers are sent to the external
+                                        processor.
+                                      enum:
+                                      - Skip
+                                      - Send
+                                      type: string
+                                    responseBodyMode:
+                                      default: None
+                                      description: responseBodyMode controls how response
+                                        bodies are sent to the external processor.
+                                      enum:
+                                      - None
+                                      - Buffered
+                                      - FullDuplexStreamed
+                                      type: string
+                                    responseHeaderMode:
+                                      default: Send
+                                      description: responseHeaderMode controls whether
+                                        response headers are sent to the external
+                                        processor.
+                                      enum:
+                                      - Send
+                                      - Skip
+                                      type: string
+                                    responseTrailerMode:
+                                      default: Skip
+                                      description: responseTrailerMode controls whether
+                                        response trailers are sent to the external
+                                        processor.
+                                      enum:
+                                      - Skip
+                                      - Send
+                                      type: string
+                                  type: object
                               type: object
                               x-kubernetes-validations:
                               - message: backendRef is required
@@ -6947,10 +7005,65 @@ spec:
                         - message: conditional entries without condition must be last
                           rule: self.filter(e, !has(e.condition)).size() <= 1 && (!self.exists(e,
                             !has(e.condition)) || !has(self[size(self) - 1].condition))
+                      processingOptions:
+                        description: processingOptions configures how request and
+                          response phases are sent to ext_proc.
+                        properties:
+                          requestBodyMode:
+                            default: None
+                            description: requestBodyMode controls how request bodies
+                              are sent to the external processor.
+                            enum:
+                            - None
+                            - Buffered
+                            - FullDuplexStreamed
+                            type: string
+                          requestHeaderMode:
+                            default: Send
+                            description: requestHeaderMode controls whether request
+                              headers are sent to the external processor.
+                            enum:
+                            - Send
+                            - Skip
+                            type: string
+                          requestTrailerMode:
+                            default: Skip
+                            description: requestTrailerMode controls whether request
+                              trailers are sent to the external processor.
+                            enum:
+                            - Skip
+                            - Send
+                            type: string
+                          responseBodyMode:
+                            default: None
+                            description: responseBodyMode controls how response bodies
+                              are sent to the external processor.
+                            enum:
+                            - None
+                            - Buffered
+                            - FullDuplexStreamed
+                            type: string
+                          responseHeaderMode:
+                            default: Send
+                            description: responseHeaderMode controls whether response
+                              headers are sent to the external processor.
+                            enum:
+                            - Send
+                            - Skip
+                            type: string
+                          responseTrailerMode:
+                            default: Skip
+                            description: responseTrailerMode controls whether response
+                              trailers are sent to the external processor.
+                            enum:
+                            - Skip
+                            - Send
+                            type: string
+                        type: object
                     type: object
                     x-kubernetes-validations:
                     - message: conditional cannot be set with any other field
-                      rule: 'has(self.conditional) ? [has(self.backendRef)].filter(x,x==true).size()
+                      rule: 'has(self.conditional) ? [has(self.backendRef),has(self.processingOptions)].filter(x,x==true).size()
                         == 0 : true'
                     - message: 'backendRef: Required value'
                       rule: 'has(self.conditional) ? true : has(self.backendRef)'

@@ -1518,11 +1518,72 @@ type HeaderTransformation struct {
 	Value shared.CELExpression `json:"value"`
 }
 
+// +kubebuilder:validation:Enum=None;Buffered;FullDuplexStreamed
+type BodySendMode string
+
+const (
+	BodySendModeNone               BodySendMode = "None"
+	BodySendModeBuffered           BodySendMode = "Buffered"
+	BodySendModeFullDuplexStreamed BodySendMode = "FullDuplexStreamed"
+)
+
+// +kubebuilder:validation:Enum=Send;Skip
+type HeaderSendMode string
+
+const (
+	HeaderSendModeSend HeaderSendMode = "Send"
+	HeaderSendModeSkip HeaderSendMode = "Skip"
+)
+
+// +kubebuilder:validation:Enum=Skip;Send
+type TrailerSendMode string
+
+const (
+	TrailerSendModeSkip TrailerSendMode = "Skip"
+	TrailerSendModeSend TrailerSendMode = "Send"
+)
+
+// ProcessingOptions configures how ext_proc handles request and response phases.
+type ProcessingOptions struct {
+	// requestBodyMode controls how request bodies are sent to the external processor.
+	// +optional
+	// +kubebuilder:default=None
+	RequestBodyMode *BodySendMode `json:"requestBodyMode,omitempty"`
+
+	// responseBodyMode controls how response bodies are sent to the external processor.
+	// +optional
+	// +kubebuilder:default=None
+	ResponseBodyMode *BodySendMode `json:"responseBodyMode,omitempty"`
+
+	// requestHeaderMode controls whether request headers are sent to the external processor.
+	// +optional
+	// +kubebuilder:default=Send
+	RequestHeaderMode *HeaderSendMode `json:"requestHeaderMode,omitempty"`
+
+	// responseHeaderMode controls whether response headers are sent to the external processor.
+	// +optional
+	// +kubebuilder:default=Send
+	ResponseHeaderMode *HeaderSendMode `json:"responseHeaderMode,omitempty"`
+
+	// requestTrailerMode controls whether request trailers are sent to the external processor.
+	// +optional
+	// +kubebuilder:default=Skip
+	RequestTrailerMode *TrailerSendMode `json:"requestTrailerMode,omitempty"`
+
+	// responseTrailerMode controls whether response trailers are sent to the external processor.
+	// +optional
+	// +kubebuilder:default=Skip
+	ResponseTrailerMode *TrailerSendMode `json:"responseTrailerMode,omitempty"`
+}
+
 type ExtProc struct {
 	// `backendRef` references the External Processor server to reach.
 	// Supported types: `Service` and `Backend`.
 	// +optional // This is actually required, but making it required breaks Conditional
 	BackendRef *gwv1.BackendObjectReference `json:"backendRef,omitempty"`
+	// processingOptions configures how request and response phases are sent to ext_proc.
+	// +optional
+	ProcessingOptions *ProcessingOptions `json:"processingOptions,omitempty"`
 }
 
 type ExtProcConditional struct {

@@ -585,6 +585,47 @@ impl ExtProcInstance {
 			return Err(e);
 		}
 
+		// BodySendMode::None means request bodies are never sent to ext_proc and must
+		// continue upstream unchanged.
+		if req_body_mode == EnvoyBodySendMode::None {
+			if !send_request_headers {
+				return Ok((req, None));
+			}
+
+			let mut rx = self
+				.rx_resp_for_request
+				.take()
+				.expect("mutate_request called twice");
+			let (mut tx_chunk, _rx_chunk) = tokio::sync::mpsc::channel(1);
+			loop {
+				let Some(presp) = rx.recv().await else {
+					if failure_mode == FailureMode::FailOpen {
+						trace!("fail open triggered");
+						self.skipped = true;
+						return Ok((req, None));
+					}
+					trace!("done receiving request");
+					return Err(Error::NoMoreResponses);
+				};
+				if let Some(resp) = to_immediate_response(&presp) {
+					trace!("got immediate response in request handler");
+					return Ok((req, Some(resp)));
+				}
+				let (headers_done, _) =
+					handle_response_for_request_mutation(
+						false,
+						send_request_headers,
+						Some(&mut req),
+						&mut tx_chunk,
+						presp,
+					)
+					.await;
+				if headers_done {
+					return Ok((req, None));
+				}
+			}
+		}
+
 		if !send_request_headers && !had_body {
 			// Nothing to send for request-side processing when both headers and body are skipped/empty.
 			return Ok((req, None));
@@ -631,6 +672,8 @@ impl ExtProcInstance {
 						Request::RequestBody,
 						Request::RequestTrailers,
 						send_request_trailers,
+						first_request_attributes.take(),
+						first_request_protocol_config.take(),
 					));
 					true
 				} else {
@@ -783,7 +826,11 @@ impl ExtProcInstance {
 		body_fn: fn(HttpBody) -> Request,
 		trail_fn: fn(HttpTrailers) -> Request,
 		send_trailers: bool,
+		first_attributes: Option<HashMap<String, Struct>>,
+		first_protocol_config: Option<ProtocolConfiguration>,
 	) {
+		let mut first_attributes = first_attributes;
+		let mut first_protocol_config = first_protocol_config;
 		let mut stream = BodyStream::new(body);
 		while let Some(Ok(frame)) = stream.next().await {
 			let request = Some(if frame.is_data() {
@@ -809,8 +856,8 @@ impl ExtProcInstance {
 				.send(ProcessingRequest {
 					request,
 					metadata_context: metadata_context.as_deref().cloned(),
-					attributes: Default::default(),
-					protocol_config: None, // Don't send after the first ProcessingRequest
+					attributes: first_attributes.take().unwrap_or_default(),
+					protocol_config: first_protocol_config.take(),
 					observability_mode: false,
 				})
 				.await
@@ -828,8 +875,8 @@ impl ExtProcInstance {
 					end_of_stream: true,
 				})),
 				metadata_context: final_metadata,
-				attributes: Default::default(),
-				protocol_config: None, // Don't send after the first ProcessingRequest
+				attributes: first_attributes.take().unwrap_or_default(),
+				protocol_config: first_protocol_config.take(),
 				observability_mode: false,
 			})
 			.await;
@@ -886,6 +933,9 @@ impl ExtProcInstance {
 		let (parts, body) = req.into_parts();
 		let end_of_stream = body.is_end_stream();
 		let had_body = !end_of_stream;
+		let send_response_body = self.processing_options.response_body_mode != BodySendMode::None && had_body;
+		let mut first_response_attributes =
+			(!send_response_headers && send_response_body).then(|| attributes.clone());
 
 		// Send the response headers to ext_proc.
 		// No response side fail_open handling.
@@ -897,11 +947,46 @@ impl ExtProcInstance {
 						end_of_stream,
 					})),
 					metadata_context: metadata_context.as_deref().cloned(),
-					attributes,
+					attributes: attributes.clone(),
 					protocol_config: None, // Don't send after the last ProcessingRequest
 					observability_mode: false,
 				})
 				.await?;
+		}
+
+		if !send_response_body {
+			let mut resp = http::Response::from_parts(parts, body);
+			if !send_response_headers {
+				return Ok((resp, None));
+			}
+
+			let mut rx = self
+				.rx_resp_for_response
+				.take()
+				.expect("mutate_response called twice");
+			let (mut tx_chunk, _rx_chunk) = tokio::sync::mpsc::channel(1);
+			loop {
+				let Some(presp) = rx.recv().await else {
+					trace!("done receiving response");
+					return Err(Error::NoMoreResponses);
+				};
+				if let Some(dr) = to_immediate_response(&presp) {
+					trace!("got immediate response in request handler");
+					return Ok((resp, Some(dr)));
+				}
+				let (headers_done, _) =
+					handle_response_for_response_mutation(
+						false,
+						send_response_headers,
+						Some(&mut resp),
+						&mut tx_chunk,
+						presp,
+					)
+					.await;
+				if headers_done {
+					return Ok((resp, None));
+				}
+			}
 		}
 		if !send_response_headers && !had_body {
 			let resp = http::Response::from_parts(parts, body);
@@ -919,6 +1004,8 @@ impl ExtProcInstance {
 				Request::ResponseBody,
 				Request::ResponseTrailers,
 				send_response_trailers,
+				first_response_attributes.take(),
+				None,
 			));
 		}
 
@@ -927,7 +1014,7 @@ impl ExtProcInstance {
 
 		let body = http_body_util::StreamBody::new(ReceiverStream::new(rx_chunk));
 		let mut resp = http::Response::from_parts(parts, http::Body::new(body));
-		let strip_response_content_length = had_body;
+		let strip_response_content_length = send_response_body;
 		let mut headers_already_done = !send_response_headers;
 		let mut rx = self
 			.rx_resp_for_response
@@ -944,7 +1031,7 @@ impl ExtProcInstance {
 			}
 			let (headers_done, eos) =
 				handle_response_for_response_mutation(
-					had_body,
+					send_response_body,
 					send_response_headers,
 					Some(&mut resp),
 					&mut tx_chunk,
@@ -964,13 +1051,13 @@ impl ExtProcInstance {
 							};
 							let (_, eos) =
 								handle_response_for_response_mutation(
-									had_body,
+									send_response_body,
 									send_response_headers,
 									None,
 									&mut tx_chunk,
 									presp,
 								).await;
-							if eos || !had_body {
+							if eos || !send_response_body {
 								trace!("response EOS!");
 								drop(tx_chunk);
 								return;
@@ -1073,6 +1160,10 @@ async fn handle_response_for_request_mutation(
 		apply_header_mutations_request(req, cr.header_mutation.as_ref());
 	}
 	if let Some(BodyMutation { mutation: Some(b) }) = cr.body_mutation {
+		if !had_body {
+			trace!("ignoring request body mutation when no body is expected");
+			return (res, true);
+		}
 		match b {
 			Mutation::StreamedResponse(bb) => {
 				let eos = bb.end_of_stream;
@@ -1152,6 +1243,10 @@ async fn handle_response_for_response_mutation(
 		apply_header_mutations_response(resp, cr.header_mutation.as_ref());
 	}
 	if let Some(BodyMutation { mutation: Some(b) }) = cr.body_mutation {
+		if !had_body {
+			trace!("ignoring response body mutation when no body is expected");
+			return (res, true);
+		}
 		match b {
 			Mutation::StreamedResponse(bb) => {
 				let eos = bb.end_of_stream;
