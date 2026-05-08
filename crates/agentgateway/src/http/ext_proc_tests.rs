@@ -689,6 +689,7 @@ pub async fn setup_ext_proc_mock_with_processing_options<T: Handler + Send + Syn
 	(mock, ext_proc, t, io)
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn setup_ext_proc_mock_with_meta_and_processing_options<
 	T: Handler + Send + Sync + 'static,
 >(

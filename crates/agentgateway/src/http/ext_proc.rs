@@ -819,6 +819,7 @@ impl ExtProcInstance {
 		}
 	}
 
+	#[allow(clippy::too_many_arguments)]
 	async fn handle_body_stream(
 		metadata_context: Option<Arc<Metadata>>,
 		body: http::Body,
