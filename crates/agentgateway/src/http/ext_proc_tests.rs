@@ -109,6 +109,200 @@ async fn body_based_router_buffer_body() {
 }
 
 #[tokio::test]
+async fn buffered_request_body_can_be_replaced() {
+	let mock = simple_mock().await;
+	let processing_options = json!({
+		"requestBodyMode": "buffered",
+		"responseBodyMode": "none",
+		"requestHeaderMode": "send",
+		"responseHeaderMode": "send",
+		"requestTrailerMode": "skip",
+		"responseTrailerMode": "skip",
+	});
+	let (_mock, _ext_proc, _bind, io) = setup_ext_proc_mock_with_processing_options(
+		mock,
+		ext_proc::FailureMode::FailClosed,
+		ExtProcMock::new(|| {
+			ModeAwareBodyExtProc::new(
+				BufferedBodyMode::Replace(b"rewritten-request".to_vec()),
+				BufferedBodyMode::Echo,
+			)
+		}),
+		"{}",
+		Some(processing_options),
+	)
+	.await;
+
+	let res = send_request_body(io, Method::POST, "http://lo", b"request body").await;
+	assert_eq!(res.status(), 200);
+	let body = read_body(res.into_body()).await;
+	assert_eq!(body.body.as_ref(), b"rewritten-request");
+}
+
+#[tokio::test]
+async fn buffered_request_body_can_be_cleared() {
+	let mock = simple_mock().await;
+	let processing_options = json!({
+		"requestBodyMode": "buffered",
+		"responseBodyMode": "none",
+		"requestHeaderMode": "send",
+		"responseHeaderMode": "send",
+		"requestTrailerMode": "skip",
+		"responseTrailerMode": "skip",
+	});
+	let (_mock, _ext_proc, _bind, io) = setup_ext_proc_mock_with_processing_options(
+		mock,
+		ext_proc::FailureMode::FailClosed,
+		ExtProcMock::new(|| {
+			ModeAwareBodyExtProc::new(BufferedBodyMode::Clear, BufferedBodyMode::Echo)
+		}),
+		"{}",
+		Some(processing_options),
+	)
+	.await;
+
+	let res = send_request_body(io, Method::POST, "http://lo", b"request body").await;
+	assert_eq!(res.status(), 200);
+	let body = read_body(res.into_body()).await;
+	assert!(body.body.is_empty());
+}
+
+#[tokio::test]
+async fn buffered_response_body_can_be_replaced() {
+	let mock = body_mock(b"backend-response").await;
+	let processing_options = json!({
+		"requestBodyMode": "none",
+		"responseBodyMode": "buffered",
+		"requestHeaderMode": "send",
+		"responseHeaderMode": "send",
+		"requestTrailerMode": "skip",
+		"responseTrailerMode": "skip",
+	});
+	let (_mock, _ext_proc, _bind, io) = setup_ext_proc_mock_with_processing_options(
+		mock,
+		ext_proc::FailureMode::FailClosed,
+		ExtProcMock::new(|| {
+			ModeAwareBodyExtProc::new(
+				BufferedBodyMode::Echo,
+				BufferedBodyMode::Replace(b"rewritten-response".to_vec()),
+			)
+		}),
+		"{}",
+		Some(processing_options),
+	)
+	.await;
+
+	let res = send_request(io, Method::GET, "http://lo").await;
+	assert_eq!(res.status(), 200);
+	let body = read_body_raw(res.into_body()).await;
+	assert_eq!(body.as_ref(), b"rewritten-response");
+}
+
+#[tokio::test]
+async fn buffered_response_body_can_be_cleared() {
+	let mock = body_mock(b"backend-response").await;
+	let processing_options = json!({
+		"requestBodyMode": "none",
+		"responseBodyMode": "buffered",
+		"requestHeaderMode": "send",
+		"responseHeaderMode": "send",
+		"requestTrailerMode": "skip",
+		"responseTrailerMode": "skip",
+	});
+	let (_mock, _ext_proc, _bind, io) = setup_ext_proc_mock_with_processing_options(
+		mock,
+		ext_proc::FailureMode::FailClosed,
+		ExtProcMock::new(|| {
+			ModeAwareBodyExtProc::new(BufferedBodyMode::Echo, BufferedBodyMode::Clear)
+		}),
+		"{}",
+		Some(processing_options),
+	)
+	.await;
+
+	let res = send_request(io, Method::GET, "http://lo").await;
+	assert_eq!(res.status(), 200);
+	let body = read_body_raw(res.into_body()).await;
+	assert!(body.is_empty());
+}
+
+#[tokio::test]
+async fn processing_options_request_header_skip_suppresses_request_headers_message() {
+	let mock = simple_mock().await;
+	let tracker = MetadataTracker::new();
+	let requests = tracker.requests.clone();
+	let processing_options = json!({
+		"requestBodyMode": "none",
+		"responseBodyMode": "none",
+		"requestHeaderMode": "skip",
+		"responseHeaderMode": "send",
+		"requestTrailerMode": "skip",
+		"responseTrailerMode": "skip",
+	});
+
+	let (_mock, _ext_proc, _bind, io) = setup_ext_proc_mock_with_processing_options(
+		mock,
+		ext_proc::FailureMode::FailClosed,
+		ExtProcMock::new(move || tracker.clone()),
+		"{}",
+		Some(processing_options),
+	)
+	.await;
+
+	let res = send_request(io, Method::GET, "http://lo").await;
+	assert_eq!(res.status(), 200);
+
+	let captured = requests.lock().unwrap();
+	assert!(
+		captured.iter().all(|r| {
+			!matches!(
+				r.request,
+				Some(proto::processing_request::Request::RequestHeaders(_))
+			)
+		}),
+		"request headers should not be sent when requestHeaderMode=skip"
+	);
+}
+
+#[tokio::test]
+async fn processing_options_response_header_skip_suppresses_response_headers_message() {
+	let mock = simple_mock().await;
+	let tracker = MetadataTracker::new();
+	let requests = tracker.requests.clone();
+	let processing_options = json!({
+		"requestBodyMode": "none",
+		"responseBodyMode": "none",
+		"requestHeaderMode": "send",
+		"responseHeaderMode": "skip",
+		"requestTrailerMode": "skip",
+		"responseTrailerMode": "skip",
+	});
+
+	let (_mock, _ext_proc, _bind, io) = setup_ext_proc_mock_with_processing_options(
+		mock,
+		ext_proc::FailureMode::FailClosed,
+		ExtProcMock::new(move || tracker.clone()),
+		"{}",
+		Some(processing_options),
+	)
+	.await;
+
+	let res = send_request(io, Method::GET, "http://lo").await;
+	assert_eq!(res.status(), 200);
+
+	let captured = requests.lock().unwrap();
+	assert!(
+		captured.iter().all(|r| {
+			!matches!(
+				r.request,
+				Some(proto::processing_request::Request::ResponseHeaders(_))
+			)
+		}),
+		"response headers should not be sent when responseHeaderMode=skip"
+	);
+}
+
+#[tokio::test]
 async fn immediate_response_request() {
 	let mock = simple_mock().await;
 	let (_mock, _ext_proc, _bind, io) = setup_ext_proc_mock(
@@ -252,6 +446,42 @@ pub async fn setup_ext_proc_mock<T: Handler + Send + Sync + 'static>(
 	Client<MemoryConnector, Body>,
 ) {
 	setup_ext_proc_mock_with_meta(mock, failure_mode, mock_ext_proc, config, None, None, None).await
+}
+
+pub async fn setup_ext_proc_mock_with_processing_options<T: Handler + Send + Sync + 'static>(
+	mock: MockServer,
+	failure_mode: ext_proc::FailureMode,
+	mock_ext_proc: ExtProcMock<T>,
+	config: &str,
+	processing_options: Option<serde_json::Value>,
+) -> (
+	MockServer,
+	MockInstance,
+	TestBind,
+	Client<MemoryConnector, Body>,
+) {
+	let ext_proc = mock_ext_proc.spawn().await;
+
+	let mut ext_proc_policy = json!({
+		"extProc": {
+			"host": ext_proc.address,
+			"failureMode": failure_mode,
+		},
+	});
+	if let Some(processing_options) = processing_options {
+		ext_proc_policy["extProc"]["processingOptions"] = processing_options;
+	}
+
+	let t = setup_proxy_test(config)
+		.unwrap()
+		.with_backend(*mock.address())
+		.with_backend(ext_proc.address)
+		.with_bind(simple_bind())
+		.with_route(basic_route(*mock.address()))
+		.attach_route_policy_builder(ext_proc_policy)
+		.await;
+	let io = t.serve_http(strng::new("bind"));
+	(mock, ext_proc, t, io)
 }
 
 pub async fn setup_ext_proc_mock_with_meta<T: Handler + Send + Sync + 'static>(
@@ -592,6 +822,103 @@ struct BBRExtProc {
 	req_body: Vec<u8>,
 	buffer_body: bool,
 	res_body: Vec<u8>,
+}
+
+#[derive(Clone, Debug)]
+enum BufferedBodyMode {
+	Echo,
+	Replace(Vec<u8>),
+	Clear,
+}
+
+#[derive(Debug)]
+struct ModeAwareBodyExtProc {
+	request_body_mode: BufferedBodyMode,
+	response_body_mode: BufferedBodyMode,
+}
+
+impl ModeAwareBodyExtProc {
+	fn new(request_body_mode: BufferedBodyMode, response_body_mode: BufferedBodyMode) -> Self {
+		Self {
+			request_body_mode,
+			response_body_mode,
+		}
+	}
+
+	fn body_response(
+		mode: &BufferedBodyMode,
+		body: &proto::HttpBody,
+	) -> Option<CommonResponse> {
+		match mode {
+			BufferedBodyMode::Echo => Some(CommonResponse {
+				body_mutation: Some(BodyMutation {
+					mutation: Some(body_mutation::Mutation::StreamedResponse(
+						proto::StreamedBodyResponse {
+							body: body.body.clone(),
+							end_of_stream: body.end_of_stream,
+						},
+					)),
+				}),
+				..Default::default()
+			}),
+			BufferedBodyMode::Replace(replacement) if body.end_of_stream => Some(CommonResponse {
+				body_mutation: Some(BodyMutation {
+					mutation: Some(body_mutation::Mutation::Body(replacement.clone())),
+				}),
+				..Default::default()
+			}),
+			BufferedBodyMode::Clear if body.end_of_stream => Some(CommonResponse {
+				body_mutation: Some(BodyMutation {
+					mutation: Some(body_mutation::Mutation::ClearBody(true)),
+				}),
+				..Default::default()
+			}),
+			_ => None,
+		}
+	}
+}
+
+#[async_trait::async_trait]
+impl Handler for ModeAwareBodyExtProc {
+	async fn handle_request_headers(
+		&mut self,
+		_headers: &HttpHeaders,
+		sender: &Sender<Result<ProcessingResponse, Status>>,
+	) -> Result<(), Status> {
+		let _ = sender.send(request_header_response(None)).await;
+		Ok(())
+	}
+
+	async fn handle_request_body(
+		&mut self,
+		body: &proto::HttpBody,
+		sender: &mpsc::Sender<Result<ProcessingResponse, Status>>,
+	) -> Result<(), Status> {
+		if let Some(response) = Self::body_response(&self.request_body_mode, body) {
+			let _ = sender.send(request_body_response(Some(response))).await;
+		}
+		Ok(())
+	}
+
+	async fn handle_response_headers(
+		&mut self,
+		_headers: &HttpHeaders,
+		sender: &Sender<Result<ProcessingResponse, Status>>,
+	) -> Result<(), Status> {
+		let _ = sender.send(response_header_response(None)).await;
+		Ok(())
+	}
+
+	async fn handle_response_body(
+		&mut self,
+		body: &proto::HttpBody,
+		sender: &mpsc::Sender<Result<ProcessingResponse, Status>>,
+	) -> Result<(), Status> {
+		if let Some(response) = Self::body_response(&self.response_body_mode, body) {
+			let _ = sender.send(response_body_response(Some(response))).await;
+		}
+		Ok(())
+	}
 }
 
 impl BBRExtProc {

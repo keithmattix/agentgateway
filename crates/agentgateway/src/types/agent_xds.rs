@@ -1756,20 +1756,35 @@ fn traffic_policy_from_proto(
 				Ok(tps::ext_proc::FailureMode::FailOpen) => http::ext_proc::FailureMode::FailOpen,
 				_ => http::ext_proc::FailureMode::FailClosed,
 			};
-			// N.B (keithmattix): Potential regression (!!) here if an old control plane doesn't send this field,
-			// extproc won't behave as expected since the default/unspecified value is "None" which won't send the body.
-			// TODO: Decide if our protos should handle unset differently than NONE. I think that's ideal for migration
-			// but probably not long-term.
-			let request_body_mode = match ep.request_body_mode() {
+
+			let to_body_send_mode = |mode: tps::ext_proc::BodySendMode| match mode {
 				tps::ext_proc::BodySendMode::None => http::ext_proc::BodySendMode::None,
 				tps::ext_proc::BodySendMode::Buffered => http::ext_proc::BodySendMode::Buffered,
-				tps::ext_proc::BodySendMode::FullDuplexStreamed => http::ext_proc::BodySendMode::FullDuplexStreamed,
+				tps::ext_proc::BodySendMode::FullDuplexStreamed => {
+					http::ext_proc::BodySendMode::FullDuplexStreamed
+				},
 			};
-			let response_body_mode = match ep.response_body_mode() {
-				tps::ext_proc::BodySendMode::None => http::ext_proc::BodySendMode::None,
-				tps::ext_proc::BodySendMode::Buffered => http::ext_proc::BodySendMode::Buffered,
-				tps::ext_proc::BodySendMode::FullDuplexStreamed => http::ext_proc::BodySendMode::FullDuplexStreamed,
+			let to_header_send_mode = |mode: tps::ext_proc::HeaderSendMode| match mode {
+				tps::ext_proc::HeaderSendMode::Send => http::ext_proc::HeaderSendMode::Send,
+				tps::ext_proc::HeaderSendMode::Skip => http::ext_proc::HeaderSendMode::Skip,
 			};
+			let to_trailer_send_mode = |mode: tps::ext_proc::TrailerSendMode| match mode {
+				tps::ext_proc::TrailerSendMode::Send => http::ext_proc::TrailerSendMode::Send,
+				tps::ext_proc::TrailerSendMode::Skip => http::ext_proc::TrailerSendMode::Skip,
+			};
+
+			let processing_options = ep
+				.processing_options
+				.as_ref()
+				.map(|opts| http::ext_proc::ProcessingOptions {
+					request_body_mode: to_body_send_mode(opts.request_body_mode()),
+					response_body_mode: to_body_send_mode(opts.response_body_mode()),
+					request_header_mode: to_header_send_mode(opts.request_header_mode()),
+					response_header_mode: to_header_send_mode(opts.response_header_mode()),
+					request_trailer_mode: to_trailer_send_mode(opts.request_trailer_mode()),
+					response_trailer_mode: to_trailer_send_mode(opts.response_trailer_mode()),
+				})
+				.unwrap_or_default();
 			fn to_cel_attrs(
 				diagnostics: &mut Diagnostics,
 				context: &str,
@@ -1834,6 +1849,7 @@ fn traffic_policy_from_proto(
 							}),
 					)
 				},
+				processing_options,
 			}))
 		},
 		Some(tps::Kind::RequestHeaderModifier(rhm)) => {
@@ -2017,7 +2033,7 @@ fn external_auth_from_proto(
 	let include_request_body =
 		ea.include_request_body
 			.as_ref()
-			.map(|body_opts| http::ext_authz::BodyOptions {
+			.map(|body_opts| http::bufferbody::BodyOptions {
 				max_request_bytes: body_opts.max_request_bytes,
 				allow_partial_message: body_opts.allow_partial_message,
 				pack_as_bytes: body_opts.pack_as_bytes,

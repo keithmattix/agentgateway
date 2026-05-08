@@ -921,6 +921,14 @@ message TrafficPolicySpec {
       BUFFERED = 2;
       FULL_DUPLEX_STREAMED = 4;
     }
+    enum HeaderSendMode {
+      HEADER_SEND_MODE_SEND = 0;
+      HEADER_SEND_MODE_SKIP = 1;
+    }
+    enum TrailerSendMode {
+      TRAILER_SEND_MODE_SKIP = 0;
+      TRAILER_SEND_MODE_SEND = 1;
+    }
     BackendReference target = 1;
     FailureMode failure_mode = 2;
 
@@ -930,9 +938,16 @@ message TrafficPolicySpec {
     message NamespacedMetadataContext {
       map<string, string> context = 1;
     }
+    message ProcessingOptions {
+      BodySendMode request_body_mode = 1;
+      BodySendMode response_body_mode = 2;
+      HeaderSendMode request_header_mode = 3;
+      HeaderSendMode response_header_mode = 4;
+      TrailerSendMode request_trailer_mode = 5;
+      TrailerSendMode response_trailer_mode = 6;
+    }
     map<string, NamespacedMetadataContext> metadata_context = 5;
-    BodySendMode request_body_mode = 6;
-    BodySendMode response_body_mode = 7;
+    ProcessingOptions processing_options = 6;
   }
   enum PolicyPhase {
     ROUTE = 0;
