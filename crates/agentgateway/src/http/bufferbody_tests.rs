@@ -33,10 +33,7 @@ async fn test_buffer_request_body_rejects_oversized_body_when_partial_disabled()
 
 	let result = bufferbody::buffer_request_body(&mut req, &body_opts).await;
 
-	assert!(matches!(
-		result,
-		Err(BufferRequestBodyError::TooLarge)
-	));
+	assert!(matches!(result, Err(BufferRequestBodyError::TooLarge)));
 	let body = crate::http::read_body_with_limit(req.into_body(), 1024)
 		.await
 		.unwrap();

@@ -43,6 +43,11 @@ func NewTestingSuite(ctx context.Context, testInst *e2e.TestInstallation) suite.
 				gatewayTargetReferenceManifest,
 			},
 		},
+		"TestExtProcProcessingOptionsRequestHeaderSkip": {
+			Manifests: []string{
+				processingOptionsRequestHeaderSkipManifest,
+			},
+		},
 	}
 
 	return &testingSuite{
@@ -141,6 +146,55 @@ func (s *testingSuite) TestExtProcWithHTTPRouteTargetRef() {
 			},
 		},
 	}
+	for _, tc := range testCases {
+		s.Run(tc.name, func() {
+			common.BaseGateway.Send(s.T(), tc.resp, tc.opts...)
+		})
+	}
+}
+
+// TestExtProcProcessingOptionsRequestHeaderSkip validates that requestHeaderMode=Skip
+// suppresses request-header processing while default ext_proc settings still mutate headers.
+func (s *testingSuite) TestExtProcProcessingOptionsRequestHeaderSkip() {
+	testCases := []struct {
+		name string
+		opts []curl.Option
+		resp *testmatchers.HttpResponse
+	}{
+		{
+			name: "default extproc route mutates request headers",
+			opts: []curl.Option{
+				curl.WithHostHeader("default-extproc.example.com"),
+				curl.WithPath("/"),
+				curl.WithHeader("instructions", getInstructionsJson(instructions{
+					AddHeaders: map[string]string{"extproctest": "true"},
+				})),
+			},
+			resp: &testmatchers.HttpResponse{
+				StatusCode: http.StatusOK,
+				Body: gomega.WithTransform(transforms.WithEchoHeaders(),
+					gomega.HaveKeyWithValue("Extproctest", "true"),
+				),
+			},
+		},
+		{
+			name: "requestHeaderMode skip route does not mutate request headers",
+			opts: []curl.Option{
+				curl.WithHostHeader("skip-extproc.example.com"),
+				curl.WithPath("/"),
+				curl.WithHeader("instructions", getInstructionsJson(instructions{
+					AddHeaders: map[string]string{"extproctest": "true"},
+				})),
+			},
+			resp: &testmatchers.HttpResponse{
+				StatusCode: http.StatusOK,
+				Body: gomega.WithTransform(transforms.WithEchoHeaders(),
+					gomega.Not(gomega.HaveKeyWithValue("Extproctest", "true")),
+				),
+			},
+		},
+	}
+
 	for _, tc := range testCases {
 		s.Run(tc.name, func() {
 			common.BaseGateway.Send(s.T(), tc.resp, tc.opts...)

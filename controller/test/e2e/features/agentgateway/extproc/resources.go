@@ -9,8 +9,9 @@ import (
 )
 
 var (
-	routeWithTargetReferenceManifest = getTestFile("httproute-targetref.yaml")
-	gatewayTargetReferenceManifest   = getTestFile("gateway-targetref.yaml")
+	routeWithTargetReferenceManifest           = getTestFile("httproute-targetref.yaml")
+	gatewayTargetReferenceManifest             = getTestFile("gateway-targetref.yaml")
+	processingOptionsRequestHeaderSkipManifest = getTestFile("processing-options-request-header-skip.yaml")
 )
 
 func getTestFile(filename string) string {

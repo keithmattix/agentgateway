@@ -1130,6 +1130,27 @@ func processExtProcTraffic(
 		// always use FAIL_CLOSED to prevent silent data loss when ExtProc is unavailable.
 		FailureMode: api.TrafficPolicySpec_ExtProc_FAIL_CLOSED,
 	}
+	if extProc.ProcessingOptions != nil {
+		spec.ProcessingOptions = &api.TrafficPolicySpec_ExtProc_ProcessingOptions{}
+		if extProc.ProcessingOptions.RequestBodyMode != nil {
+			spec.ProcessingOptions.RequestBodyMode = toBodySendMode(*extProc.ProcessingOptions.RequestBodyMode)
+		}
+		if extProc.ProcessingOptions.ResponseBodyMode != nil {
+			spec.ProcessingOptions.ResponseBodyMode = toBodySendMode(*extProc.ProcessingOptions.ResponseBodyMode)
+		}
+		if extProc.ProcessingOptions.RequestHeaderMode != nil {
+			spec.ProcessingOptions.RequestHeaderMode = toHeaderSendMode(*extProc.ProcessingOptions.RequestHeaderMode)
+		}
+		if extProc.ProcessingOptions.ResponseHeaderMode != nil {
+			spec.ProcessingOptions.ResponseHeaderMode = toHeaderSendMode(*extProc.ProcessingOptions.ResponseHeaderMode)
+		}
+		if extProc.ProcessingOptions.RequestTrailerMode != nil {
+			spec.ProcessingOptions.RequestTrailerMode = toTrailerSendMode(*extProc.ProcessingOptions.RequestTrailerMode)
+		}
+		if extProc.ProcessingOptions.ResponseTrailerMode != nil {
+			spec.ProcessingOptions.ResponseTrailerMode = toTrailerSendMode(*extProc.ProcessingOptions.ResponseTrailerMode)
+		}
+	}
 
 	return &api.Policy_Traffic{
 		Traffic: &api.TrafficPolicySpec{
@@ -1138,6 +1159,35 @@ func processExtProcTraffic(
 			},
 		},
 	}, backendErr
+}
+
+func toBodySendMode(mode agentgateway.BodySendMode) api.TrafficPolicySpec_ExtProc_BodySendMode {
+	switch mode {
+	case agentgateway.BodySendModeBuffered:
+		return api.TrafficPolicySpec_ExtProc_BUFFERED
+	case agentgateway.BodySendModeFullDuplexStreamed:
+		return api.TrafficPolicySpec_ExtProc_FULL_DUPLEX_STREAMED
+	default:
+		return api.TrafficPolicySpec_ExtProc_NONE
+	}
+}
+
+func toHeaderSendMode(mode agentgateway.HeaderSendMode) api.TrafficPolicySpec_ExtProc_HeaderSendMode {
+	switch mode {
+	case agentgateway.HeaderSendModeSkip:
+		return api.TrafficPolicySpec_ExtProc_HEADER_SEND_MODE_SKIP
+	default:
+		return api.TrafficPolicySpec_ExtProc_HEADER_SEND_MODE_SEND
+	}
+}
+
+func toTrailerSendMode(mode agentgateway.TrailerSendMode) api.TrafficPolicySpec_ExtProc_TrailerSendMode {
+	switch mode {
+	case agentgateway.TrailerSendModeSend:
+		return api.TrafficPolicySpec_ExtProc_TRAILER_SEND_MODE_SEND
+	default:
+		return api.TrafficPolicySpec_ExtProc_TRAILER_SEND_MODE_SKIP
+	}
 }
 
 func phase(policyPhase *agentgateway.PolicyPhase) api.TrafficPolicySpec_PolicyPhase {

@@ -1,10 +1,14 @@
 use std::collections::HashMap;
+use std::convert::Infallible;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use ::http::{Method, Request};
+use http_body::Frame;
 use hyper_util::client::legacy::Client;
-use protos::envoy::service::ext_proc::v3::processing_response;
+use protos::envoy::service::ext_proc::v3::{
+	BodySendMode as EnvoyBodySendMode, processing_response,
+};
 use serde_json::json;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
@@ -137,6 +141,7 @@ async fn buffered_request_body_can_be_replaced() {
 	assert_eq!(res.status(), 200);
 	let body = read_body(res.into_body()).await;
 	assert_eq!(body.body.as_ref(), b"rewritten-request");
+	assert!(body.headers.get("content-length").is_none());
 }
 
 #[tokio::test]
@@ -153,9 +158,7 @@ async fn buffered_request_body_can_be_cleared() {
 	let (_mock, _ext_proc, _bind, io) = setup_ext_proc_mock_with_processing_options(
 		mock,
 		ext_proc::FailureMode::FailClosed,
-		ExtProcMock::new(|| {
-			ModeAwareBodyExtProc::new(BufferedBodyMode::Clear, BufferedBodyMode::Echo)
-		}),
+		ExtProcMock::new(|| ModeAwareBodyExtProc::new(BufferedBodyMode::Clear, BufferedBodyMode::Echo)),
 		"{}",
 		Some(processing_options),
 	)
@@ -165,6 +168,33 @@ async fn buffered_request_body_can_be_cleared() {
 	assert_eq!(res.status(), 200);
 	let body = read_body(res.into_body()).await;
 	assert!(body.body.is_empty());
+}
+
+#[tokio::test]
+async fn buffered_request_body_noop_preserves_original_body() {
+	let mock = simple_mock().await;
+	let processing_options = json!({
+		"requestBodyMode": "buffered",
+		"responseBodyMode": "none",
+		"requestHeaderMode": "send",
+		"responseHeaderMode": "send",
+		"requestTrailerMode": "skip",
+		"responseTrailerMode": "skip",
+	});
+	let (_mock, _ext_proc, _bind, io) = setup_ext_proc_mock_with_processing_options(
+		mock,
+		ext_proc::FailureMode::FailClosed,
+		ExtProcMock::new(|| ModeAwareBodyExtProc::new(BufferedBodyMode::Noop, BufferedBodyMode::Echo)),
+		"{}",
+		Some(processing_options),
+	)
+	.await;
+
+	let body_in = b"request body";
+	let res = send_request_body(io, Method::POST, "http://lo", body_in).await;
+	assert_eq!(res.status(), 200);
+	let body = read_body(res.into_body()).await;
+	assert_eq!(body.body.as_ref(), body_in);
 }
 
 #[tokio::test]
@@ -194,8 +224,76 @@ async fn buffered_response_body_can_be_replaced() {
 
 	let res = send_request(io, Method::GET, "http://lo").await;
 	assert_eq!(res.status(), 200);
+	assert!(res.headers().get(http::header::CONTENT_LENGTH).is_none());
 	let body = read_body_raw(res.into_body()).await;
 	assert_eq!(body.as_ref(), b"rewritten-response");
+}
+
+#[tokio::test]
+async fn request_body_mode_none_preserves_body_and_content_length() {
+	let mock = simple_mock().await;
+	let processing_options = json!({
+		"requestBodyMode": "none",
+		"responseBodyMode": "none",
+		"requestHeaderMode": "send",
+		"responseHeaderMode": "send",
+		"requestTrailerMode": "skip",
+		"responseTrailerMode": "skip",
+	});
+	let (_mock, _ext_proc, _bind, io) = setup_ext_proc_mock_with_processing_options(
+		mock,
+		ext_proc::FailureMode::FailClosed,
+		ExtProcMock::new(NopExtProc::default),
+		"{}",
+		Some(processing_options),
+	)
+	.await;
+
+	let body_in = b"request body";
+	let res = send_request_body(io, Method::POST, "http://lo", body_in).await;
+	assert_eq!(res.status(), 200);
+	let dump = read_body(res.into_body()).await;
+	assert_eq!(dump.body.as_ref(), body_in);
+	assert_eq!(
+		dump
+			.headers
+			.get("content-length")
+			.and_then(|v| v.to_str().ok()),
+		Some(body_in.len().to_string().as_str())
+	);
+}
+
+#[tokio::test]
+async fn response_body_mode_none_preserves_body_and_content_length() {
+	let mock = body_mock_with_content_length(b"backend-response").await;
+	let processing_options = json!({
+		"requestBodyMode": "none",
+		"responseBodyMode": "none",
+		"requestHeaderMode": "send",
+		"responseHeaderMode": "send",
+		"requestTrailerMode": "skip",
+		"responseTrailerMode": "skip",
+	});
+	let (_mock, _ext_proc, _bind, io) = setup_ext_proc_mock_with_processing_options(
+		mock,
+		ext_proc::FailureMode::FailClosed,
+		ExtProcMock::new(NopExtProc::default),
+		"{}",
+		Some(processing_options),
+	)
+	.await;
+
+	let res = send_request(io, Method::GET, "http://lo").await;
+	assert_eq!(res.status(), 200);
+	assert_eq!(
+		res
+			.headers()
+			.get(http::header::CONTENT_LENGTH)
+			.and_then(|v| v.to_str().ok()),
+		Some("16")
+	);
+	let body = read_body_raw(res.into_body()).await;
+	assert_eq!(body.as_ref(), b"backend-response");
 }
 
 #[tokio::test]
@@ -212,9 +310,7 @@ async fn buffered_response_body_can_be_cleared() {
 	let (_mock, _ext_proc, _bind, io) = setup_ext_proc_mock_with_processing_options(
 		mock,
 		ext_proc::FailureMode::FailClosed,
-		ExtProcMock::new(|| {
-			ModeAwareBodyExtProc::new(BufferedBodyMode::Echo, BufferedBodyMode::Clear)
-		}),
+		ExtProcMock::new(|| ModeAwareBodyExtProc::new(BufferedBodyMode::Echo, BufferedBodyMode::Clear)),
 		"{}",
 		Some(processing_options),
 	)
@@ -300,6 +396,192 @@ async fn processing_options_response_header_skip_suppresses_response_headers_mes
 		}),
 		"response headers should not be sent when responseHeaderMode=skip"
 	);
+}
+
+#[tokio::test]
+async fn request_header_skip_buffered_sends_attributes_and_protocol_once() {
+	let mock = simple_mock().await;
+	let tracker = MetadataTracker::new();
+	let requests = tracker.requests.clone();
+	let processing_options = json!({
+		"requestBodyMode": "buffered",
+		"responseBodyMode": "none",
+		"requestHeaderMode": "skip",
+		"responseHeaderMode": "send",
+		"requestTrailerMode": "skip",
+		"responseTrailerMode": "skip",
+	});
+
+	let (_mock, _ext_proc, _bind, io) = setup_ext_proc_mock_with_meta_and_processing_options(
+		mock,
+		ext_proc::FailureMode::FailClosed,
+		ExtProcMock::new(move || tracker.clone()),
+		"{}",
+		None,
+		Some(
+			[(
+				"method".to_string(),
+				Arc::new(Expression::new_strict("request.method").unwrap()),
+			)]
+			.into(),
+		),
+		None,
+		Some(processing_options),
+	)
+	.await;
+
+	let res = send_request_body(io, Method::POST, "http://lo", b"request body").await;
+	assert_eq!(res.status(), 200);
+
+	let captured = requests.lock().unwrap();
+	let request_body_messages: Vec<_> = captured
+		.iter()
+		.filter(|r| {
+			matches!(
+				r.request,
+				Some(proto::processing_request::Request::RequestBody(_))
+			)
+		})
+		.collect();
+	assert!(
+		!request_body_messages.is_empty(),
+		"expected at least one RequestBody message"
+	);
+
+	let first = request_body_messages[0];
+	let ns_attrs = first
+		.attributes
+		.get("envoy.filters.http.ext_proc")
+		.expect("first RequestBody should include request attributes");
+	match &ns_attrs.fields.get("method").unwrap().kind {
+		Some(prost_wkt_types::value::Kind::StringValue(s)) => assert_eq!(s, "POST"),
+		invalid => panic!("expected method string in first RequestBody, got {invalid:?}"),
+	}
+	let first_proto = first
+		.protocol_config
+		.as_ref()
+		.expect("first RequestBody should include protocol_config");
+	assert_eq!(
+		first_proto.request_body_mode,
+		EnvoyBodySendMode::Buffered as i32
+	);
+
+	for msg in request_body_messages.iter().skip(1) {
+		assert!(msg.attributes.is_empty());
+		assert!(msg.protocol_config.is_none());
+	}
+}
+
+#[tokio::test]
+async fn response_header_skip_buffered_sends_response_attributes_on_first_body_message() {
+	let mock = body_mock(b"backend-response").await;
+	let tracker = MetadataTracker::new();
+	let requests = tracker.requests.clone();
+	let processing_options = json!({
+		"requestBodyMode": "none",
+		"responseBodyMode": "buffered",
+		"requestHeaderMode": "send",
+		"responseHeaderMode": "skip",
+		"requestTrailerMode": "skip",
+		"responseTrailerMode": "skip",
+	});
+
+	let (_mock, _ext_proc, _bind, io) = setup_ext_proc_mock_with_meta_and_processing_options(
+		mock,
+		ext_proc::FailureMode::FailClosed,
+		ExtProcMock::new(move || tracker.clone()),
+		"{}",
+		None,
+		None,
+		Some(
+			[(
+				"status".to_string(),
+				Arc::new(Expression::new_strict("response.code").unwrap()),
+			)]
+			.into(),
+		),
+		Some(processing_options),
+	)
+	.await;
+
+	let res = send_request(io, Method::GET, "http://lo").await;
+	assert_eq!(res.status(), 200);
+
+	let captured = requests.lock().unwrap();
+	let response_body_messages: Vec<_> = captured
+		.iter()
+		.filter(|r| {
+			matches!(
+				r.request,
+				Some(proto::processing_request::Request::ResponseBody(_))
+			)
+		})
+		.collect();
+	assert!(
+		!response_body_messages.is_empty(),
+		"expected at least one ResponseBody message"
+	);
+
+	let first = response_body_messages[0];
+	let ns_attrs = first
+		.attributes
+		.get("envoy.filters.http.ext_proc")
+		.expect("first ResponseBody should include response attributes");
+	match &ns_attrs.fields.get("status").unwrap().kind {
+		Some(prost_wkt_types::value::Kind::NumberValue(n)) => assert_eq!(*n, 200.0),
+		invalid => panic!("expected status number in first ResponseBody, got {invalid:?}"),
+	}
+
+	for msg in response_body_messages.iter().skip(1) {
+		assert!(msg.attributes.is_empty());
+	}
+}
+
+#[tokio::test]
+async fn response_headers_first_message_includes_protocol_config() {
+	let mock = simple_mock().await;
+	let tracker = MetadataTracker::new();
+	let requests = tracker.requests.clone();
+	let processing_options = json!({
+		"requestBodyMode": "none",
+		"responseBodyMode": "none",
+		"requestHeaderMode": "skip",
+		"responseHeaderMode": "send",
+		"requestTrailerMode": "skip",
+		"responseTrailerMode": "skip",
+	});
+
+	let (_mock, _ext_proc, _bind, io) = setup_ext_proc_mock_with_processing_options(
+		mock,
+		ext_proc::FailureMode::FailClosed,
+		ExtProcMock::new(move || tracker.clone()),
+		"{}",
+		Some(processing_options),
+	)
+	.await;
+
+	let res = send_request(io, Method::GET, "http://lo").await;
+	assert_eq!(res.status(), 200);
+
+	let captured = requests.lock().unwrap();
+	let first = captured
+		.first()
+		.expect("expected at least one processing request");
+	assert!(
+		matches!(
+			first.request,
+			Some(proto::processing_request::Request::ResponseHeaders(_))
+		),
+		"expected first processing request to be ResponseHeaders"
+	);
+	assert!(
+		first.protocol_config.is_some(),
+		"first processing request should carry protocol_config"
+	);
+
+	for msg in captured.iter().skip(1) {
+		assert!(msg.protocol_config.is_none());
+	}
 }
 
 #[tokio::test]
@@ -466,6 +748,51 @@ pub async fn setup_ext_proc_mock_with_processing_options<T: Handler + Send + Syn
 		"extProc": {
 			"host": ext_proc.address,
 			"failureMode": failure_mode,
+		},
+	});
+	if let Some(processing_options) = processing_options {
+		ext_proc_policy["extProc"]["processingOptions"] = processing_options;
+	}
+
+	let t = setup_proxy_test(config)
+		.unwrap()
+		.with_backend(*mock.address())
+		.with_backend(ext_proc.address)
+		.with_bind(simple_bind())
+		.with_route(basic_route(*mock.address()))
+		.attach_route_policy_builder(ext_proc_policy)
+		.await;
+	let io = t.serve_http(strng::new("bind"));
+	(mock, ext_proc, t, io)
+}
+
+#[allow(clippy::too_many_arguments)]
+pub async fn setup_ext_proc_mock_with_meta_and_processing_options<
+	T: Handler + Send + Sync + 'static,
+>(
+	mock: MockServer,
+	failure_mode: ext_proc::FailureMode,
+	mock_ext_proc: ExtProcMock<T>,
+	config: &str,
+	metadata_context: Option<HashMap<String, HashMap<String, Arc<Expression>>>>,
+	request_attributes: Option<HashMap<String, Arc<Expression>>>,
+	response_attributes: Option<HashMap<String, Arc<Expression>>>,
+	processing_options: Option<serde_json::Value>,
+) -> (
+	MockServer,
+	MockInstance,
+	TestBind,
+	Client<MemoryConnector, Body>,
+) {
+	let ext_proc = mock_ext_proc.spawn().await;
+
+	let mut ext_proc_policy = json!({
+		"extProc": {
+			"host": ext_proc.address,
+			"failureMode": failure_mode,
+			"metadataContext": metadata_context,
+			"requestAttributes": request_attributes,
+			"responseAttributes": response_attributes,
 		},
 	});
 	if let Some(processing_options) = processing_options {
@@ -829,6 +1156,7 @@ enum BufferedBodyMode {
 	Echo,
 	Replace(Vec<u8>),
 	Clear,
+	Noop,
 }
 
 #[derive(Debug)]
@@ -845,10 +1173,7 @@ impl ModeAwareBodyExtProc {
 		}
 	}
 
-	fn body_response(
-		mode: &BufferedBodyMode,
-		body: &proto::HttpBody,
-	) -> Option<CommonResponse> {
+	fn body_response(mode: &BufferedBodyMode, body: &proto::HttpBody) -> Option<CommonResponse> {
 		match mode {
 			BufferedBodyMode::Echo => Some(CommonResponse {
 				body_mutation: Some(BodyMutation {
@@ -873,6 +1198,7 @@ impl ModeAwareBodyExtProc {
 				}),
 				..Default::default()
 			}),
+			BufferedBodyMode::Noop => None,
 			_ => None,
 		}
 	}
@@ -894,9 +1220,8 @@ impl Handler for ModeAwareBodyExtProc {
 		body: &proto::HttpBody,
 		sender: &mpsc::Sender<Result<ProcessingResponse, Status>>,
 	) -> Result<(), Status> {
-		if let Some(response) = Self::body_response(&self.request_body_mode, body) {
-			let _ = sender.send(request_body_response(Some(response))).await;
-		}
+		let response = Self::body_response(&self.request_body_mode, body);
+		let _ = sender.send(request_body_response(response)).await;
 		Ok(())
 	}
 
@@ -914,9 +1239,8 @@ impl Handler for ModeAwareBodyExtProc {
 		body: &proto::HttpBody,
 		sender: &mpsc::Sender<Result<ProcessingResponse, Status>>,
 	) -> Result<(), Status> {
-		if let Some(response) = Self::body_response(&self.response_body_mode, body) {
-			let _ = sender.send(response_body_response(Some(response))).await;
-		}
+		let response = Self::body_response(&self.response_body_mode, body);
+		let _ = sender.send(response_body_response(response)).await;
 		Ok(())
 	}
 }
@@ -1246,6 +1570,20 @@ async fn mock_with_header(header_name: &str, header_value: &str) -> MockServer {
 	mock
 }
 
+async fn body_mock_with_content_length(body: &'static [u8]) -> MockServer {
+	let mock = wiremock::MockServer::start().await;
+	let len = body.len().to_string();
+	wiremock::Mock::given(wiremock::matchers::path_regex("/.*"))
+		.respond_with(move |_: &wiremock::Request| {
+			wiremock::ResponseTemplate::new(200)
+				.insert_header("content-length", len.as_str())
+				.set_body_raw(body.to_vec(), "application/octet-stream")
+		})
+		.mount(&mock)
+		.await;
+	mock
+}
+
 #[test]
 fn test_dynamic_metadata_extraction() {
 	let mut metadata = ExtProcDynamicMetadata::default();
@@ -1483,6 +1821,79 @@ impl Handler for MetadataTracker {
 	async fn on_request(&mut self, request: &proto::ProcessingRequest) {
 		self.requests.lock().unwrap().push(request.clone());
 	}
+}
+
+#[tokio::test]
+async fn handle_body_stream_skips_trailers_when_send_trailers_is_false() {
+	let mut trailers = ::http::HeaderMap::new();
+	trailers.insert("x-test-trailer", "value".parse().unwrap());
+	let frames = tokio_stream::iter(vec![
+		Ok::<Frame<bytes::Bytes>, Infallible>(Frame::data(bytes::Bytes::from_static(b"hello"))),
+		Ok::<Frame<bytes::Bytes>, Infallible>(Frame::trailers(trailers)),
+	]);
+	let body = Body::new(http_body_util::StreamBody::new(frames));
+
+	let (tx, mut rx) = mpsc::channel(8);
+	super::ExtProcInstance::handle_body_stream(
+		None,
+		body,
+		tx,
+		proto::processing_request::Request::RequestBody,
+		proto::processing_request::Request::RequestTrailers,
+		false,
+		None,
+		None,
+	)
+	.await;
+
+	let mut saw_trailers = false;
+	while let Some(req) = rx.recv().await {
+		if matches!(
+			req.request,
+			Some(proto::processing_request::Request::RequestTrailers(_))
+		) {
+			saw_trailers = true;
+		}
+	}
+	assert!(!saw_trailers);
+}
+
+#[tokio::test]
+async fn handle_body_stream_sends_trailers_when_send_trailers_is_true() {
+	let mut trailers = ::http::HeaderMap::new();
+	trailers.insert("x-test-trailer", "value".parse().unwrap());
+	let frames = tokio_stream::iter(vec![
+		Ok::<Frame<bytes::Bytes>, Infallible>(Frame::data(bytes::Bytes::from_static(b"hello"))),
+		Ok::<Frame<bytes::Bytes>, Infallible>(Frame::trailers(trailers.clone())),
+	]);
+	let body = Body::new(http_body_util::StreamBody::new(frames));
+
+	let (tx, mut rx) = mpsc::channel(8);
+	super::ExtProcInstance::handle_body_stream(
+		None,
+		body,
+		tx,
+		proto::processing_request::Request::RequestBody,
+		proto::processing_request::Request::RequestTrailers,
+		true,
+		None,
+		None,
+	)
+	.await;
+
+	let mut saw_expected_trailer = false;
+	while let Some(req) = rx.recv().await {
+		if let Some(proto::processing_request::Request::RequestTrailers(ts)) = req.request
+			&& let Some(map) = ts.trailers
+			&& map
+				.headers
+				.iter()
+				.any(|h| h.key.eq_ignore_ascii_case("x-test-trailer"))
+		{
+			saw_expected_trailer = true;
+		}
+	}
+	assert!(saw_expected_trailer);
 }
 
 #[tokio::test]
