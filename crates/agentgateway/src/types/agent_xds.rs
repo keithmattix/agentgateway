@@ -1756,6 +1756,10 @@ fn traffic_policy_from_proto(
 				Ok(tps::ext_proc::FailureMode::FailOpen) => http::ext_proc::FailureMode::FailOpen,
 				_ => http::ext_proc::FailureMode::FailClosed,
 			};
+			// N.B (keithmattix): Potential regression (!!) here if an old control plane doesn't send this field,
+			// extproc won't behave as expected since the default/unspecified value is "None" which won't send the body.
+			// TODO: Decide if our protos should handle unset differently than NONE. I think that's ideal for migration
+			// but probably not long-term.
 			let request_body_mode = match ep.request_body_mode() {
 				tps::ext_proc::BodySendMode::None => http::ext_proc::BodySendMode::None,
 				tps::ext_proc::BodySendMode::Buffered => http::ext_proc::BodySendMode::Buffered,

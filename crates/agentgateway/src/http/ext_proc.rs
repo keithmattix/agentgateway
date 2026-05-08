@@ -23,7 +23,7 @@ use crate::http::ext_proc::proto::{
 	BodyMutation, BodyResponse, HeaderMutation, HeadersResponse, HttpBody, HttpHeaders, HttpTrailers,
 	ImmediateResponse, Metadata, ProcessingRequest, ProcessingResponse, processing_response,
 };
-use crate::http::{HeaderName, PolicyResponse, envoy_proto_common};
+use crate::http::{HeaderName, PolicyResponse, bufferbody, envoy_proto_common};
 use crate::proxy::ProxyError;
 use crate::proxy::dtrace::{self, pol_result};
 use crate::proxy::httpproxy::PolicyClient;
@@ -482,7 +482,6 @@ impl ExtProcInstance {
 
 		let failure_mode = self.failure_mode;
 		let end_of_stream = req.body().is_end_stream();
-		// Default to FULL_DUPLEX_STREAMED for backwards compat
 
 		// Send the request headers to ext_proc.
 		if let Err(e) = self
@@ -510,76 +509,108 @@ impl ExtProcInstance {
 			return Err(e);
 		}
 
-		// At this point, we start body handling. Fail open + streaming bodies is a disaster,
-		// as we could silently corrupt data.
-		// We behave approximately like Envoy here (https://github.com/envoyproxy/envoy/pull/41276); after
-		// the headers are sent we drop fail_open.
-		// In practice, this means that the server was running fine at the start of the request which covers
-		// all but edge cases around the server dying mid-request.
+		// Prepare to start sending parts of the request to the extproc server
 		let (parts, body) = req.into_parts();
 		let had_body = !end_of_stream;
 		let tx = self.tx_req.clone();
-		if had_body {
-			tokio::task::spawn(Self::handle_body_stream(
-				metadata_context,
-				body,
-				tx,
-				Request::RequestBody,
-				Request::RequestTrailers,
-			));
-		}
-
-		// Now we need to build the new body. This is going to be streamed in from the ext_proc server.
 		let (mut tx_chunk, rx_chunk) = tokio::sync::mpsc::channel(1);
-
 		let upstream_body = http_body_util::StreamBody::new(ReceiverStream::new(rx_chunk));
 		let mut req = http::Request::from_parts(parts, http::Body::new(upstream_body));
-		req.headers_mut().remove(http::header::CONTENT_LENGTH);
-		let mut rx = self
-			.rx_resp_for_request
-			.take()
-			.expect("mutate_request called twice");
-		loop {
-			let Some(presp) = rx.recv().await else {
-				if !had_body && failure_mode == FailureMode::FailOpen {
-					trace!("fail open triggered");
-					self.skipped = true;
-					return Ok((req, None));
+
+		// Now we need to decide how to handle sending the initial request body to the extproc server.
+		// In all modes besides None and FullDuplexStreamed, the extproc server can choose whether to
+		// stream the body back to us or buffer it and send it as a single chunk. In FullDuplexStreamed mode
+		// the extproc server is going to stream the body back to us as it comes in.
+		match self.req_body_mode {
+			EnvoyBodySendMode::None => {
+				// Semantics: extproc client doesn't send the body at all.
+				todo!("implementing now!")
+			},
+			EnvoyBodySendMode::Streamed => {
+				// Semantics: extproc client sends a chunk, the server processes it and sends a chunk back 1:1.
+				unimplemented!("streamed body mode is not yet implemented")
+			},
+			EnvoyBodySendMode::Buffered | EnvoyBodySendMode::BufferedPartial => {
+				// Semantics(Buffered): extproc client buffers entire body in memory and sends it to the client all at once.
+				// If the body exceeds the max buffer size, the data plane returns an error to the downstream.
+				// Semantics(BufferedPartial): extproc client buffers up to the max buffer size in memory and sends it to the client.
+				// If the body exceeds the max buffer size, extproc client sends what it has buffered.
+				let options = bufferbody::BodyOptions {
+					allow_partial_message: self.req_body_mode == EnvoyBodySendMode::BufferedPartial,
+					pack_as_bytes: true, // Envoy ext_proc always packs buffered bodies as bytes,
+					..Default::default()
+				};
+				bufferbody::buffer_request_body(&mut req, body_opts)
+				todo!("implmenting now!")
+			},
+			EnvoyBodySendMode::FullDuplexStreamed => {
+				// In this mode, the extproc server can modify body and streams it back to us as it comes in. This
+				// is scary when combined with FailOpen as we could silently corrupt data (if, e.g. we lose a connection to the server).
+				// We behave approximately like Envoy here (https://github.com/envoyproxy/envoy/pull/41276); after
+				// the headers are sent we drop fail_open.
+				// In practice, this means that the server was running fine at the start of the request which covers
+				// all but edge cases around the server dying mid-request.
+				if had_body {
+					tokio::task::spawn(Self::handle_body_stream(
+						metadata_context,
+						body,
+						tx,
+						Request::RequestBody,
+						Request::RequestTrailers,
+					));
 				}
-				trace!("done receiving request");
-				return Err(Error::NoMoreResponses);
-			};
-			if let Some(resp) = to_immediate_response(&presp) {
-				trace!("got immediate response in request handler");
-				return Ok((req, Some(resp)));
-			}
-			let (headers_done, eos) =
-				handle_response_for_request_mutation(had_body, Some(&mut req), &mut tx_chunk, presp).await;
-			if headers_done {
-				if !eos {
-					trace!("spawn body!");
-					// Moving rest of body handling to async
-					tokio::task::spawn(async move {
-						loop {
-							let Some(presp) = rx.recv().await else {
-								trace!("done receiving request");
-								return;
-							};
-							let (_, eos) =
-								handle_response_for_request_mutation(had_body, None, &mut tx_chunk, presp).await;
-							if eos || !had_body {
-								trace!("request EOS!");
-								drop(tx_chunk);
-								return;
-							}
-						}
-					});
-				}
-				// Skip content-length as the EPP sets it to invalid values
-				// https://github.com/kubernetes-sigs/gateway-api-inference-extension/issues/943
+
+				// Now we need to build the new body. This is going to be streamed in from the ext_proc server.
 				req.headers_mut().remove(http::header::CONTENT_LENGTH);
-				return Ok((req, None));
-			}
+				let mut rx = self
+					.rx_resp_for_request
+					.take()
+					.expect("mutate_request called twice");
+				loop {
+					let Some(presp) = rx.recv().await else {
+						if !had_body && failure_mode == FailureMode::FailOpen {
+							trace!("fail open triggered");
+							self.skipped = true;
+							return Ok((req, None));
+						}
+						trace!("done receiving request");
+						return Err(Error::NoMoreResponses);
+					};
+					if let Some(resp) = to_immediate_response(&presp) {
+						trace!("got immediate response in request handler");
+						return Ok((req, Some(resp)));
+					}
+					let (headers_done, eos) =
+						handle_response_for_request_mutation(had_body, Some(&mut req), &mut tx_chunk, presp)
+							.await;
+					if headers_done {
+						if !eos {
+							trace!("spawn body!");
+							// Moving rest of body handling to async
+							tokio::task::spawn(async move {
+								loop {
+									let Some(presp) = rx.recv().await else {
+										trace!("done receiving request");
+										return;
+									};
+									let (_, eos) =
+										handle_response_for_request_mutation(had_body, None, &mut tx_chunk, presp)
+											.await;
+									if eos || !had_body {
+										trace!("request EOS!");
+										drop(tx_chunk);
+										return;
+									}
+								}
+							});
+						}
+						// Skip content-length as the EPP sets it to invalid values
+						// https://github.com/kubernetes-sigs/gateway-api-inference-extension/issues/943
+						req.headers_mut().remove(http::header::CONTENT_LENGTH);
+						return Ok((req, None));
+					}
+				}
+			},
 		}
 	}
 
