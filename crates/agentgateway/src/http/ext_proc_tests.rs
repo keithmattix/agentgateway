@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::convert::Infallible;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::time::Duration;
 
 use ::http::{Method, Request};
 use http_body::Frame;
@@ -209,7 +210,12 @@ async fn buffered_request_body_noop_preserves_original_body() {
 	.await;
 
 	let body_in = b"request body";
-	let res = send_request_body(io, Method::POST, "http://lo", body_in).await;
+	let res = tokio::time::timeout(
+		Duration::from_secs(3),
+		send_request_body(io, Method::POST, "http://lo", body_in),
+	)
+	.await
+	.expect("request timed out while waiting for ext_proc body response");
 	assert_eq!(res.status(), 200);
 	let body = read_body(res.into_body()).await;
 	assert_eq!(body.body.as_ref(), body_in);
@@ -1318,8 +1324,17 @@ impl Handler for ModeAwareBodyExtProc {
 		body: &proto::HttpBody,
 		sender: &mpsc::Sender<Result<ProcessingResponse, Status>>,
 	) -> Result<(), Status> {
-		let response = Self::body_response(&self.request_body_mode, body);
-		let _ = sender.send(request_body_response(response)).await;
+		match &self.request_body_mode {
+			BufferedBodyMode::Noop => {
+				let _ = sender.send(request_body_response(None)).await;
+			},
+			_ => {
+				let response = Self::body_response(&self.request_body_mode, body);
+				if let Some(response) = response {
+					let _ = sender.send(request_body_response(Some(response))).await;
+				}
+			},
+		}
 		Ok(())
 	}
 
@@ -1337,8 +1352,17 @@ impl Handler for ModeAwareBodyExtProc {
 		body: &proto::HttpBody,
 		sender: &mpsc::Sender<Result<ProcessingResponse, Status>>,
 	) -> Result<(), Status> {
-		let response = Self::body_response(&self.response_body_mode, body);
-		let _ = sender.send(response_body_response(response)).await;
+		match &self.response_body_mode {
+			BufferedBodyMode::Noop => {
+				let _ = sender.send(response_body_response(None)).await;
+			},
+			_ => {
+				let response = Self::body_response(&self.response_body_mode, body);
+				if let Some(response) = response {
+					let _ = sender.send(response_body_response(Some(response))).await;
+				}
+			},
+		}
 		Ok(())
 	}
 }
@@ -2008,6 +2032,106 @@ struct ModeOverrideOnRequestBodyTracker {
 	requests: Arc<std::sync::Mutex<Vec<proto::ProcessingRequest>>>,
 }
 
+#[derive(Clone)]
+struct ModeOverrideIgnoredForFullDuplexRequestTracker {
+	requests: Arc<std::sync::Mutex<Vec<proto::ProcessingRequest>>>,
+}
+
+impl ModeOverrideIgnoredForFullDuplexRequestTracker {
+	fn new() -> Self {
+		Self {
+			requests: Arc::new(std::sync::Mutex::new(Vec::new())),
+		}
+	}
+}
+
+#[async_trait::async_trait]
+impl Handler for ModeOverrideIgnoredForFullDuplexRequestTracker {
+	async fn on_request(&mut self, request: &proto::ProcessingRequest) {
+		self.requests.lock().unwrap().push(request.clone());
+	}
+
+	async fn handle_request_headers(
+		&mut self,
+		_headers: &HttpHeaders,
+		sender: &mpsc::Sender<Result<ProcessingResponse, Status>>,
+	) -> Result<(), Status> {
+		let mode_override = ProcessingMode {
+			request_body_mode: processing_mode::BodySendMode::None as i32,
+			..Default::default()
+		};
+		let _ = sender
+			.send(Ok(ProcessingResponse {
+				response: Some(processing_response::Response::RequestHeaders(
+					proto::HeadersResponse { response: None },
+				)),
+				mode_override: Some(mode_override),
+				..Default::default()
+			}))
+			.await;
+		Ok(())
+	}
+
+	async fn handle_request_body(
+		&mut self,
+		_body: &proto::HttpBody,
+		sender: &mpsc::Sender<Result<ProcessingResponse, Status>>,
+	) -> Result<(), Status> {
+		let _ = sender.send(request_body_response(None)).await;
+		Ok(())
+	}
+}
+
+#[derive(Clone)]
+struct ModeOverrideIgnoredForFullDuplexResponseTracker {
+	requests: Arc<std::sync::Mutex<Vec<proto::ProcessingRequest>>>,
+}
+
+impl ModeOverrideIgnoredForFullDuplexResponseTracker {
+	fn new() -> Self {
+		Self {
+			requests: Arc::new(std::sync::Mutex::new(Vec::new())),
+		}
+	}
+}
+
+#[async_trait::async_trait]
+impl Handler for ModeOverrideIgnoredForFullDuplexResponseTracker {
+	async fn on_request(&mut self, request: &proto::ProcessingRequest) {
+		self.requests.lock().unwrap().push(request.clone());
+	}
+
+	async fn handle_request_headers(
+		&mut self,
+		_headers: &HttpHeaders,
+		sender: &mpsc::Sender<Result<ProcessingResponse, Status>>,
+	) -> Result<(), Status> {
+		let mode_override = ProcessingMode {
+			response_body_mode: processing_mode::BodySendMode::None as i32,
+			..Default::default()
+		};
+		let _ = sender
+			.send(Ok(ProcessingResponse {
+				response: Some(processing_response::Response::RequestHeaders(
+					proto::HeadersResponse { response: None },
+				)),
+				mode_override: Some(mode_override),
+				..Default::default()
+			}))
+			.await;
+		Ok(())
+	}
+
+	async fn handle_response_body(
+		&mut self,
+		_body: &proto::HttpBody,
+		sender: &mpsc::Sender<Result<ProcessingResponse, Status>>,
+	) -> Result<(), Status> {
+		let _ = sender.send(response_body_response(None)).await;
+		Ok(())
+	}
+}
+
 #[tokio::test]
 async fn mode_override_streamed_does_not_enable_response_body_phase() {
 	let mock = body_mock(b"upstream-response").await;
@@ -2036,12 +2160,95 @@ async fn mode_override_streamed_does_not_enable_response_body_phase() {
 	assert_eq!(res.status(), 200);
 
 	let captured = requests.lock().unwrap();
-	let saw_response_body = captured
-		.iter()
-		.any(|r| matches!(r.request, Some(proto::processing_request::Request::ResponseBody(_))));
+	let saw_response_body = captured.iter().any(|r| {
+		matches!(
+			r.request,
+			Some(proto::processing_request::Request::ResponseBody(_))
+		)
+	});
 	assert!(
 		!saw_response_body,
 		"unsupported STREAMED mode_override must not be converted into response body processing"
+	);
+}
+
+#[tokio::test]
+async fn mode_override_does_not_change_request_body_when_initial_mode_is_full_duplex() {
+	let mock = simple_mock().await;
+	let tracker = ModeOverrideIgnoredForFullDuplexRequestTracker::new();
+	let requests = tracker.requests.clone();
+	let processing_options = json!({
+		"requestBodyMode": "fullDuplexStreamed",
+		"responseBodyMode": "none",
+		"requestHeaderMode": "send",
+		"responseHeaderMode": "send",
+		"requestTrailerMode": "skip",
+		"responseTrailerMode": "skip",
+		"allowModeOverride": true,
+	});
+
+	let (_mock, _ext_proc, _bind, io) = setup_ext_proc_mock_with_processing_options(
+		mock,
+		ext_proc::FailureMode::FailClosed,
+		ExtProcMock::new(move || tracker.clone()),
+		"{}",
+		Some(processing_options),
+	)
+	.await;
+
+	let res = send_request_body(io, Method::POST, "http://lo", b"abc").await;
+	assert_eq!(res.status(), 200);
+
+	let captured = requests.lock().unwrap();
+	let saw_request_body = captured.iter().any(|r| {
+		matches!(
+			r.request,
+			Some(proto::processing_request::Request::RequestBody(_))
+		)
+	});
+	assert!(
+		saw_request_body,
+		"mode_override must not disable request body processing when the initial mode is FULL_DUPLEX_STREAMED"
+	);
+}
+
+#[tokio::test]
+async fn mode_override_does_not_change_response_body_when_initial_mode_is_full_duplex() {
+	let mock = body_mock(b"upstream-response").await;
+	let tracker = ModeOverrideIgnoredForFullDuplexResponseTracker::new();
+	let requests = tracker.requests.clone();
+	let processing_options = json!({
+		"requestBodyMode": "none",
+		"responseBodyMode": "fullDuplexStreamed",
+		"requestHeaderMode": "send",
+		"responseHeaderMode": "send",
+		"requestTrailerMode": "skip",
+		"responseTrailerMode": "skip",
+		"allowModeOverride": true,
+	});
+
+	let (_mock, _ext_proc, _bind, io) = setup_ext_proc_mock_with_processing_options(
+		mock,
+		ext_proc::FailureMode::FailClosed,
+		ExtProcMock::new(move || tracker.clone()),
+		"{}",
+		Some(processing_options),
+	)
+	.await;
+
+	let res = send_request(io, Method::GET, "http://lo").await;
+	assert_eq!(res.status(), 200);
+
+	let captured = requests.lock().unwrap();
+	let saw_response_body = captured.iter().any(|r| {
+		matches!(
+			r.request,
+			Some(proto::processing_request::Request::ResponseBody(_))
+		)
+	});
+	assert!(
+		saw_response_body,
+		"mode_override must not disable response body processing when the initial mode is FULL_DUPLEX_STREAMED"
 	);
 }
 
@@ -2079,9 +2286,9 @@ impl Handler for ModeOverrideOnRequestBodyTracker {
 		};
 		let _ = sender
 			.send(Ok(ProcessingResponse {
-				response: Some(processing_response::Response::RequestBody(proto::BodyResponse {
-					response: None,
-				})),
+				response: Some(processing_response::Response::RequestBody(
+					proto::BodyResponse { response: None },
+				)),
 				mode_override: Some(mode_override),
 				..Default::default()
 			}))
