@@ -34,7 +34,6 @@ pub struct BufferedRequestBody {
 	pub original_size: i64,
 }
 
-
 #[derive(Debug)]
 pub enum BufferRequestBodyError {
 	TooLarge,

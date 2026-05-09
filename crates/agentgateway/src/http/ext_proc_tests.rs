@@ -6,7 +6,9 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use ::http::{Method, Request};
 use http_body::Frame;
 use hyper_util::client::legacy::Client;
-use protos::envoy::service::ext_proc::v3::{BodySendMode as EnvoyBodySendMode, processing_response};
+use protos::envoy::service::ext_proc::v3::{
+	BodySendMode as EnvoyBodySendMode, processing_response,
+};
 use serde_json::json;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
@@ -156,9 +158,7 @@ async fn buffered_request_body_can_be_cleared() {
 	let (_mock, _ext_proc, _bind, io) = setup_ext_proc_mock_with_processing_options(
 		mock,
 		ext_proc::FailureMode::FailClosed,
-		ExtProcMock::new(|| {
-			ModeAwareBodyExtProc::new(BufferedBodyMode::Clear, BufferedBodyMode::Echo)
-		}),
+		ExtProcMock::new(|| ModeAwareBodyExtProc::new(BufferedBodyMode::Clear, BufferedBodyMode::Echo)),
 		"{}",
 		Some(processing_options),
 	)
@@ -168,6 +168,33 @@ async fn buffered_request_body_can_be_cleared() {
 	assert_eq!(res.status(), 200);
 	let body = read_body(res.into_body()).await;
 	assert!(body.body.is_empty());
+}
+
+#[tokio::test]
+async fn buffered_request_body_noop_preserves_original_body() {
+	let mock = simple_mock().await;
+	let processing_options = json!({
+		"requestBodyMode": "buffered",
+		"responseBodyMode": "none",
+		"requestHeaderMode": "send",
+		"responseHeaderMode": "send",
+		"requestTrailerMode": "skip",
+		"responseTrailerMode": "skip",
+	});
+	let (_mock, _ext_proc, _bind, io) = setup_ext_proc_mock_with_processing_options(
+		mock,
+		ext_proc::FailureMode::FailClosed,
+		ExtProcMock::new(|| ModeAwareBodyExtProc::new(BufferedBodyMode::Noop, BufferedBodyMode::Echo)),
+		"{}",
+		Some(processing_options),
+	)
+	.await;
+
+	let body_in = b"request body";
+	let res = send_request_body(io, Method::POST, "http://lo", body_in).await;
+	assert_eq!(res.status(), 200);
+	let body = read_body(res.into_body()).await;
+	assert_eq!(body.body.as_ref(), body_in);
 }
 
 #[tokio::test]
@@ -228,7 +255,8 @@ async fn request_body_mode_none_preserves_body_and_content_length() {
 	let dump = read_body(res.into_body()).await;
 	assert_eq!(dump.body.as_ref(), body_in);
 	assert_eq!(
-		dump.headers
+		dump
+			.headers
 			.get("content-length")
 			.and_then(|v| v.to_str().ok()),
 		Some(body_in.len().to_string().as_str())
@@ -258,7 +286,8 @@ async fn response_body_mode_none_preserves_body_and_content_length() {
 	let res = send_request(io, Method::GET, "http://lo").await;
 	assert_eq!(res.status(), 200);
 	assert_eq!(
-		res.headers()
+		res
+			.headers()
 			.get(http::header::CONTENT_LENGTH)
 			.and_then(|v| v.to_str().ok()),
 		Some("16")
@@ -281,9 +310,7 @@ async fn buffered_response_body_can_be_cleared() {
 	let (_mock, _ext_proc, _bind, io) = setup_ext_proc_mock_with_processing_options(
 		mock,
 		ext_proc::FailureMode::FailClosed,
-		ExtProcMock::new(|| {
-			ModeAwareBodyExtProc::new(BufferedBodyMode::Echo, BufferedBodyMode::Clear)
-		}),
+		ExtProcMock::new(|| ModeAwareBodyExtProc::new(BufferedBodyMode::Echo, BufferedBodyMode::Clear)),
 		"{}",
 		Some(processing_options),
 	)
@@ -434,7 +461,10 @@ async fn request_header_skip_buffered_sends_attributes_and_protocol_once() {
 		.protocol_config
 		.as_ref()
 		.expect("first RequestBody should include protocol_config");
-	assert_eq!(first_proto.request_body_mode, EnvoyBodySendMode::Buffered as i32);
+	assert_eq!(
+		first_proto.request_body_mode,
+		EnvoyBodySendMode::Buffered as i32
+	);
 
 	for msg in request_body_messages.iter().skip(1) {
 		assert!(msg.attributes.is_empty());
@@ -504,6 +534,53 @@ async fn response_header_skip_buffered_sends_response_attributes_on_first_body_m
 
 	for msg in response_body_messages.iter().skip(1) {
 		assert!(msg.attributes.is_empty());
+	}
+}
+
+#[tokio::test]
+async fn response_headers_first_message_includes_protocol_config() {
+	let mock = simple_mock().await;
+	let tracker = MetadataTracker::new();
+	let requests = tracker.requests.clone();
+	let processing_options = json!({
+		"requestBodyMode": "none",
+		"responseBodyMode": "none",
+		"requestHeaderMode": "skip",
+		"responseHeaderMode": "send",
+		"requestTrailerMode": "skip",
+		"responseTrailerMode": "skip",
+	});
+
+	let (_mock, _ext_proc, _bind, io) = setup_ext_proc_mock_with_processing_options(
+		mock,
+		ext_proc::FailureMode::FailClosed,
+		ExtProcMock::new(move || tracker.clone()),
+		"{}",
+		Some(processing_options),
+	)
+	.await;
+
+	let res = send_request(io, Method::GET, "http://lo").await;
+	assert_eq!(res.status(), 200);
+
+	let captured = requests.lock().unwrap();
+	let first = captured
+		.first()
+		.expect("expected at least one processing request");
+	assert!(
+		matches!(
+			first.request,
+			Some(proto::processing_request::Request::ResponseHeaders(_))
+		),
+		"expected first processing request to be ResponseHeaders"
+	);
+	assert!(
+		first.protocol_config.is_some(),
+		"first processing request should carry protocol_config"
+	);
+
+	for msg in captured.iter().skip(1) {
+		assert!(msg.protocol_config.is_none());
 	}
 }
 
@@ -1079,6 +1156,7 @@ enum BufferedBodyMode {
 	Echo,
 	Replace(Vec<u8>),
 	Clear,
+	Noop,
 }
 
 #[derive(Debug)]
@@ -1095,10 +1173,7 @@ impl ModeAwareBodyExtProc {
 		}
 	}
 
-	fn body_response(
-		mode: &BufferedBodyMode,
-		body: &proto::HttpBody,
-	) -> Option<CommonResponse> {
+	fn body_response(mode: &BufferedBodyMode, body: &proto::HttpBody) -> Option<CommonResponse> {
 		match mode {
 			BufferedBodyMode::Echo => Some(CommonResponse {
 				body_mutation: Some(BodyMutation {
@@ -1123,6 +1198,7 @@ impl ModeAwareBodyExtProc {
 				}),
 				..Default::default()
 			}),
+			BufferedBodyMode::Noop => None,
 			_ => None,
 		}
 	}
@@ -1144,9 +1220,8 @@ impl Handler for ModeAwareBodyExtProc {
 		body: &proto::HttpBody,
 		sender: &mpsc::Sender<Result<ProcessingResponse, Status>>,
 	) -> Result<(), Status> {
-		if let Some(response) = Self::body_response(&self.request_body_mode, body) {
-			let _ = sender.send(request_body_response(Some(response))).await;
-		}
+		let response = Self::body_response(&self.request_body_mode, body);
+		let _ = sender.send(request_body_response(response)).await;
 		Ok(())
 	}
 
@@ -1164,9 +1239,8 @@ impl Handler for ModeAwareBodyExtProc {
 		body: &proto::HttpBody,
 		sender: &mpsc::Sender<Result<ProcessingResponse, Status>>,
 	) -> Result<(), Status> {
-		if let Some(response) = Self::body_response(&self.response_body_mode, body) {
-			let _ = sender.send(response_body_response(Some(response))).await;
-		}
+		let response = Self::body_response(&self.response_body_mode, body);
+		let _ = sender.send(response_body_response(response)).await;
 		Ok(())
 	}
 }
@@ -1811,7 +1885,10 @@ async fn handle_body_stream_sends_trailers_when_send_trailers_is_true() {
 	while let Some(req) = rx.recv().await {
 		if let Some(proto::processing_request::Request::RequestTrailers(ts)) = req.request
 			&& let Some(map) = ts.trailers
-			&& map.headers.iter().any(|h| h.key.eq_ignore_ascii_case("x-test-trailer"))
+			&& map
+				.headers
+				.iter()
+				.any(|h| h.key.eq_ignore_ascii_case("x-test-trailer"))
 		{
 			saw_expected_trailer = true;
 		}

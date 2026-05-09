@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use ::http::HeaderMap;
 
-use crate::http::{HeaderOrPseudo};
+use crate::http::HeaderOrPseudo;
 use crate::http::ext_authz::proto::{
 	HeaderValue as ProtoHeaderValue, HeaderValueOption, QueryParameter,
 };

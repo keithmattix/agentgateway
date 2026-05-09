@@ -2,8 +2,8 @@ pub mod filters;
 pub mod health;
 pub mod timeout;
 
-mod buflist;
 pub mod bufferbody;
+mod buflist;
 pub mod cors;
 pub mod jwt;
 pub mod localratelimit;
