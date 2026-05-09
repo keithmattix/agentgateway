@@ -1783,6 +1783,8 @@ fn traffic_policy_from_proto(
 					response_header_mode: to_header_send_mode(opts.response_header_mode()),
 					request_trailer_mode: to_trailer_send_mode(opts.request_trailer_mode()),
 					response_trailer_mode: to_trailer_send_mode(opts.response_trailer_mode()),
+					allow_mode_override: false,
+					send_body_without_waiting_for_header_response: false,
 				})
 				.unwrap_or_default();
 			fn to_cel_attrs(
