@@ -256,6 +256,37 @@ async fn buffered_request_body_noop_preserves_original_body() {
 }
 
 #[tokio::test]
+async fn buffered_response_body_noop_preserves_original_body() {
+	let mock = body_mock(b"backend-response").await;
+	let processing_options = json!({
+		"requestBodyMode": "none",
+		"responseBodyMode": "buffered",
+		"requestHeaderMode": "send",
+		"responseHeaderMode": "send",
+		"requestTrailerMode": "skip",
+		"responseTrailerMode": "skip",
+	});
+	let (_mock, _ext_proc, _bind, io) = setup_ext_proc_mock_with_processing_options(
+		mock,
+		ext_proc::FailureMode::FailClosed,
+		ExtProcMock::new(|| ModeAwareBodyExtProc::new(BufferedBodyMode::Echo, BufferedBodyMode::Noop)),
+		"{}",
+		Some(processing_options),
+	)
+	.await;
+
+	let res = tokio::time::timeout(
+		Duration::from_secs(3),
+		send_request(io, Method::GET, "http://lo"),
+	)
+	.await
+	.expect("request timed out while waiting for ext_proc body response");
+	assert_eq!(res.status(), 200);
+	let body = read_body_raw(res.into_body()).await;
+	assert_eq!(body.as_ref(), b"backend-response");
+}
+
+#[tokio::test]
 async fn buffered_response_body_can_be_replaced() {
 	let mock = body_mock(b"backend-response").await;
 	let processing_options = json!({

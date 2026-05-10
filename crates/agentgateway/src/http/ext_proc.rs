@@ -258,8 +258,8 @@ pub struct ProcessingOptions {
 impl Default for ProcessingOptions {
 	fn default() -> Self {
 		Self {
-			request_body_mode: BodySendMode::FullDuplexStreamed,
-			response_body_mode: BodySendMode::FullDuplexStreamed,
+			request_body_mode: BodySendMode::None,
+			response_body_mode: BodySendMode::None,
 			request_header_mode: HeaderSendMode::Send,
 			response_header_mode: HeaderSendMode::Send,
 			request_trailer_mode: TrailerSendMode::Skip,
@@ -633,6 +633,10 @@ impl ResponseFlowFsm {
 
 	fn strip_content_length(&self) -> bool {
 		self.send_body
+	}
+
+	fn should_restore_original_buffered_body(&self, body_no_mutation: bool) -> bool {
+		body_no_mutation && self.send_body
 	}
 }
 
@@ -1647,12 +1651,17 @@ impl ExtProcInstance {
 				_ => None,
 			};
 		let tx = self.tx_req.clone();
+		// For buffered response-body modes: if ext_proc responds with no body mutation,
+		// we need to forward the original bytes to the client. We keep a clone here so
+		// we can restore it when the server sends a no-op response.
+		let mut buffered_response_original: Option<bytes::Bytes> = None;
 		if !send_response_headers && had_body {
 			let include_protocol = first_response_protocol_config.is_some();
 			if let Some(task) = pending_response_buffer_task.take() {
 				let buf = task
 					.await
 					.map_err(|_| Error::BodyBuffer("response body buffer task panicked".into()))??;
+				buffered_response_original = Some(buf.clone());
 				self
 					.send_buffered_response_body(
 						buf,
@@ -1695,7 +1704,11 @@ impl ExtProcInstance {
 			let (transitioned, eos) = match msg {
 				ResponseLoopMessage::Immediate(dr) => return Ok((resp, Some(dr))),
 				ResponseLoopMessage::Processing(presp) => {
-					self
+					let response_body_no_mutation = matches!(
+						presp.response,
+						Some(Response::ResponseBody(BodyResponse { response: None }))
+					);
+					let result = self
 						.process_response_loop_message(
 							presp,
 							Some(&mut resp),
@@ -1703,7 +1716,15 @@ impl ExtProcInstance {
 							&mut response_fsm,
 							send_response_headers,
 						)
-						.await
+						.await;
+					// For buffered modes: if ext_proc returned no body mutation, forward the
+					// original buffered bytes to the client instead of an empty body.
+					if response_fsm.should_restore_original_buffered_body(response_body_no_mutation)
+						&& let Some(original) = buffered_response_original.take()
+					{
+						let _ = tx_chunk.send(Ok(Frame::data(original))).await;
+					}
+					result
 				},
 			};
 			if transitioned {
@@ -1712,6 +1733,7 @@ impl ExtProcInstance {
 						let buf = task
 							.await
 							.map_err(|_| Error::BodyBuffer("response body buffer task panicked".into()))??;
+						buffered_response_original = Some(buf.clone());
 						self
 							.send_buffered_response_body(
 								buf,
