@@ -4612,6 +4612,19 @@
           "additionalProperties": {
             "$ref": "#/$defs/Expression"
           }
+        },
+        "processingOptions": {
+          "$ref": "#/$defs/ProcessingOptions",
+          "default": {
+            "requestBodyMode": "fullDuplexStreamed",
+            "responseBodyMode": "fullDuplexStreamed",
+            "requestHeaderMode": "send",
+            "responseHeaderMode": "send",
+            "requestTrailerMode": "skip",
+            "responseTrailerMode": "skip",
+            "allowModeOverride": false,
+            "sendBodyWithoutWaitingForHeaderResponse": false
+          }
         }
       },
       "oneOf": [
@@ -4683,6 +4696,71 @@
         "failOpen"
       ]
     },
+    "ProcessingOptions": {
+      "type": "object",
+      "properties": {
+        "requestBodyMode": {
+          "$ref": "#/$defs/BodySendMode"
+        },
+        "responseBodyMode": {
+          "$ref": "#/$defs/BodySendMode"
+        },
+        "requestHeaderMode": {
+          "$ref": "#/$defs/HeaderSendMode"
+        },
+        "responseHeaderMode": {
+          "$ref": "#/$defs/HeaderSendMode"
+        },
+        "requestTrailerMode": {
+          "$ref": "#/$defs/TrailerSendMode"
+        },
+        "responseTrailerMode": {
+          "$ref": "#/$defs/TrailerSendMode"
+        },
+        "allowModeOverride": {
+          "description": "Allow ext_proc `mode_override` values from matching headers responses to update\nsubsequent request/response processing phases for this exchange.",
+          "type": "boolean",
+          "default": false
+        },
+        "sendBodyWithoutWaitingForHeaderResponse": {
+          "description": "If true, start sending body chunks immediately after headers are sent to ext_proc\nwithout waiting for the headers response first.",
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "requestBodyMode",
+        "responseBodyMode",
+        "requestHeaderMode",
+        "responseHeaderMode",
+        "requestTrailerMode",
+        "responseTrailerMode"
+      ]
+    },
+    "BodySendMode": {
+      "type": "string",
+      "enum": [
+        "none",
+        "buffered",
+        "bufferedPartial",
+        "fullDuplexStreamed"
+      ]
+    },
+    "HeaderSendMode": {
+      "type": "string",
+      "enum": [
+        "send",
+        "skip"
+      ]
+    },
+    "TrailerSendMode": {
+      "type": "string",
+      "enum": [
+        "send",
+        "skip"
+      ]
+    },
     "ExtProc": {
       "type": "object",
       "properties": {
@@ -4733,6 +4811,19 @@
           ],
           "additionalProperties": {
             "$ref": "#/$defs/Expression"
+          }
+        },
+        "processingOptions": {
+          "$ref": "#/$defs/ProcessingOptions",
+          "default": {
+            "requestBodyMode": "fullDuplexStreamed",
+            "responseBodyMode": "fullDuplexStreamed",
+            "requestHeaderMode": "send",
+            "responseHeaderMode": "send",
+            "requestTrailerMode": "skip",
+            "responseTrailerMode": "skip",
+            "allowModeOverride": false,
+            "sendBodyWithoutWaitingForHeaderResponse": false
           }
         }
       },

@@ -1,5 +1,7 @@
-use crate::{http::bufferbody, *};
 use bufferbody::{BodyOptions, BufferRequestBodyError};
+
+use crate::http::bufferbody;
+use crate::*;
 
 #[test]
 fn test_body_truncation() {

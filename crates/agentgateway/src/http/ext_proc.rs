@@ -85,6 +85,7 @@ pub enum BodySendMode {
 	#[default]
 	None,
 	Buffered,
+	BufferedPartial,
 	FullDuplexStreamed,
 }
 
@@ -236,7 +237,7 @@ impl InferencePoolRouter {
 }
 
 #[apply(schema!)]
-#[derive(Default, Copy)]
+#[derive(Copy)]
 pub struct ProcessingOptions {
 	pub request_body_mode: BodySendMode,
 	pub response_body_mode: BodySendMode,
@@ -244,6 +245,395 @@ pub struct ProcessingOptions {
 	pub response_header_mode: HeaderSendMode,
 	pub request_trailer_mode: TrailerSendMode,
 	pub response_trailer_mode: TrailerSendMode,
+	/// Allow ext_proc `mode_override` values from matching headers responses to update
+	/// subsequent request/response processing phases for this exchange.
+	#[serde(default)]
+	pub allow_mode_override: bool,
+	/// If true, start sending body chunks immediately after headers are sent to ext_proc
+	/// without waiting for the headers response first.
+	#[serde(default)]
+	pub send_body_without_waiting_for_header_response: bool,
+}
+
+impl Default for ProcessingOptions {
+	fn default() -> Self {
+		Self {
+			request_body_mode: BodySendMode::FullDuplexStreamed,
+			response_body_mode: BodySendMode::FullDuplexStreamed,
+			request_header_mode: HeaderSendMode::Send,
+			response_header_mode: HeaderSendMode::Send,
+			request_trailer_mode: TrailerSendMode::Skip,
+			response_trailer_mode: TrailerSendMode::Skip,
+			allow_mode_override: false,
+			send_body_without_waiting_for_header_response: false,
+		}
+	}
+}
+
+#[derive(Debug, Copy, Clone)]
+enum HeaderPhase {
+	Request,
+	Response,
+}
+
+#[derive(Debug, Copy, Clone)]
+enum BodyModeOverrideDirection {
+	Request,
+	Response,
+}
+
+// Tracks the negotiated ext_proc processing modes for the lifetime of a single
+// gRPC bidirectional stream. This is the protocol-facing state: it stores what we believe
+// Envoy ext_proc wants us to send next, and applies mode_override updates with
+// protocol validity checks.
+#[derive(Debug, Copy, Clone)]
+struct ModeStateMachine {
+	request_body_mode: BodySendMode,
+	response_body_mode: BodySendMode,
+	request_header_mode: HeaderSendMode,
+	response_header_mode: HeaderSendMode,
+	request_trailer_mode: TrailerSendMode,
+	response_trailer_mode: TrailerSendMode,
+	allow_mode_override: bool,
+	send_body_without_waiting_for_header_response: bool,
+	request_headers_processed: bool,
+	response_headers_processed: bool,
+}
+
+impl From<ProcessingOptions> for ModeStateMachine {
+	fn from(opts: ProcessingOptions) -> Self {
+		Self {
+			request_body_mode: opts.request_body_mode,
+			response_body_mode: opts.response_body_mode,
+			request_header_mode: opts.request_header_mode,
+			response_header_mode: opts.response_header_mode,
+			request_trailer_mode: opts.request_trailer_mode,
+			response_trailer_mode: opts.response_trailer_mode,
+			allow_mode_override: opts.allow_mode_override,
+			send_body_without_waiting_for_header_response: opts
+				.send_body_without_waiting_for_header_response,
+			request_headers_processed: false,
+			response_headers_processed: false,
+		}
+	}
+}
+
+impl ModeStateMachine {
+	fn current_mode_allows_body_override(
+		current_mode: BodySendMode,
+		phase: HeaderPhase,
+		direction: BodyModeOverrideDirection,
+	) -> bool {
+		if current_mode == BodySendMode::FullDuplexStreamed {
+			warn!(
+				phase = ?phase,
+				direction = ?direction,
+				"ignoring body mode_override because current body mode is FULL_DUPLEX_STREAMED"
+			);
+			return false;
+		}
+		true
+	}
+
+	fn allow_mode_override(&self) -> bool {
+		self.allow_mode_override
+	}
+
+	fn send_body_without_waiting_for_header_response(&self) -> bool {
+		self.send_body_without_waiting_for_header_response
+	}
+
+	fn mark_headers_processed(&mut self, phase: HeaderPhase) {
+		match phase {
+			HeaderPhase::Request => self.request_headers_processed = true,
+			HeaderPhase::Response => self.response_headers_processed = true,
+		}
+	}
+
+	fn apply_envoy_mode_override(&mut self, phase: HeaderPhase, mode: &proto::ProcessingMode) {
+		use proto::processing_mode::{
+			BodySendMode as ProtoBodySendMode, HeaderSendMode as ProtoHeaderSendMode,
+		};
+		let phase_name = match phase {
+			HeaderPhase::Request => "request_headers",
+			HeaderPhase::Response => "response_headers",
+		};
+
+		if mode.request_header_mode != ProtoHeaderSendMode::Default as i32 {
+			warn!(
+				phase = phase_name,
+				"mode_override.request_header_mode is ignored by protocol"
+			);
+		}
+
+		if let Ok(hm) = ProtoHeaderSendMode::try_from(mode.response_header_mode) {
+			match hm {
+				ProtoHeaderSendMode::Default => {},
+				ProtoHeaderSendMode::Send if !self.response_headers_processed => {
+					self.response_header_mode = HeaderSendMode::Send;
+				},
+				ProtoHeaderSendMode::Skip if !self.response_headers_processed => {
+					self.response_header_mode = HeaderSendMode::Skip;
+				},
+				_ => {},
+			}
+		}
+
+		if let Ok(bm) = ProtoBodySendMode::try_from(mode.request_body_mode) {
+			match bm {
+				// TODO: Should we abort the stream?
+				ProtoBodySendMode::Streamed => {
+					warn!(
+						phase = phase_name,
+						"mode_override request_body_mode=STREAMED is not implemented; keeping current request body mode"
+					)
+				},
+				_ if !Self::current_mode_allows_body_override(
+					self.request_body_mode,
+					phase,
+					BodyModeOverrideDirection::Request,
+				) => {},
+				ProtoBodySendMode::None => {
+					self.request_body_mode = BodySendMode::None;
+				},
+				ProtoBodySendMode::Buffered => {
+					self.request_body_mode = BodySendMode::Buffered;
+				},
+				ProtoBodySendMode::BufferedPartial => {
+					self.request_body_mode = BodySendMode::BufferedPartial;
+				},
+				ProtoBodySendMode::FullDuplexStreamed => {
+					self.request_body_mode = BodySendMode::FullDuplexStreamed;
+				},
+			}
+		}
+
+		if let Ok(bm) = ProtoBodySendMode::try_from(mode.response_body_mode) {
+			match bm {
+				ProtoBodySendMode::Streamed => {
+					warn!(
+						phase = phase_name,
+						"mode_override response_body_mode=STREAMED is not implemented; keeping current response body mode"
+					)
+				},
+				_ if !Self::current_mode_allows_body_override(
+					self.response_body_mode,
+					phase,
+					BodyModeOverrideDirection::Response,
+				) => {},
+				ProtoBodySendMode::None => {
+					self.response_body_mode = BodySendMode::None;
+				},
+				ProtoBodySendMode::Buffered => {
+					self.response_body_mode = BodySendMode::Buffered;
+				},
+				ProtoBodySendMode::BufferedPartial => {
+					self.response_body_mode = BodySendMode::BufferedPartial;
+				},
+				ProtoBodySendMode::FullDuplexStreamed => {
+					self.response_body_mode = BodySendMode::FullDuplexStreamed;
+				},
+			}
+		}
+
+		if let Ok(hm) = ProtoHeaderSendMode::try_from(mode.request_trailer_mode) {
+			match hm {
+				ProtoHeaderSendMode::Default => {},
+				ProtoHeaderSendMode::Send => self.request_trailer_mode = TrailerSendMode::Send,
+				ProtoHeaderSendMode::Skip => self.request_trailer_mode = TrailerSendMode::Skip,
+			}
+		}
+		if let Ok(hm) = ProtoHeaderSendMode::try_from(mode.response_trailer_mode) {
+			match hm {
+				ProtoHeaderSendMode::Default => {},
+				ProtoHeaderSendMode::Send => self.response_trailer_mode = TrailerSendMode::Send,
+				ProtoHeaderSendMode::Skip => self.response_trailer_mode = TrailerSendMode::Skip,
+			}
+		}
+	}
+}
+
+// Request-side execution FSM. Unlike ModeStateMachine (which stores ext_proc
+// protocol configuration), this FSM captures local control-flow transitions in
+// mutate_request: whether we are waiting on headers, body, or can return.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+enum RequestPhase {
+	AwaitingHeaders,
+	AwaitingBody,
+	StreamingContinuation,
+	Complete,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+enum BodyPath {
+	None,
+	Buffered,
+	FullDuplex,
+}
+
+#[derive(Debug, Copy, Clone)]
+struct RequestFlowFsm {
+	phase: RequestPhase,
+	body_path: BodyPath,
+	had_body: bool,
+	expect_body_response: bool,
+}
+
+impl RequestFlowFsm {
+	fn new(send_headers: bool, had_body: bool, body_mode: EnvoyBodySendMode) -> Self {
+		let body_path = match body_mode {
+			EnvoyBodySendMode::None => BodyPath::None,
+			EnvoyBodySendMode::Buffered | EnvoyBodySendMode::BufferedPartial => BodyPath::Buffered,
+			EnvoyBodySendMode::FullDuplexStreamed => BodyPath::FullDuplex,
+			EnvoyBodySendMode::Streamed => {
+				warn!("request body mode STREAMED is not implemented; disabling request body phase");
+				BodyPath::None
+			},
+		};
+		let expect_body_response = body_path != BodyPath::None && had_body;
+		let phase = if send_headers {
+			RequestPhase::AwaitingHeaders
+		} else if expect_body_response {
+			RequestPhase::AwaitingBody
+		} else {
+			RequestPhase::Complete
+		};
+		Self {
+			phase,
+			body_path,
+			had_body,
+			expect_body_response,
+		}
+	}
+
+	fn sync_body_path_from_mode(&mut self, mode: BodySendMode) {
+		self.body_path = match mode {
+			BodySendMode::None => BodyPath::None,
+			BodySendMode::Buffered | BodySendMode::BufferedPartial => BodyPath::Buffered,
+			BodySendMode::FullDuplexStreamed => BodyPath::FullDuplex,
+		};
+		self.expect_body_response = self.body_path != BodyPath::None && self.had_body;
+		if self.phase == RequestPhase::AwaitingBody && !self.expect_body_response {
+			self.phase = RequestPhase::Complete;
+		}
+	}
+
+	fn reconcile_headers_response(&mut self, mode: BodySendMode) {
+		self.sync_body_path_from_mode(mode);
+	}
+
+	fn finish_headers_phase(&mut self) {
+		self.phase = if self.expect_body_response {
+			RequestPhase::AwaitingBody
+		} else {
+			RequestPhase::Complete
+		};
+	}
+
+	fn enter_streaming_continuation(&mut self) {
+		self.phase = RequestPhase::StreamingContinuation;
+	}
+
+	fn is_awaiting_headers(&self) -> bool {
+		self.phase == RequestPhase::AwaitingHeaders
+	}
+
+	fn advance_after_response(&mut self, headers_done: bool) -> bool {
+		if headers_done {
+			self.finish_headers_phase();
+		}
+		!self.is_awaiting_headers()
+	}
+
+	fn should_restore_original_buffered_body(&self, body_no_mutation: bool) -> bool {
+		body_no_mutation && self.expect_body_response && self.body_path != BodyPath::FullDuplex
+	}
+
+	fn should_fail_open_on_disconnect(&self, failure_mode: FailureMode) -> bool {
+		failure_mode == FailureMode::FailOpen
+			&& (!self.had_body || self.body_path != BodyPath::FullDuplex)
+	}
+
+	fn strip_content_length(&self) -> bool {
+		self.expect_body_response
+	}
+}
+
+// Response-side execution FSM mirroring RequestFlowFsm. This controls local
+// phase progression in mutate_response independently of protocol mode storage.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+enum ResponsePhase {
+	AwaitingHeaders,
+	AwaitingBody,
+	StreamingContinuation,
+	Complete,
+}
+
+#[derive(Debug, Copy, Clone)]
+struct ResponseFlowFsm {
+	phase: ResponsePhase,
+	had_body: bool,
+	send_body: bool,
+}
+
+enum ResponseLoopMessage {
+	Immediate(PolicyResponse),
+	Processing(ProcessingResponse),
+}
+
+impl ResponseFlowFsm {
+	fn new(send_headers: bool, send_body: bool, had_body: bool) -> Self {
+		let phase = if send_headers {
+			ResponsePhase::AwaitingHeaders
+		} else if send_body {
+			ResponsePhase::AwaitingBody
+		} else {
+			ResponsePhase::Complete
+		};
+		Self {
+			phase,
+			had_body,
+			send_body,
+		}
+	}
+
+	fn sync_send_body_from_mode(&mut self, mode: BodySendMode) {
+		self.send_body = mode != BodySendMode::None && self.had_body;
+		if self.phase == ResponsePhase::AwaitingBody && !self.send_body {
+			self.phase = ResponsePhase::Complete;
+		}
+	}
+
+	fn reconcile_headers_response(&mut self, mode: BodySendMode) {
+		self.sync_send_body_from_mode(mode);
+	}
+
+	fn finish_headers_phase(&mut self) {
+		self.phase = if self.send_body {
+			ResponsePhase::AwaitingBody
+		} else {
+			ResponsePhase::Complete
+		};
+	}
+
+	fn enter_streaming_continuation(&mut self) {
+		self.phase = ResponsePhase::StreamingContinuation;
+	}
+
+	fn is_awaiting_headers(&self) -> bool {
+		self.phase == ResponsePhase::AwaitingHeaders
+	}
+
+	fn advance_after_response(&mut self, headers_done: bool) -> bool {
+		if headers_done {
+			self.finish_headers_phase();
+		}
+		!self.is_awaiting_headers()
+	}
+
+	fn strip_content_length(&self) -> bool {
+		self.send_body
+	}
 }
 
 #[apply(schema!)]
@@ -374,13 +764,13 @@ struct ExtProcInstance {
 	failure_mode: FailureMode,
 	skipped: bool,
 	protocol_config_sent: bool,
+	mode_state: ModeStateMachine,
 	tx_req: Sender<ProcessingRequest>,
 	rx_resp_for_request: Option<Receiver<ProcessingResponse>>,
 	rx_resp_for_response: Option<Receiver<ProcessingResponse>>,
 	metadata_context: Option<HashMap<String, HashMap<String, Arc<cel::Expression>>>>,
 	req_attributes: Option<HashMap<String, Arc<cel::Expression>>>,
 	resp_attributes: Option<HashMap<String, Arc<cel::Expression>>>,
-	processing_options: ProcessingOptions,
 }
 
 impl ExtProcInstance {
@@ -455,13 +845,13 @@ impl ExtProcInstance {
 			skipped: Default::default(),
 			failure_mode,
 			protocol_config_sent: false,
+			mode_state: processing_options.into(),
 			tx_req,
 			rx_resp_for_request: Some(rx_resp_for_request),
 			rx_resp_for_response: Some(rx_resp_for_response),
 			metadata_context,
 			req_attributes,
 			resp_attributes,
-			processing_options,
 		}
 	}
 
@@ -469,23 +859,184 @@ impl ExtProcInstance {
 		self.tx_req.send(req).await.map_err(|_| Error::RequestSend)
 	}
 
+	async fn send_buffered_request_body(
+		&mut self,
+		buf: bytes::Bytes,
+		metadata_context: &Option<Arc<Metadata>>,
+		first_request_attributes: &mut Option<HashMap<String, Struct>>,
+		first_request_protocol_config: &mut Option<ProtocolConfiguration>,
+	) -> Result<(), Error> {
+		let include_protocol = first_request_protocol_config.is_some();
+		self
+			.send_request(ProcessingRequest {
+				request: Some(Request::RequestBody(HttpBody {
+					body: buf.to_vec(),
+					end_of_stream: true,
+				})),
+				metadata_context: metadata_context.as_deref().cloned(),
+				attributes: first_request_attributes.take().unwrap_or_default(),
+				protocol_config: first_request_protocol_config.take(),
+				observability_mode: false,
+			})
+			.await?;
+		if include_protocol {
+			self.protocol_config_sent = true;
+		}
+		Ok(())
+	}
+
+	async fn send_buffered_response_body(
+		&mut self,
+		buf: bytes::Bytes,
+		metadata_context: &Option<Arc<Metadata>>,
+		first_response_attributes: &mut Option<HashMap<String, Struct>>,
+		first_response_protocol_config: &mut Option<ProtocolConfiguration>,
+	) -> Result<(), Error> {
+		let include_protocol = first_response_protocol_config.is_some();
+		self
+			.send_request(ProcessingRequest {
+				request: Some(Request::ResponseBody(HttpBody {
+					body: buf.to_vec(),
+					end_of_stream: true,
+				})),
+				metadata_context: metadata_context.as_deref().cloned(),
+				attributes: first_response_attributes.take().unwrap_or_default(),
+				protocol_config: first_response_protocol_config.take(),
+				observability_mode: false,
+			})
+			.await?;
+		if include_protocol {
+			self.protocol_config_sent = true;
+		}
+		Ok(())
+	}
+
+	async fn recv_response_loop_message(
+		rx: &mut Receiver<ProcessingResponse>,
+	) -> Result<ResponseLoopMessage, Error> {
+		let Some(presp) = rx.recv().await else {
+			trace!("done receiving response");
+			return Err(Error::NoMoreResponses);
+		};
+		if let Some(dr) = to_immediate_response(&presp) {
+			trace!("got immediate response in request handler");
+			return Ok(ResponseLoopMessage::Immediate(dr));
+		}
+		Ok(ResponseLoopMessage::Processing(presp))
+	}
+
+	async fn process_response_loop_message(
+		&mut self,
+		presp: ProcessingResponse,
+		resp: Option<&mut http::Response>,
+		tx_chunk: &mut Sender<Result<Frame<Bytes>, Infallible>>,
+		response_fsm: &mut ResponseFlowFsm,
+		send_response_headers: bool,
+	) -> (bool, bool) {
+		if matches!(presp.response, Some(Response::ResponseHeaders(_))) {
+			self
+				.mode_state
+				.mark_headers_processed(HeaderPhase::Response);
+			self.maybe_apply_mode_override(HeaderPhase::Response, &presp);
+			response_fsm.reconcile_headers_response(self.mode_state.response_body_mode);
+		}
+		let (headers_done, eos) = handle_response_for_response_mutation(
+			response_fsm.send_body,
+			send_response_headers,
+			resp,
+			tx_chunk,
+			presp,
+		)
+		.await;
+		(response_fsm.advance_after_response(headers_done), eos)
+	}
+
+	async fn forward_response_stream_continuation(
+		mut rx: Receiver<ProcessingResponse>,
+		mut tx_chunk: Sender<Result<Frame<Bytes>, Infallible>>,
+		send_response_body: bool,
+		send_response_headers: bool,
+	) {
+		loop {
+			let Some(presp) = rx.recv().await else {
+				trace!("done receiving response");
+				return;
+			};
+			let (_, eos) = handle_response_for_response_mutation(
+				send_response_body,
+				send_response_headers,
+				None,
+				&mut tx_chunk,
+				presp,
+			)
+			.await;
+			if eos || !send_response_body {
+				trace!("response EOS!");
+				drop(tx_chunk);
+				return;
+			}
+		}
+	}
+
 	fn protocol_config(&self) -> ProtocolConfiguration {
-		let req_body_mode = match self.processing_options.request_body_mode {
+		let req_body_mode = match self.mode_state.request_body_mode {
 			BodySendMode::None => EnvoyBodySendMode::None,
 			BodySendMode::Buffered => EnvoyBodySendMode::Buffered,
+			BodySendMode::BufferedPartial => EnvoyBodySendMode::BufferedPartial,
 			BodySendMode::FullDuplexStreamed => EnvoyBodySendMode::FullDuplexStreamed,
 		};
-		let resp_body_mode = match self.processing_options.response_body_mode {
+		let resp_body_mode = match self.mode_state.response_body_mode {
 			BodySendMode::None => EnvoyBodySendMode::None,
-			// Response-side buffered handling is currently streamed, so advertise streamed semantics.
-			BodySendMode::Buffered => EnvoyBodySendMode::FullDuplexStreamed,
+			BodySendMode::Buffered => EnvoyBodySendMode::Buffered,
+			BodySendMode::BufferedPartial => EnvoyBodySendMode::BufferedPartial,
 			BodySendMode::FullDuplexStreamed => EnvoyBodySendMode::FullDuplexStreamed,
 		};
 		ProtocolConfiguration {
 			request_body_mode: req_body_mode.into(),
 			response_body_mode: resp_body_mode.into(),
-			..Default::default() // TODO: Do we need send_body_without_waiting_for_header_response?
+			send_body_without_waiting_for_header_response: self
+				.mode_state
+				.send_body_without_waiting_for_header_response(),
 		}
+	}
+
+	fn maybe_apply_mode_override(&mut self, phase: HeaderPhase, presp: &ProcessingResponse) {
+		let Some(mode_override) = presp.mode_override.as_ref() else {
+			return;
+		};
+		// This updates mode_state (protocol configuration). RequestFlowFsm/
+		// ResponseFlowFsm are synced from mode_state when we consume header-phase
+		// responses in the mutate_* loops.
+		let valid_phase_response = matches!(
+			(phase, &presp.response),
+			(
+				HeaderPhase::Request,
+				Some(processing_response::Response::RequestHeaders(_))
+			) | (
+				HeaderPhase::Response,
+				Some(processing_response::Response::ResponseHeaders(_))
+			)
+		);
+		if !valid_phase_response {
+			warn!(phase = ?phase, "received mode_override outside matching headers response phase; ignoring");
+			return;
+		}
+		if !self.mode_state.allow_mode_override() {
+			warn!("received mode_override but allow_mode_override is disabled; ignoring");
+			return;
+		}
+		if self
+			.mode_state
+			.send_body_without_waiting_for_header_response()
+		{
+			warn!(
+				"received mode_override while send_body_without_waiting_for_header_response=true; ignoring"
+			);
+			return;
+		}
+		self
+			.mode_state
+			.apply_envoy_mode_override(phase, mode_override);
 	}
 
 	pub async fn mutate_request(
@@ -521,14 +1072,18 @@ impl ExtProcInstance {
 		let failure_mode = self.failure_mode;
 		let end_of_stream = req.body().is_end_stream();
 		let had_body = !end_of_stream;
-		let send_request_headers = self.processing_options.request_header_mode == HeaderSendMode::Send;
-		let send_request_trailers =
-			self.processing_options.request_trailer_mode == TrailerSendMode::Send;
-		let req_body_mode = match self.processing_options.request_body_mode {
+		let send_request_headers = self.mode_state.request_header_mode == HeaderSendMode::Send;
+		let send_request_trailers = self.mode_state.request_trailer_mode == TrailerSendMode::Send;
+		let req_body_mode = match self.mode_state.request_body_mode {
 			BodySendMode::None => EnvoyBodySendMode::None,
 			BodySendMode::Buffered => EnvoyBodySendMode::Buffered,
+			BodySendMode::BufferedPartial => EnvoyBodySendMode::BufferedPartial,
 			BodySendMode::FullDuplexStreamed => EnvoyBodySendMode::FullDuplexStreamed,
 		};
+		// request_fsm is method-local execution state (what phase mutate_request is
+		// waiting on). mode_state is protocol state that can be updated by
+		// mode_override responses.
+		let mut request_fsm = RequestFlowFsm::new(send_request_headers, had_body, req_body_mode);
 		let protocol_config = self.protocol_config();
 		// If request headers are skipped, the first body-phase ProcessingRequest must carry
 		// attributes/protocol_config, and subsequent ProcessingRequests must not.
@@ -623,6 +1178,10 @@ impl ExtProcInstance {
 					trace!("got immediate response in request handler");
 					return Ok((req, Some(resp)));
 				}
+				if matches!(presp.response, Some(Response::RequestHeaders(_))) {
+					self.mode_state.mark_headers_processed(HeaderPhase::Request);
+					self.maybe_apply_mode_override(HeaderPhase::Request, &presp);
+				}
 				let (headers_done, _) = handle_response_for_request_mutation(
 					false,
 					send_request_headers,
@@ -649,15 +1208,15 @@ impl ExtProcInstance {
 		let (mut tx_chunk, rx_chunk) = tokio::sync::mpsc::channel(1);
 		let upstream_body = http_body_util::StreamBody::new(ReceiverStream::new(rx_chunk));
 		let mut req = http::Request::from_parts(parts, http::Body::new(upstream_body));
+		let mut pending_full_duplex_body = Some(body);
 
 		// Set up body forwarding to ext_proc based on the negotiated mode.
 		//
 		// Returns `true` when body data is being piped asynchronously (FullDuplexStreamed
 		// with a body), which suppresses fail-open after the headers have been acknowledged.
-		let body_forwarded_async = match req_body_mode {
+		match req_body_mode {
 			EnvoyBodySendMode::None => {
 				// Semantics: ext_proc client doesn't send the body at all.
-				false
 			},
 			EnvoyBodySendMode::Streamed => {
 				// Semantics: extproc client sends a chunk, the server processes it and sends a chunk back 1:1.
@@ -669,18 +1228,24 @@ impl ExtProcInstance {
 				// The buffer task runs concurrently with the headers round-trip; we will
 				// await it and send the body inside the response loop once ext_proc
 				// acknowledges the headers, maximising overlap.
-				false
 			},
 			EnvoyBodySendMode::FullDuplexStreamed => {
 				// In this mode, the extproc server can modify body and streams it back to us as it comes in.
 				// We behave approximately like Envoy here (https://github.com/envoyproxy/envoy/pull/41276); after
 				// the headers are sent we drop fail_open for requests with a body in flight.
-				if had_body {
+				if had_body
+					&& (!send_request_headers
+						|| self
+							.mode_state
+							.send_body_without_waiting_for_header_response())
+				{
 					let include_protocol = first_request_protocol_config.is_some();
 					tokio::task::spawn(Self::handle_body_stream(
 						metadata_context.clone(),
-						body,
-						tx,
+						pending_full_duplex_body
+							.take()
+							.expect("request body should be available before streaming starts"),
+						tx.clone(),
 						Request::RequestBody,
 						Request::RequestTrailers,
 						send_request_trailers,
@@ -690,19 +1255,14 @@ impl ExtProcInstance {
 					if include_protocol {
 						self.protocol_config_sent = true;
 					}
-					true
-				} else {
-					false
 				}
 			},
-		};
+		}
 
 		// Whether ext_proc will send RequestBody phase responses (i.e. we sent body data).
 		// Used to decide whether the response loop should wait for body-phase messages after
 		// the headers response, and whether to spawn a body continuation task.
-		let expect_body_response = req_body_mode != EnvoyBodySendMode::None && had_body;
-		let strip_request_content_length = expect_body_response;
-		let mut headers_already_done = !send_request_headers;
+		let strip_request_content_length = request_fsm.strip_content_length();
 
 		// Common response-processing loop shared across all body modes.
 		let mut rx = self
@@ -713,23 +1273,20 @@ impl ExtProcInstance {
 		// round-trip. We consume it here so we can send the body after headers_done.
 		let mut pending_body_task = body_buffer_task;
 		let mut buffered_original_body: Option<bytes::Bytes> = None;
-		if headers_already_done && let Some(task) = pending_body_task.take() {
+		if !request_fsm.is_awaiting_headers()
+			&& let Some(task) = pending_body_task.take()
+		{
 			let buf = task
 				.await
 				.map_err(|_| Error::BodyBuffer("body buffer task panicked".into()))??;
 			buffered_original_body = Some(buf.clone());
-			let include_protocol = first_request_protocol_config.is_some();
 			if let Err(e) = self
-				.send_request(ProcessingRequest {
-					request: Some(Request::RequestBody(HttpBody {
-						body: buf.to_vec(),
-						end_of_stream: true,
-					})),
-					metadata_context: metadata_context.as_deref().cloned(),
-					attributes: first_request_attributes.take().unwrap_or_default(),
-					protocol_config: first_request_protocol_config.take(),
-					observability_mode: false,
-				})
+				.send_buffered_request_body(
+					buf,
+					&metadata_context,
+					&mut first_request_attributes,
+					&mut first_request_protocol_config,
+				)
 				.await
 			{
 				if failure_mode == FailureMode::FailOpen {
@@ -739,15 +1296,12 @@ impl ExtProcInstance {
 				}
 				return Err(e);
 			}
-			if include_protocol {
-				self.protocol_config_sent = true;
-			}
 		}
 		loop {
 			let Some(presp) = rx.recv().await else {
 				// Fail-open unless we're mid-stream (FullDuplexStreamed with body in flight),
 				// where failing open could silently corrupt data.
-				if !body_forwarded_async && failure_mode == FailureMode::FailOpen {
+				if request_fsm.should_fail_open_on_disconnect(failure_mode) {
 					trace!("fail open triggered");
 					self.skipped = true;
 					return Ok((req, None));
@@ -759,27 +1313,29 @@ impl ExtProcInstance {
 				trace!("got immediate response in request handler");
 				return Ok((req, Some(resp)));
 			}
+			if matches!(presp.response, Some(Response::RequestHeaders(_))) {
+				self.mode_state.mark_headers_processed(HeaderPhase::Request);
+				self.maybe_apply_mode_override(HeaderPhase::Request, &presp);
+				request_fsm.reconcile_headers_response(self.mode_state.request_body_mode);
+			}
 			let request_body_no_mutation = matches!(
 				presp.response,
 				Some(Response::RequestBody(BodyResponse { response: None }))
 			);
 			let (headers_done, eos) = handle_response_for_request_mutation(
-				expect_body_response,
+				request_fsm.expect_body_response,
 				send_request_headers,
 				Some(&mut req),
 				&mut tx_chunk,
 				presp,
 			)
 			.await;
-			if request_body_no_mutation
-				&& expect_body_response
-				&& !body_forwarded_async
+			if request_fsm.should_restore_original_buffered_body(request_body_no_mutation)
 				&& let Some(original) = buffered_original_body.take()
 			{
 				let _ = tx_chunk.send(Ok(Frame::data(original))).await;
 			}
-			headers_already_done |= headers_done;
-			if headers_already_done {
+			if request_fsm.advance_after_response(headers_done) {
 				// For Buffered/BufferedPartial: ext_proc has finished with the headers.
 				// Await the body buffer task (which has been running concurrently) and send
 				// the body now. Then continue the loop to receive the body-phase response.
@@ -788,18 +1344,13 @@ impl ExtProcInstance {
 						.await
 						.map_err(|_| Error::BodyBuffer("body buffer task panicked".into()))??;
 					buffered_original_body = Some(buf.clone());
-					let include_protocol = first_request_protocol_config.is_some();
 					if let Err(e) = self
-						.send_request(ProcessingRequest {
-							request: Some(Request::RequestBody(HttpBody {
-								body: buf.to_vec(),
-								end_of_stream: true,
-							})),
-							metadata_context: metadata_context.as_deref().cloned(),
-							attributes: first_request_attributes.take().unwrap_or_default(),
-							protocol_config: first_request_protocol_config.take(),
-							observability_mode: false,
-						})
+						.send_buffered_request_body(
+							buf,
+							&metadata_context,
+							&mut first_request_attributes,
+							&mut first_request_protocol_config,
+						)
 						.await
 					{
 						if failure_mode == FailureMode::FailOpen {
@@ -809,14 +1360,31 @@ impl ExtProcInstance {
 						}
 						return Err(e);
 					}
-					if include_protocol {
-						self.protocol_config_sent = true;
-					}
 					// Loop again to receive the RequestBody response from ext_proc.
 					continue;
 				}
 
+				if pending_full_duplex_body.is_some() && request_fsm.expect_body_response {
+					let include_protocol = first_request_protocol_config.is_some();
+					tokio::task::spawn(Self::handle_body_stream(
+						metadata_context.clone(),
+						pending_full_duplex_body
+							.take()
+							.expect("request body should be available before streaming continuation starts"),
+						tx.clone(),
+						Request::RequestBody,
+						Request::RequestTrailers,
+						send_request_trailers,
+						first_request_attributes.take(),
+						first_request_protocol_config.take(),
+					));
+					if include_protocol {
+						self.protocol_config_sent = true;
+					}
+				}
+
 				if !eos {
+					request_fsm.enter_streaming_continuation();
 					trace!("spawn body!");
 					// Move remaining body response handling to an async task so we can return
 					// the request to the caller while body chunks continue to flow.
@@ -827,14 +1395,14 @@ impl ExtProcInstance {
 								return;
 							};
 							let (_, eos) = handle_response_for_request_mutation(
-								expect_body_response,
+								request_fsm.expect_body_response,
 								send_request_headers,
 								None,
 								&mut tx_chunk,
 								presp,
 							)
 							.await;
-							if eos || !expect_body_response {
+							if eos || !request_fsm.expect_body_response {
 								trace!("request EOS!");
 								drop(tx_chunk);
 								return;
@@ -927,10 +1495,8 @@ impl ExtProcInstance {
 			return Ok((req, None));
 		}
 		let headers = resp_to_header_map(&req);
-		let send_response_headers =
-			self.processing_options.response_header_mode == HeaderSendMode::Send;
-		let send_response_trailers =
-			self.processing_options.response_trailer_mode == TrailerSendMode::Send;
+		let send_response_headers = self.mode_state.response_header_mode == HeaderSendMode::Send;
+		let send_response_trailers = self.mode_state.response_trailer_mode == TrailerSendMode::Send;
 
 		let exec = cel::Executor::new_response(request, &req);
 		// Wrap metadata_context in Arc for cheap cloning across body chunks
@@ -969,14 +1535,18 @@ impl ExtProcInstance {
 		let (parts, body) = req.into_parts();
 		let end_of_stream = body.is_end_stream();
 		let had_body = !end_of_stream;
-		let send_response_body =
-			self.processing_options.response_body_mode != BodySendMode::None && had_body;
+		let response_body_mode = self.mode_state.response_body_mode;
+		let send_response_body = response_body_mode != BodySendMode::None && had_body;
+		// response_fsm drives local flow in mutate_response, while mode_state tracks
+		// the currently effective ext_proc processing modes.
+		let mut response_fsm =
+			ResponseFlowFsm::new(send_response_headers, send_response_body, had_body);
 		let mut first_response_attributes =
 			(!send_response_headers && send_response_body).then(|| attributes.clone());
 		let protocol_config = self.protocol_config();
 		let mut first_response_protocol_config =
 			(!send_response_headers && send_response_body && !self.protocol_config_sent)
-				.then_some(protocol_config.clone());
+				.then_some(protocol_config);
 
 		// Send the response headers to ext_proc.
 		// No response side fail_open handling.
@@ -1011,24 +1581,22 @@ impl ExtProcInstance {
 				.expect("mutate_response called twice");
 			let (mut tx_chunk, _rx_chunk) = tokio::sync::mpsc::channel(1);
 			loop {
-				let Some(presp) = rx.recv().await else {
-					trace!("done receiving response");
-					return Err(Error::NoMoreResponses);
-				};
-				if let Some(dr) = to_immediate_response(&presp) {
-					trace!("got immediate response in request handler");
-					return Ok((resp, Some(dr)));
-				}
-				let (headers_done, _) = handle_response_for_response_mutation(
-					false,
-					send_response_headers,
-					Some(&mut resp),
-					&mut tx_chunk,
-					presp,
-				)
-				.await;
-				if headers_done {
-					return Ok((resp, None));
+				let msg = Self::recv_response_loop_message(&mut rx).await?;
+				match msg {
+					ResponseLoopMessage::Immediate(dr) => return Ok((resp, Some(dr))),
+					ResponseLoopMessage::Processing(presp) => {
+						let (headers_done, _) = handle_response_for_response_mutation(
+							false,
+							send_response_headers,
+							Some(&mut resp),
+							&mut tx_chunk,
+							presp,
+						)
+						.await;
+						if headers_done {
+							return Ok((resp, None));
+						}
+					},
 				}
 			}
 		}
@@ -1037,21 +1605,76 @@ impl ExtProcInstance {
 			return Ok((resp, None));
 		}
 
-		// The EPP will await for our headers and body. The body is going to be streaming in.
-		// We will spin off a task that is going to pipe the body to the ext_proc server as we read it.
+		// Response headers are allowed to change the effective body mode. Keep the upstream body
+		// local until the headers response has been applied, then start forwarding only if the
+		// response FSM still expects a body phase.
+		let mut pending_response_body = Some(body);
+		type BufferResult = Result<bytes::Bytes, Error>;
+		let mut pending_response_buffer_task: Option<tokio::task::JoinHandle<BufferResult>> =
+			match response_body_mode {
+				BodySendMode::Buffered | BodySendMode::BufferedPartial if had_body => {
+					let body_opts = bufferbody::BodyOptions {
+						allow_partial_message: response_body_mode == BodySendMode::BufferedPartial,
+						pack_as_bytes: true,
+						..Default::default()
+					};
+					let mut body = pending_response_body
+						.take()
+						.expect("response body should be available before buffering starts");
+					let handle = tokio::task::spawn(async move {
+						let max_size = body_opts.max_request_bytes as usize;
+						let peek_limit = max_size.saturating_add(1);
+						let buf = crate::http::inspect_body_with_limit(&mut body, peek_limit)
+							.await
+							.map_err(|e| {
+								Error::BodyBuffer(format!("failed to read response body for buffering: {e}"))
+							})?;
+						let is_partial = buf.len() > max_size;
+						if is_partial && !body_opts.allow_partial_message {
+							return Err(Error::BodyBuffer(format!(
+								"response body exceeded max buffer size of {} bytes",
+								body_opts.max_request_bytes
+							)));
+						}
+						Ok(if is_partial {
+							buf.slice(0..max_size)
+						} else {
+							buf
+						})
+					});
+					Some(handle)
+				},
+				_ => None,
+			};
 		let tx = self.tx_req.clone();
-		if had_body {
+		if !send_response_headers && had_body {
 			let include_protocol = first_response_protocol_config.is_some();
-			tokio::task::spawn(Self::handle_body_stream(
-				metadata_context,
-				body,
-				tx,
-				Request::ResponseBody,
-				Request::ResponseTrailers,
-				send_response_trailers,
-				first_response_attributes.take(),
-				first_response_protocol_config.take(),
-			));
+			if let Some(task) = pending_response_buffer_task.take() {
+				let buf = task
+					.await
+					.map_err(|_| Error::BodyBuffer("response body buffer task panicked".into()))??;
+				self
+					.send_buffered_response_body(
+						buf,
+						&metadata_context,
+						&mut first_response_attributes,
+						&mut first_response_protocol_config,
+					)
+					.await?;
+			} else {
+				tokio::task::spawn(Self::handle_body_stream(
+					metadata_context.clone(),
+					pending_response_body
+						.take()
+						.expect("response body should be available before streaming starts"),
+					tx.clone(),
+					Request::ResponseBody,
+					Request::ResponseTrailers,
+					send_response_trailers,
+					first_response_attributes.take(),
+					first_response_protocol_config.take(),
+				));
+			}
 			if include_protocol {
 				self.protocol_config_sent = true;
 			}
@@ -1062,55 +1685,69 @@ impl ExtProcInstance {
 
 		let body = http_body_util::StreamBody::new(ReceiverStream::new(rx_chunk));
 		let mut resp = http::Response::from_parts(parts, http::Body::new(body));
-		let strip_response_content_length = send_response_body;
-		let mut headers_already_done = !send_response_headers;
+		let strip_response_content_length = response_fsm.strip_content_length();
 		let mut rx = self
 			.rx_resp_for_response
 			.take()
 			.expect("mutate_response called twice");
 		loop {
-			let Some(presp) = rx.recv().await else {
-				trace!("done receiving response");
-				return Err(Error::NoMoreResponses);
+			let msg = Self::recv_response_loop_message(&mut rx).await?;
+			let (transitioned, eos) = match msg {
+				ResponseLoopMessage::Immediate(dr) => return Ok((resp, Some(dr))),
+				ResponseLoopMessage::Processing(presp) => {
+					self
+						.process_response_loop_message(
+							presp,
+							Some(&mut resp),
+							&mut tx_chunk,
+							&mut response_fsm,
+							send_response_headers,
+						)
+						.await
+				},
 			};
-			if let Some(dr) = to_immediate_response(&presp) {
-				trace!("got immediate response in request handler");
-				return Ok((resp, Some(dr)));
-			}
-			let (headers_done, eos) = handle_response_for_response_mutation(
-				send_response_body,
-				send_response_headers,
-				Some(&mut resp),
-				&mut tx_chunk,
-				presp,
-			)
-			.await;
-			headers_already_done |= headers_done;
-			if headers_already_done {
-				if !eos {
-					trace!("spawn body!");
-					// Moving rest of body handling to async
-					tokio::task::spawn(async move {
-						loop {
-							let Some(presp) = rx.recv().await else {
-								trace!("done receiving response");
-								return;
-							};
-							let (_, eos) = handle_response_for_response_mutation(
-								send_response_body,
-								send_response_headers,
-								None,
-								&mut tx_chunk,
-								presp,
+			if transitioned {
+				if !eos && response_fsm.send_body {
+					if let Some(task) = pending_response_buffer_task.take() {
+						let buf = task
+							.await
+							.map_err(|_| Error::BodyBuffer("response body buffer task panicked".into()))??;
+						self
+							.send_buffered_response_body(
+								buf,
+								&metadata_context,
+								&mut first_response_attributes,
+								&mut first_response_protocol_config,
 							)
-							.await;
-							if eos || !send_response_body {
-								trace!("response EOS!");
-								drop(tx_chunk);
-								return;
-							}
+							.await?;
+						continue;
+					}
+					if pending_response_body.is_some() {
+						let include_protocol = first_response_protocol_config.is_some();
+						trace!("spawn body!");
+						tokio::task::spawn(Self::handle_body_stream(
+							metadata_context.clone(),
+							pending_response_body
+								.take()
+								.expect("response body should be available before streaming continuation starts"),
+							tx.clone(),
+							Request::ResponseBody,
+							Request::ResponseTrailers,
+							send_response_trailers,
+							first_response_attributes.take(),
+							first_response_protocol_config.take(),
+						));
+						if include_protocol {
+							self.protocol_config_sent = true;
 						}
-					});
+					}
+					response_fsm.enter_streaming_continuation();
+					tokio::task::spawn(Self::forward_response_stream_continuation(
+						rx,
+						tx_chunk,
+						true,
+						send_response_headers,
+					));
 				}
 				if strip_response_content_length {
 					// Skip content-length when the response body passed through ext_proc, since the
@@ -1260,14 +1897,49 @@ fn apply_header_mutations_response(resp: &mut http::Response, h: Option<&HeaderM
 	}
 }
 
+fn merge_dynamic_metadata(
+	extensions: &mut ::http::Extensions,
+	metadata: &prost_wkt_types::Struct,
+) -> Result<(), Error> {
+	let mut dynamic_metadata = extensions
+		.remove::<ExtProcDynamicMetadata>()
+		.unwrap_or_default();
+
+	for (key, value) in &metadata.fields {
+		let json_val = envoy_proto_common::prost_value_to_json(value)
+			.map_err(|e| Error::MetadataConversion(format!("failed to convert key '{}': {}", key, e)))?;
+		dynamic_metadata.0.insert(key.clone(), json_val);
+	}
+
+	if !dynamic_metadata.0.is_empty() {
+		extensions.insert(dynamic_metadata);
+	}
+
+	Ok(())
+}
+
 // handle_response_for_response_mutation handles a single ext_proc response. If it returns 'true' we are done processing.
 async fn handle_response_for_response_mutation(
 	had_body: bool,
 	allow_header_mutations: bool,
-	resp: Option<&mut http::Response>,
+	mut resp: Option<&mut http::Response>,
 	body_tx: &mut Sender<Result<Frame<Bytes>, Infallible>>,
 	presp: ProcessingResponse,
 ) -> (bool, bool) {
+	if let Some(dm) = &presp.dynamic_metadata {
+		if let Some(resp) = resp.as_mut() {
+			if let Err(e) = extract_dynamic_metadata_response(resp, dm) {
+				warn!("Failed to extract ext_proc dynamic metadata: {}", e);
+			}
+		} else if !dm.fields.is_empty() {
+			warn!(
+				"ext_proc server sent dynamic_metadata after response headers were processed; \
+				 metadata cannot be attached and will be ignored. Consider sending \
+				 metadata in the ResponseHeaders response instead."
+			);
+		}
+	}
+
 	let res = matches!(presp.response, Some(Response::ResponseHeaders(_)));
 	let cr = match presp.response {
 		Some(Response::ResponseHeaders(HeadersResponse { response: None })) => {
@@ -1398,24 +2070,14 @@ pub(crate) fn extract_dynamic_metadata(
 	req: &mut http::Request,
 	metadata: &prost_wkt_types::Struct,
 ) -> Result<(), Error> {
-	// Get or create metadata container, merging with existing metadata
-	let mut dynamic_metadata = req
-		.extensions_mut()
-		.remove::<ExtProcDynamicMetadata>()
-		.unwrap_or_default();
+	merge_dynamic_metadata(req.extensions_mut(), metadata)
+}
 
-	// Merge new fields into existing metadata
-	for (key, value) in &metadata.fields {
-		let json_val = envoy_proto_common::prost_value_to_json(value)
-			.map_err(|e| Error::MetadataConversion(format!("failed to convert key '{}': {}", key, e)))?;
-		dynamic_metadata.0.insert(key.clone(), json_val);
-	}
-
-	if !dynamic_metadata.0.is_empty() {
-		req.extensions_mut().insert(dynamic_metadata);
-	}
-
-	Ok(())
+fn extract_dynamic_metadata_response(
+	resp: &mut http::Response,
+	metadata: &prost_wkt_types::Struct,
+) -> Result<(), Error> {
+	merge_dynamic_metadata(resp.extensions_mut(), metadata)
 }
 
 #[derive(Clone, Debug)]
