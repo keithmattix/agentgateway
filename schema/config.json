@@ -4616,8 +4616,8 @@
         "processingOptions": {
           "$ref": "#/$defs/ProcessingOptions",
           "default": {
-            "requestBodyMode": "fullDuplexStreamed",
-            "responseBodyMode": "fullDuplexStreamed",
+            "requestBodyMode": "none",
+            "responseBodyMode": "none",
             "requestHeaderMode": "send",
             "responseHeaderMode": "send",
             "requestTrailerMode": "skip",
@@ -4816,8 +4816,8 @@
         "processingOptions": {
           "$ref": "#/$defs/ProcessingOptions",
           "default": {
-            "requestBodyMode": "fullDuplexStreamed",
-            "responseBodyMode": "fullDuplexStreamed",
+            "requestBodyMode": "none",
+            "responseBodyMode": "none",
             "requestHeaderMode": "send",
             "responseHeaderMode": "send",
             "requestTrailerMode": "skip",
