@@ -4700,22 +4700,28 @@
       "type": "object",
       "properties": {
         "requestBodyMode": {
-          "$ref": "#/$defs/BodySendMode"
+          "$ref": "#/$defs/BodySendMode",
+          "default": "none"
         },
         "responseBodyMode": {
-          "$ref": "#/$defs/BodySendMode"
+          "$ref": "#/$defs/BodySendMode",
+          "default": "none"
         },
         "requestHeaderMode": {
-          "$ref": "#/$defs/HeaderSendMode"
+          "$ref": "#/$defs/HeaderSendMode",
+          "default": "send"
         },
         "responseHeaderMode": {
-          "$ref": "#/$defs/HeaderSendMode"
+          "$ref": "#/$defs/HeaderSendMode",
+          "default": "send"
         },
         "requestTrailerMode": {
-          "$ref": "#/$defs/TrailerSendMode"
+          "$ref": "#/$defs/TrailerSendMode",
+          "default": "skip"
         },
         "responseTrailerMode": {
-          "$ref": "#/$defs/TrailerSendMode"
+          "$ref": "#/$defs/TrailerSendMode",
+          "default": "skip"
         },
         "allowModeOverride": {
           "description": "Allow ext_proc `mode_override` values from matching headers responses to update\nsubsequent request/response processing phases for this exchange.",
@@ -4728,15 +4734,7 @@
           "default": false
         }
       },
-      "additionalProperties": false,
-      "required": [
-        "requestBodyMode",
-        "responseBodyMode",
-        "requestHeaderMode",
-        "responseHeaderMode",
-        "requestTrailerMode",
-        "responseTrailerMode"
-      ]
+      "additionalProperties": false
     },
     "BodySendMode": {
       "type": "string",

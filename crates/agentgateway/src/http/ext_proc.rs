@@ -239,11 +239,17 @@ impl InferencePoolRouter {
 #[apply(schema!)]
 #[derive(Copy)]
 pub struct ProcessingOptions {
+	#[serde(default)]
 	pub request_body_mode: BodySendMode,
+	#[serde(default)]
 	pub response_body_mode: BodySendMode,
+	#[serde(default)]
 	pub request_header_mode: HeaderSendMode,
+	#[serde(default)]
 	pub response_header_mode: HeaderSendMode,
+	#[serde(default)]
 	pub request_trailer_mode: TrailerSendMode,
+	#[serde(default)]
 	pub response_trailer_mode: TrailerSendMode,
 	/// Allow ext_proc `mode_override` values from matching headers responses to update
 	/// subsequent request/response processing phases for this exchange.
