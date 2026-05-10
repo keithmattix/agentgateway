@@ -64,12 +64,13 @@ func TestAttachments(t *testing.T) {
       name: ext-processor
       port: 80
     processingOptions:
-      requestBodyMode: Buffered
+      requestBodyMode: BufferedPartial
       responseBodyMode: FullDuplexStreamed
       requestHeaderMode: Skip
       responseHeaderMode: Send
       requestTrailerMode: Send
-      responseTrailerMode: Skip`,
+      responseTrailerMode: Skip
+      allowModeOverride: true`,
 			attachments: Attachments{
 				Gateway:    true,
 				Port:       false,

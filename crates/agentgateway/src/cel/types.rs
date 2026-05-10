@@ -362,6 +362,9 @@ impl<'a> Executor<'a> {
 		if let Some(llm) = resp.extensions().get::<LLMContext>() {
 			self.llm = ExtensionOrDirect::Direct(Some(llm));
 		}
+		if let Some(extproc) = resp.extensions().get::<ExtProcDynamicMetadata>() {
+			self.extproc = ExtensionOrDirect::Direct(Some(extproc));
+		}
 		if let Some(metadata) = resp.extensions().get::<TransformationMetadata>() {
 			self.metadata = ExtensionOrDirect::Direct(Some(metadata));
 		}

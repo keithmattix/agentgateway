@@ -1,7 +1,7 @@
 apiVersion: agentgateway.dev/v1alpha1
 kind: AgentgatewayPolicy
 metadata:
-  name: http
+  name: http-defaults
   namespace: default
 spec:
   targetRefs:
@@ -13,14 +13,7 @@ spec:
       backendRef:
         name: extproc-svc
         port: 4444
-      processingOptions:
-        requestBodyMode: BufferedPartial
-        responseBodyMode: FullDuplexStreamed
-        requestHeaderMode: Skip
-        responseHeaderMode: Send
-        requestTrailerMode: Send
-        responseTrailerMode: Skip
-        allowModeOverride: true
+      processingOptions: {}
 ---
 apiVersion: v1
 kind: Service
@@ -38,10 +31,10 @@ output:
     Namespace: default
   resource:
     policy:
-      key: traffic/default/http:extproc:default/test
+      key: traffic/default/http-defaults:extproc:default/test
       name:
         kind: AgentgatewayPolicy
-        name: http
+        name: http-defaults
         namespace: default
       target:
         gateway:
@@ -50,13 +43,8 @@ output:
       traffic:
         extProc:
           processingOptions:
-            allowModeOverride: true
-            requestBodyMode: BUFFERED_PARTIAL
-            requestHeaderMode: SKIP
-            requestTrailerMode: SEND
+            requestBodyMode: FULL_DUPLEX_STREAMED
             responseBodyMode: FULL_DUPLEX_STREAMED
-            responseHeaderMode: SEND
-            responseTrailerMode: SKIP
           target:
             port: 4444
             service:
@@ -66,7 +54,7 @@ status:
 - apiVersion: agentgateway.dev/v1alpha1
   kind: AgentgatewayPolicy
   metadata:
-    name: http
+    name: http-defaults
     namespace: default
   spec: null
   status:

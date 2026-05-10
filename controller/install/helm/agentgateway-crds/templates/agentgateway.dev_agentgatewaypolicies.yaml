@@ -7229,55 +7229,70 @@ spec:
                                   description: processingOptions configures how request
                                     and response phases are sent to ext_proc.
                                   properties:
+                                    allowModeOverride:
+                                      default: false
+                                      description: |-
+                                        allowModeOverride allows ext_proc `mode_override` values from matching headers responses to update
+                                        subsequent request/response processing phases for this exchange. Defaults to `false`.
+                                      type: boolean
                                     requestBodyMode:
-                                      default: None
-                                      description: requestBodyMode controls how request
-                                        bodies are sent to the external processor.
+                                      default: FullDuplexStreamed
+                                      description: |-
+                                        requestBodyMode controls how request bodies are sent to the external processor.
+                                        `Buffered` buffers the full body and returns an error if it exceeds 8KB.
+                                        `BufferedPartial` buffers up to 8KB and sends the buffered prefix if the
+                                        body exceeds that limit. Defaults to `FullDuplexStreamed`.
                                       enum:
                                       - None
                                       - Buffered
+                                      - BufferedPartial
                                       - FullDuplexStreamed
                                       type: string
                                     requestHeaderMode:
                                       default: Send
-                                      description: requestHeaderMode controls whether
-                                        request headers are sent to the external processor.
+                                      description: |-
+                                        requestHeaderMode controls whether request headers are sent to the external processor.
+                                        Defaults to `Send`.
                                       enum:
                                       - Send
                                       - Skip
                                       type: string
                                     requestTrailerMode:
                                       default: Skip
-                                      description: requestTrailerMode controls whether
-                                        request trailers are sent to the external
-                                        processor.
+                                      description: |-
+                                        requestTrailerMode controls whether request trailers are sent to the external processor.
+                                        Defaults to `Skip`.
                                       enum:
                                       - Skip
                                       - Send
                                       type: string
                                     responseBodyMode:
-                                      default: None
-                                      description: responseBodyMode controls how response
-                                        bodies are sent to the external processor.
+                                      default: FullDuplexStreamed
+                                      description: |-
+                                        responseBodyMode controls how response bodies are sent to the external processor.
+                                        `Buffered` buffers the full body and returns an error if it exceeds 8KB.
+                                        `BufferedPartial` buffers up to 8KB and sends the buffered prefix if the
+                                        body exceeds that limit. Defaults to `FullDuplexStreamed`.
                                       enum:
                                       - None
                                       - Buffered
+                                      - BufferedPartial
                                       - FullDuplexStreamed
                                       type: string
                                     responseHeaderMode:
                                       default: Send
-                                      description: responseHeaderMode controls whether
-                                        response headers are sent to the external
-                                        processor.
+                                      description: |-
+                                        responseHeaderMode controls whether response headers are sent to the external processor.
+                                        Defaults to `Send`.
                                       enum:
                                       - Send
                                       - Skip
                                       type: string
                                     responseTrailerMode:
                                       default: Skip
-                                      description: responseTrailerMode controls whether
-                                        response trailers are sent to the external
-                                        processor.
+                                      description: |-
+                                        responseTrailerMode controls whether response trailers are sent to the external processor.
+                                        Defaults to `Skip`.
                                       enum:
                                       - Skip
                                       - Send
@@ -7301,52 +7316,70 @@ spec:
                         description: processingOptions configures how request and
                           response phases are sent to ext_proc.
                         properties:
+                          allowModeOverride:
+                            default: false
+                            description: |-
+                              allowModeOverride allows ext_proc `mode_override` values from matching headers responses to update
+                              subsequent request/response processing phases for this exchange. Defaults to `false`.
+                            type: boolean
                           requestBodyMode:
-                            default: None
-                            description: requestBodyMode controls how request bodies
-                              are sent to the external processor.
+                            default: FullDuplexStreamed
+                            description: |-
+                              requestBodyMode controls how request bodies are sent to the external processor.
+                              `Buffered` buffers the full body and returns an error if it exceeds 8KB.
+                              `BufferedPartial` buffers up to 8KB and sends the buffered prefix if the
+                              body exceeds that limit. Defaults to `FullDuplexStreamed`.
                             enum:
                             - None
                             - Buffered
+                            - BufferedPartial
                             - FullDuplexStreamed
                             type: string
                           requestHeaderMode:
                             default: Send
-                            description: requestHeaderMode controls whether request
-                              headers are sent to the external processor.
+                            description: |-
+                              requestHeaderMode controls whether request headers are sent to the external processor.
+                              Defaults to `Send`.
                             enum:
                             - Send
                             - Skip
                             type: string
                           requestTrailerMode:
                             default: Skip
-                            description: requestTrailerMode controls whether request
-                              trailers are sent to the external processor.
+                            description: |-
+                              requestTrailerMode controls whether request trailers are sent to the external processor.
+                              Defaults to `Skip`.
                             enum:
                             - Skip
                             - Send
                             type: string
                           responseBodyMode:
-                            default: None
-                            description: responseBodyMode controls how response bodies
-                              are sent to the external processor.
+                            default: FullDuplexStreamed
+                            description: |-
+                              responseBodyMode controls how response bodies are sent to the external processor.
+                              `Buffered` buffers the full body and returns an error if it exceeds 8KB.
+                              `BufferedPartial` buffers up to 8KB and sends the buffered prefix if the
+                              body exceeds that limit. Defaults to `FullDuplexStreamed`.
                             enum:
                             - None
                             - Buffered
+                            - BufferedPartial
                             - FullDuplexStreamed
                             type: string
                           responseHeaderMode:
                             default: Send
-                            description: responseHeaderMode controls whether response
-                              headers are sent to the external processor.
+                            description: |-
+                              responseHeaderMode controls whether response headers are sent to the external processor.
+                              Defaults to `Send`.
                             enum:
                             - Send
                             - Skip
                             type: string
                           responseTrailerMode:
                             default: Skip
-                            description: responseTrailerMode controls whether response
-                              trailers are sent to the external processor.
+                            description: |-
+                              responseTrailerMode controls whether response trailers are sent to the external processor.
+                              Defaults to `Skip`.
                             enum:
                             - Skip
                             - Send

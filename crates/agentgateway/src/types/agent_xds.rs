@@ -37,6 +37,9 @@ use crate::types::proto::agent::backend_policy_spec::ai::request_guard::Kind;
 use crate::types::proto::agent::backend_policy_spec::ai::{ActionKind, response_guard};
 use crate::types::proto::agent::backend_policy_spec::backend_http::HttpVersion;
 use crate::types::proto::agent::mcp_target::Protocol;
+use crate::types::proto::agent::traffic_policy_spec::ext_proc::{
+	BodySendMode as XdsBodySendMode, HeaderTrailerSendMode as XdsHeaderTrailerSendMode,
+};
 use crate::types::proto::agent::traffic_policy_spec::host_rewrite::Mode;
 use crate::types::{agent, backend, proto};
 use crate::*;
@@ -57,6 +60,37 @@ impl Diagnostics {
 
 	pub fn into_warnings(self) -> Vec<String> {
 		self.warnings
+	}
+}
+
+impl From<XdsBodySendMode> for http::ext_proc::BodySendMode {
+	fn from(mode: XdsBodySendMode) -> Self {
+		match mode {
+			XdsBodySendMode::None => http::ext_proc::BodySendMode::None,
+			XdsBodySendMode::Buffered => http::ext_proc::BodySendMode::Buffered,
+			XdsBodySendMode::BufferedPartial => http::ext_proc::BodySendMode::BufferedPartial,
+			XdsBodySendMode::FullDuplexStreamed => http::ext_proc::BodySendMode::FullDuplexStreamed,
+		}
+	}
+}
+
+impl From<XdsHeaderTrailerSendMode> for http::ext_proc::HeaderSendMode {
+	fn from(mode: XdsHeaderTrailerSendMode) -> Self {
+		match mode {
+			XdsHeaderTrailerSendMode::Unset => http::ext_proc::HeaderSendMode::default(),
+			XdsHeaderTrailerSendMode::Send => http::ext_proc::HeaderSendMode::Send,
+			XdsHeaderTrailerSendMode::Skip => http::ext_proc::HeaderSendMode::Skip,
+		}
+	}
+}
+
+impl From<XdsHeaderTrailerSendMode> for http::ext_proc::TrailerSendMode {
+	fn from(mode: XdsHeaderTrailerSendMode) -> Self {
+		match mode {
+			XdsHeaderTrailerSendMode::Unset => http::ext_proc::TrailerSendMode::default(),
+			XdsHeaderTrailerSendMode::Send => http::ext_proc::TrailerSendMode::Send,
+			XdsHeaderTrailerSendMode::Skip => http::ext_proc::TrailerSendMode::Skip,
+		}
 	}
 }
 
@@ -1770,32 +1804,17 @@ fn traffic_policy_from_proto(
 				_ => http::ext_proc::FailureMode::FailClosed,
 			};
 
-			let to_body_send_mode = |mode: tps::ext_proc::BodySendMode| match mode {
-				tps::ext_proc::BodySendMode::None => http::ext_proc::BodySendMode::None,
-				tps::ext_proc::BodySendMode::Buffered => http::ext_proc::BodySendMode::Buffered,
-				tps::ext_proc::BodySendMode::FullDuplexStreamed => {
-					http::ext_proc::BodySendMode::FullDuplexStreamed
-				},
-			};
-			let to_header_send_mode = |mode: tps::ext_proc::HeaderSendMode| match mode {
-				tps::ext_proc::HeaderSendMode::Send => http::ext_proc::HeaderSendMode::Send,
-				tps::ext_proc::HeaderSendMode::Skip => http::ext_proc::HeaderSendMode::Skip,
-			};
-			let to_trailer_send_mode = |mode: tps::ext_proc::TrailerSendMode| match mode {
-				tps::ext_proc::TrailerSendMode::Send => http::ext_proc::TrailerSendMode::Send,
-				tps::ext_proc::TrailerSendMode::Skip => http::ext_proc::TrailerSendMode::Skip,
-			};
-
 			let processing_options = ep
 				.processing_options
 				.as_ref()
 				.map(|opts| http::ext_proc::ProcessingOptions {
-					request_body_mode: to_body_send_mode(opts.request_body_mode()),
-					response_body_mode: to_body_send_mode(opts.response_body_mode()),
-					request_header_mode: to_header_send_mode(opts.request_header_mode()),
-					response_header_mode: to_header_send_mode(opts.response_header_mode()),
-					request_trailer_mode: to_trailer_send_mode(opts.request_trailer_mode()),
-					response_trailer_mode: to_trailer_send_mode(opts.response_trailer_mode()),
+					request_body_mode: opts.request_body_mode().into(),
+					response_body_mode: opts.response_body_mode().into(),
+					request_header_mode: opts.request_header_mode().into(),
+					response_header_mode: opts.response_header_mode().into(),
+					request_trailer_mode: opts.request_trailer_mode().into(),
+					response_trailer_mode: opts.response_trailer_mode().into(),
+					allow_mode_override: opts.allow_mode_override,
 				})
 				.unwrap_or_default();
 			fn to_cel_attrs(
@@ -2051,7 +2070,7 @@ fn external_auth_from_proto(
 	let include_request_body =
 		ea.include_request_body
 			.as_ref()
-			.map(|body_opts| http::bufferbody::BodyOptions {
+			.map(|body_opts| http::ext_authz::BodyOptions {
 				max_request_bytes: body_opts.max_request_bytes,
 				allow_partial_message: body_opts.allow_partial_message,
 				pack_as_bytes: body_opts.pack_as_bytes,
@@ -3255,6 +3274,124 @@ mod tests {
 		} else {
 			panic!("Expected CSRF policy variant, got: {policy:?}");
 		}
+	}
+
+	#[test]
+	fn test_ext_proc_processing_options_default_header_trailer_modes() -> Result<(), ProtoError> {
+		let spec = proto::agent::TrafficPolicySpec {
+			phase: proto::agent::traffic_policy_spec::PolicyPhase::Route as i32,
+			kind: Some(proto::agent::traffic_policy_spec::Kind::ExtProc(
+				proto::agent::traffic_policy_spec::ExtProc {
+					processing_options: Some(
+						proto::agent::traffic_policy_spec::ext_proc::ProcessingOptions::default(),
+					),
+					..Default::default()
+				},
+			)),
+		};
+
+		let policy = traffic_policy_from_proto(&spec, &mut Diagnostics::default())?;
+		let TrafficPolicy::ExtProc(policy) = policy else {
+			panic!("expected ext_proc policy");
+		};
+		let processing_options = policy
+			.iter()
+			.next()
+			.expect("expected single ext_proc policy")
+			.pol
+			.processing_options;
+
+		assert!(matches!(
+			processing_options.request_header_mode,
+			crate::http::ext_proc::HeaderSendMode::Send
+		));
+		assert!(matches!(
+			processing_options.response_header_mode,
+			crate::http::ext_proc::HeaderSendMode::Send
+		));
+		assert!(matches!(
+			processing_options.request_trailer_mode,
+			crate::http::ext_proc::TrailerSendMode::Skip
+		));
+		assert!(matches!(
+			processing_options.response_trailer_mode,
+			crate::http::ext_proc::TrailerSendMode::Skip
+		));
+		Ok(())
+	}
+
+	#[test]
+	fn test_ext_proc_processing_options_explicit_none_body_modes() -> Result<(), ProtoError> {
+		use proto::agent::traffic_policy_spec::ext_proc::BodySendMode;
+
+		let spec = proto::agent::TrafficPolicySpec {
+			phase: proto::agent::traffic_policy_spec::PolicyPhase::Route as i32,
+			kind: Some(proto::agent::traffic_policy_spec::Kind::ExtProc(
+				proto::agent::traffic_policy_spec::ExtProc {
+					processing_options: Some(
+						proto::agent::traffic_policy_spec::ext_proc::ProcessingOptions {
+							request_body_mode: BodySendMode::None as i32,
+							response_body_mode: BodySendMode::None as i32,
+							..Default::default()
+						},
+					),
+					..Default::default()
+				},
+			)),
+		};
+
+		let policy = traffic_policy_from_proto(&spec, &mut Diagnostics::default())?;
+		let TrafficPolicy::ExtProc(policy) = policy else {
+			panic!("expected ext_proc policy");
+		};
+		let processing_options = policy
+			.iter()
+			.next()
+			.expect("expected single ext_proc policy")
+			.pol
+			.processing_options;
+
+		assert!(matches!(
+			processing_options.request_body_mode,
+			crate::http::ext_proc::BodySendMode::None
+		));
+		assert!(matches!(
+			processing_options.response_body_mode,
+			crate::http::ext_proc::BodySendMode::None
+		));
+		Ok(())
+	}
+
+	#[test]
+	fn test_ext_proc_processing_options_allow_mode_override() -> Result<(), ProtoError> {
+		let spec = proto::agent::TrafficPolicySpec {
+			phase: proto::agent::traffic_policy_spec::PolicyPhase::Route as i32,
+			kind: Some(proto::agent::traffic_policy_spec::Kind::ExtProc(
+				proto::agent::traffic_policy_spec::ExtProc {
+					processing_options: Some(
+						proto::agent::traffic_policy_spec::ext_proc::ProcessingOptions {
+							allow_mode_override: true,
+							..Default::default()
+						},
+					),
+					..Default::default()
+				},
+			)),
+		};
+
+		let policy = traffic_policy_from_proto(&spec, &mut Diagnostics::default())?;
+		let TrafficPolicy::ExtProc(policy) = policy else {
+			panic!("expected ext_proc policy");
+		};
+		let processing_options = policy
+			.iter()
+			.next()
+			.expect("expected single ext_proc policy")
+			.pol
+			.processing_options;
+
+		assert!(processing_options.allow_mode_override);
+		Ok(())
 	}
 
 	#[test]

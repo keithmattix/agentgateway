@@ -6,7 +6,7 @@ use crate::http::HeaderOrPseudo;
 use crate::http::ext_authz::proto::{
 	HeaderValue as ProtoHeaderValue, HeaderValueOption, QueryParameter,
 };
-use crate::http::ext_authz::{ExtAuthz, ExtAuthzDynamicMetadata, FailureMode};
+use crate::http::ext_authz::{BodyOptions, ExtAuthz, ExtAuthzDynamicMetadata, FailureMode};
 use crate::types::agent::SimpleBackendReference;
 use crate::*;
 

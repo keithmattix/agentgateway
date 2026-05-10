@@ -1,67 +1,61 @@
-use crate::{http::bufferbody, *};
-use bufferbody::{BodyOptions, BufferRequestBodyError};
+use std::convert::Infallible;
 
-#[test]
-fn test_body_truncation() {
-	let body_opts = BodyOptions {
-		max_request_bytes: 10,
-		allow_partial_message: true,
-		pack_as_bytes: false,
-	};
+use bytes::Bytes;
+use http_body::Body as _;
+use http_body::Frame;
+use http_body_util::BodyExt;
 
-	// Test truncation
-	let long_body = b"This is a very long body that exceeds max size";
-	assert!(long_body.len() > body_opts.max_request_bytes as usize);
+use crate::http::bufferbody;
+use crate::*;
 
-	let mut truncated = long_body.to_vec();
-	truncated.truncate(body_opts.max_request_bytes as usize);
-	assert_eq!(truncated.len(), 10);
-	assert_eq!(&truncated, b"This is a ");
+#[tokio::test]
+async fn buffered_body_emits_single_final_data_frame() {
+	let frames = tokio_stream::iter(vec![
+		Ok::<_, Infallible>(Frame::data(Bytes::from_static(b"hello"))),
+		Ok::<_, Infallible>(Frame::data(Bytes::from_static(b" "))),
+		Ok::<_, Infallible>(Frame::data(Bytes::from_static(b"world"))),
+	]);
+	let inner = http::Body::new(http_body_util::StreamBody::new(frames));
+	let (mut body, handle) = bufferbody::BufferedBody::new_with_limit(inner, 1024);
+
+	let frame = body.frame().await.unwrap().unwrap();
+	assert_eq!(
+		frame.into_data().unwrap(),
+		Bytes::from_static(b"hello world")
+	);
+	assert!(body.is_end_stream());
+	assert_eq!(handle.bytes().unwrap(), Bytes::from_static(b"hello world"));
+	assert!(body.frame().await.is_none());
 }
 
 #[tokio::test]
-async fn test_buffer_request_body_rejects_oversized_body_when_partial_disabled() {
-	let mut req = ::http::Request::builder()
-		.header("content-length", "11")
-		.body(http::Body::from("hello world"))
-		.unwrap();
-	let body_opts = BodyOptions {
-		max_request_bytes: 10,
-		allow_partial_message: false,
-		pack_as_bytes: false,
-	};
+async fn buffered_body_rejects_oversized_body() {
+	let inner = http::Body::from("hello world");
+	let (mut body, handle) = bufferbody::BufferedBody::new_with_limit(inner, 5);
 
-	let result = bufferbody::buffer_request_body(&mut req, &body_opts).await;
-
-	assert!(matches!(result, Err(BufferRequestBodyError::TooLarge)));
-	let body = crate::http::read_body_with_limit(req.into_body(), 1024)
-		.await
-		.unwrap();
-	assert_eq!(body, bytes::Bytes::from_static(b"hello world"));
+	let err = body.frame().await.unwrap().unwrap_err();
+	assert!(err.to_string().contains("body exceeded max buffer size"));
+	assert!(handle.bytes().is_none());
 }
 
 #[tokio::test]
-async fn test_buffer_request_body_allows_partial_when_enabled() {
-	let mut req = ::http::Request::builder()
-		.header("content-length", "11")
-		.body(http::Body::from("hello world"))
-		.unwrap();
-	let body_opts = BodyOptions {
-		max_request_bytes: 10,
-		allow_partial_message: true,
-		pack_as_bytes: false,
-	};
+async fn buffered_body_preserves_trailers_after_buffered_data() {
+	let mut trailers = ::http::HeaderMap::new();
+	trailers.insert("x-test-trailer", "value".parse().unwrap());
+	let frames = tokio_stream::iter(vec![
+		Ok::<_, Infallible>(Frame::data(Bytes::from_static(b"hello"))),
+		Ok::<_, Infallible>(Frame::trailers(trailers.clone())),
+	]);
+	let inner = http::Body::new(http_body_util::StreamBody::new(frames));
+	let (mut body, handle) = bufferbody::BufferedBody::new_with_limit(inner, 1024);
 
-	let result = bufferbody::buffer_request_body(&mut req, &body_opts)
-		.await
-		.unwrap();
+	let frame = body.frame().await.unwrap().unwrap();
+	assert_eq!(frame.into_data().unwrap(), Bytes::from_static(b"hello"));
+	assert!(!body.is_end_stream());
+	assert_eq!(handle.bytes().unwrap(), Bytes::from_static(b"hello"));
 
-	assert!(result.is_partial);
-	assert_eq!(result.original_size, -1);
-	assert_eq!(result.body, bytes::Bytes::from_static(b"hello worl"));
-
-	let body = crate::http::read_body_with_limit(req.into_body(), 1024)
-		.await
-		.unwrap();
-	assert_eq!(body, bytes::Bytes::from_static(b"hello world"));
+	let frame = body.frame().await.unwrap().unwrap();
+	assert_eq!(frame.into_trailers().unwrap(), trailers);
+	assert!(body.is_end_stream());
+	assert!(body.frame().await.is_none());
 }
