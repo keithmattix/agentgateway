@@ -4718,10 +4718,12 @@
           "$ref": "#/$defs/TrailerSendMode"
         },
         "allowModeOverride": {
+          "description": "Allow ext_proc `mode_override` values from matching headers responses to update\nsubsequent request/response processing phases for this exchange.",
           "type": "boolean",
           "default": false
         },
         "sendBodyWithoutWaitingForHeaderResponse": {
+          "description": "If true, start sending body chunks immediately after headers are sent to ext_proc\nwithout waiting for the headers response first.",
           "type": "boolean",
           "default": false
         }

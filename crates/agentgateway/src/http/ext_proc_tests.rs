@@ -75,6 +75,7 @@ async fn body_based_router() {
 		"responseHeaderMode": "send",
 		"requestTrailerMode": "skip",
 		"responseTrailerMode": "skip",
+		"sendBodyWithoutWaitingForHeaderResponse": true,
 	});
 	let (_mock, _ext_proc, _bind, io) = setup_ext_proc_mock_with_processing_options(
 		mock,
@@ -108,6 +109,7 @@ async fn body_based_router_buffer_body() {
 		"responseHeaderMode": "send",
 		"requestTrailerMode": "skip",
 		"responseTrailerMode": "skip",
+		"sendBodyWithoutWaitingForHeaderResponse": true,
 	});
 	let (_mock, _ext_proc, _bind, io) = setup_ext_proc_mock_with_processing_options(
 		mock,
@@ -2989,6 +2991,7 @@ async fn request_trailers_are_sent_end_to_end_when_enabled() {
 		response_header_mode: ext_proc::HeaderSendMode::Send,
 		request_trailer_mode: ext_proc::TrailerSendMode::Send,
 		response_trailer_mode: ext_proc::TrailerSendMode::Skip,
+		send_body_without_waiting_for_header_response: true,
 		..Default::default()
 	};
 	let ext_proc = ExtProcMock::new(move || tracker.clone()).spawn().await;
