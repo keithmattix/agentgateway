@@ -1706,6 +1706,15 @@
 |`binds[].listeners[].routes[].policies.extProc.conditional[].metadataContext`|object|Additional metadata to send to the external processing service.<br>Maps to the `metadata_context.filter_metadata` field in ProcessingRequest, and allows dynamic CEL expressions.|
 |`binds[].listeners[].routes[].policies.extProc.conditional[].requestAttributes`|object|Maps to the request `attributes` field in ProcessingRequest, and allows dynamic CEL expressions.|
 |`binds[].listeners[].routes[].policies.extProc.conditional[].responseAttributes`|object|Maps to the response `attributes` field in ProcessingRequest, and allows dynamic CEL expressions.|
+|`binds[].listeners[].routes[].policies.extProc.conditional[].processingOptions`|object||
+|`binds[].listeners[].routes[].policies.extProc.conditional[].processingOptions.requestBodyMode`|enum|Possible values: `none`, `buffered`, `bufferedPartial`, `fullDuplexStreamed`.|
+|`binds[].listeners[].routes[].policies.extProc.conditional[].processingOptions.responseBodyMode`|enum|Possible values: `none`, `buffered`, `bufferedPartial`, `fullDuplexStreamed`.|
+|`binds[].listeners[].routes[].policies.extProc.conditional[].processingOptions.requestHeaderMode`|enum|Possible values: `send`, `skip`.|
+|`binds[].listeners[].routes[].policies.extProc.conditional[].processingOptions.responseHeaderMode`|enum|Possible values: `send`, `skip`.|
+|`binds[].listeners[].routes[].policies.extProc.conditional[].processingOptions.requestTrailerMode`|enum|Possible values: `send`, `skip`.|
+|`binds[].listeners[].routes[].policies.extProc.conditional[].processingOptions.responseTrailerMode`|enum|Possible values: `send`, `skip`.|
+|`binds[].listeners[].routes[].policies.extProc.conditional[].processingOptions.allowModeOverride`|boolean||
+|`binds[].listeners[].routes[].policies.extProc.conditional[].processingOptions.sendBodyWithoutWaitingForHeaderResponse`|boolean||
 |`binds[].listeners[].routes[].policies.extProc.service`|object||
 |`binds[].listeners[].routes[].policies.extProc.service.name`|object||
 |`binds[].listeners[].routes[].policies.extProc.service.name.namespace`|string||
@@ -1814,6 +1823,15 @@
 |`binds[].listeners[].routes[].policies.extProc.metadataContext`|object|Additional metadata to send to the external processing service.<br>Maps to the `metadata_context.filter_metadata` field in ProcessingRequest, and allows dynamic CEL expressions.|
 |`binds[].listeners[].routes[].policies.extProc.requestAttributes`|object|Maps to the request `attributes` field in ProcessingRequest, and allows dynamic CEL expressions.|
 |`binds[].listeners[].routes[].policies.extProc.responseAttributes`|object|Maps to the response `attributes` field in ProcessingRequest, and allows dynamic CEL expressions.|
+|`binds[].listeners[].routes[].policies.extProc.processingOptions`|object||
+|`binds[].listeners[].routes[].policies.extProc.processingOptions.requestBodyMode`|enum|Possible values: `none`, `buffered`, `bufferedPartial`, `fullDuplexStreamed`.|
+|`binds[].listeners[].routes[].policies.extProc.processingOptions.responseBodyMode`|enum|Possible values: `none`, `buffered`, `bufferedPartial`, `fullDuplexStreamed`.|
+|`binds[].listeners[].routes[].policies.extProc.processingOptions.requestHeaderMode`|enum|Possible values: `send`, `skip`.|
+|`binds[].listeners[].routes[].policies.extProc.processingOptions.responseHeaderMode`|enum|Possible values: `send`, `skip`.|
+|`binds[].listeners[].routes[].policies.extProc.processingOptions.requestTrailerMode`|enum|Possible values: `send`, `skip`.|
+|`binds[].listeners[].routes[].policies.extProc.processingOptions.responseTrailerMode`|enum|Possible values: `send`, `skip`.|
+|`binds[].listeners[].routes[].policies.extProc.processingOptions.allowModeOverride`|boolean||
+|`binds[].listeners[].routes[].policies.extProc.processingOptions.sendBodyWithoutWaitingForHeaderResponse`|boolean||
 |`binds[].listeners[].routes[].policies.transformations`|object|Modify requests and responses|
 |`binds[].listeners[].routes[].policies.transformations.conditional`|[]object|conditional policy entries. An entry without a condition must be the final fallback.|
 |`binds[].listeners[].routes[].policies.transformations.conditional[].condition`|string|condition must evaluate to true for this policy to execute. If unset, the policy is the fallback.|
@@ -5631,6 +5649,15 @@
 |`binds[].listeners[].policies.extProc.conditional[].metadataContext`|object|Additional metadata to send to the external processing service.<br>Maps to the `metadata_context.filter_metadata` field in ProcessingRequest, and allows dynamic CEL expressions.|
 |`binds[].listeners[].policies.extProc.conditional[].requestAttributes`|object|Maps to the request `attributes` field in ProcessingRequest, and allows dynamic CEL expressions.|
 |`binds[].listeners[].policies.extProc.conditional[].responseAttributes`|object|Maps to the response `attributes` field in ProcessingRequest, and allows dynamic CEL expressions.|
+|`binds[].listeners[].policies.extProc.conditional[].processingOptions`|object||
+|`binds[].listeners[].policies.extProc.conditional[].processingOptions.requestBodyMode`|enum|Possible values: `none`, `buffered`, `bufferedPartial`, `fullDuplexStreamed`.|
+|`binds[].listeners[].policies.extProc.conditional[].processingOptions.responseBodyMode`|enum|Possible values: `none`, `buffered`, `bufferedPartial`, `fullDuplexStreamed`.|
+|`binds[].listeners[].policies.extProc.conditional[].processingOptions.requestHeaderMode`|enum|Possible values: `send`, `skip`.|
+|`binds[].listeners[].policies.extProc.conditional[].processingOptions.responseHeaderMode`|enum|Possible values: `send`, `skip`.|
+|`binds[].listeners[].policies.extProc.conditional[].processingOptions.requestTrailerMode`|enum|Possible values: `send`, `skip`.|
+|`binds[].listeners[].policies.extProc.conditional[].processingOptions.responseTrailerMode`|enum|Possible values: `send`, `skip`.|
+|`binds[].listeners[].policies.extProc.conditional[].processingOptions.allowModeOverride`|boolean||
+|`binds[].listeners[].policies.extProc.conditional[].processingOptions.sendBodyWithoutWaitingForHeaderResponse`|boolean||
 |`binds[].listeners[].policies.extProc.service`|object||
 |`binds[].listeners[].policies.extProc.service.name`|object||
 |`binds[].listeners[].policies.extProc.service.name.namespace`|string||
@@ -5739,6 +5766,15 @@
 |`binds[].listeners[].policies.extProc.metadataContext`|object|Additional metadata to send to the external processing service.<br>Maps to the `metadata_context.filter_metadata` field in ProcessingRequest, and allows dynamic CEL expressions.|
 |`binds[].listeners[].policies.extProc.requestAttributes`|object|Maps to the request `attributes` field in ProcessingRequest, and allows dynamic CEL expressions.|
 |`binds[].listeners[].policies.extProc.responseAttributes`|object|Maps to the response `attributes` field in ProcessingRequest, and allows dynamic CEL expressions.|
+|`binds[].listeners[].policies.extProc.processingOptions`|object||
+|`binds[].listeners[].policies.extProc.processingOptions.requestBodyMode`|enum|Possible values: `none`, `buffered`, `bufferedPartial`, `fullDuplexStreamed`.|
+|`binds[].listeners[].policies.extProc.processingOptions.responseBodyMode`|enum|Possible values: `none`, `buffered`, `bufferedPartial`, `fullDuplexStreamed`.|
+|`binds[].listeners[].policies.extProc.processingOptions.requestHeaderMode`|enum|Possible values: `send`, `skip`.|
+|`binds[].listeners[].policies.extProc.processingOptions.responseHeaderMode`|enum|Possible values: `send`, `skip`.|
+|`binds[].listeners[].policies.extProc.processingOptions.requestTrailerMode`|enum|Possible values: `send`, `skip`.|
+|`binds[].listeners[].policies.extProc.processingOptions.responseTrailerMode`|enum|Possible values: `send`, `skip`.|
+|`binds[].listeners[].policies.extProc.processingOptions.allowModeOverride`|boolean||
+|`binds[].listeners[].policies.extProc.processingOptions.sendBodyWithoutWaitingForHeaderResponse`|boolean||
 |`binds[].listeners[].policies.transformations`|object|Modify requests and responses|
 |`binds[].listeners[].policies.transformations.conditional`|[]object|conditional policy entries. An entry without a condition must be the final fallback.|
 |`binds[].listeners[].policies.transformations.conditional[].condition`|string|condition must evaluate to true for this policy to execute. If unset, the policy is the fallback.|
@@ -7678,6 +7714,15 @@
 |`policies[].policy.extProc.conditional[].metadataContext`|object|Additional metadata to send to the external processing service.<br>Maps to the `metadata_context.filter_metadata` field in ProcessingRequest, and allows dynamic CEL expressions.|
 |`policies[].policy.extProc.conditional[].requestAttributes`|object|Maps to the request `attributes` field in ProcessingRequest, and allows dynamic CEL expressions.|
 |`policies[].policy.extProc.conditional[].responseAttributes`|object|Maps to the response `attributes` field in ProcessingRequest, and allows dynamic CEL expressions.|
+|`policies[].policy.extProc.conditional[].processingOptions`|object||
+|`policies[].policy.extProc.conditional[].processingOptions.requestBodyMode`|enum|Possible values: `none`, `buffered`, `bufferedPartial`, `fullDuplexStreamed`.|
+|`policies[].policy.extProc.conditional[].processingOptions.responseBodyMode`|enum|Possible values: `none`, `buffered`, `bufferedPartial`, `fullDuplexStreamed`.|
+|`policies[].policy.extProc.conditional[].processingOptions.requestHeaderMode`|enum|Possible values: `send`, `skip`.|
+|`policies[].policy.extProc.conditional[].processingOptions.responseHeaderMode`|enum|Possible values: `send`, `skip`.|
+|`policies[].policy.extProc.conditional[].processingOptions.requestTrailerMode`|enum|Possible values: `send`, `skip`.|
+|`policies[].policy.extProc.conditional[].processingOptions.responseTrailerMode`|enum|Possible values: `send`, `skip`.|
+|`policies[].policy.extProc.conditional[].processingOptions.allowModeOverride`|boolean||
+|`policies[].policy.extProc.conditional[].processingOptions.sendBodyWithoutWaitingForHeaderResponse`|boolean||
 |`policies[].policy.extProc.service`|object||
 |`policies[].policy.extProc.service.name`|object||
 |`policies[].policy.extProc.service.name.namespace`|string||
@@ -7786,6 +7831,15 @@
 |`policies[].policy.extProc.metadataContext`|object|Additional metadata to send to the external processing service.<br>Maps to the `metadata_context.filter_metadata` field in ProcessingRequest, and allows dynamic CEL expressions.|
 |`policies[].policy.extProc.requestAttributes`|object|Maps to the request `attributes` field in ProcessingRequest, and allows dynamic CEL expressions.|
 |`policies[].policy.extProc.responseAttributes`|object|Maps to the response `attributes` field in ProcessingRequest, and allows dynamic CEL expressions.|
+|`policies[].policy.extProc.processingOptions`|object||
+|`policies[].policy.extProc.processingOptions.requestBodyMode`|enum|Possible values: `none`, `buffered`, `bufferedPartial`, `fullDuplexStreamed`.|
+|`policies[].policy.extProc.processingOptions.responseBodyMode`|enum|Possible values: `none`, `buffered`, `bufferedPartial`, `fullDuplexStreamed`.|
+|`policies[].policy.extProc.processingOptions.requestHeaderMode`|enum|Possible values: `send`, `skip`.|
+|`policies[].policy.extProc.processingOptions.responseHeaderMode`|enum|Possible values: `send`, `skip`.|
+|`policies[].policy.extProc.processingOptions.requestTrailerMode`|enum|Possible values: `send`, `skip`.|
+|`policies[].policy.extProc.processingOptions.responseTrailerMode`|enum|Possible values: `send`, `skip`.|
+|`policies[].policy.extProc.processingOptions.allowModeOverride`|boolean||
+|`policies[].policy.extProc.processingOptions.sendBodyWithoutWaitingForHeaderResponse`|boolean||
 |`policies[].policy.transformations`|object|Modify requests and responses|
 |`policies[].policy.transformations.conditional`|[]object|conditional policy entries. An entry without a condition must be the final fallback.|
 |`policies[].policy.transformations.conditional[].condition`|string|condition must evaluate to true for this policy to execute. If unset, the policy is the fallback.|
@@ -12773,6 +12827,15 @@
 |`routeGroups[].routes[].policies.extProc.conditional[].metadataContext`|object|Additional metadata to send to the external processing service.<br>Maps to the `metadata_context.filter_metadata` field in ProcessingRequest, and allows dynamic CEL expressions.|
 |`routeGroups[].routes[].policies.extProc.conditional[].requestAttributes`|object|Maps to the request `attributes` field in ProcessingRequest, and allows dynamic CEL expressions.|
 |`routeGroups[].routes[].policies.extProc.conditional[].responseAttributes`|object|Maps to the response `attributes` field in ProcessingRequest, and allows dynamic CEL expressions.|
+|`routeGroups[].routes[].policies.extProc.conditional[].processingOptions`|object||
+|`routeGroups[].routes[].policies.extProc.conditional[].processingOptions.requestBodyMode`|enum|Possible values: `none`, `buffered`, `bufferedPartial`, `fullDuplexStreamed`.|
+|`routeGroups[].routes[].policies.extProc.conditional[].processingOptions.responseBodyMode`|enum|Possible values: `none`, `buffered`, `bufferedPartial`, `fullDuplexStreamed`.|
+|`routeGroups[].routes[].policies.extProc.conditional[].processingOptions.requestHeaderMode`|enum|Possible values: `send`, `skip`.|
+|`routeGroups[].routes[].policies.extProc.conditional[].processingOptions.responseHeaderMode`|enum|Possible values: `send`, `skip`.|
+|`routeGroups[].routes[].policies.extProc.conditional[].processingOptions.requestTrailerMode`|enum|Possible values: `send`, `skip`.|
+|`routeGroups[].routes[].policies.extProc.conditional[].processingOptions.responseTrailerMode`|enum|Possible values: `send`, `skip`.|
+|`routeGroups[].routes[].policies.extProc.conditional[].processingOptions.allowModeOverride`|boolean||
+|`routeGroups[].routes[].policies.extProc.conditional[].processingOptions.sendBodyWithoutWaitingForHeaderResponse`|boolean||
 |`routeGroups[].routes[].policies.extProc.service`|object||
 |`routeGroups[].routes[].policies.extProc.service.name`|object||
 |`routeGroups[].routes[].policies.extProc.service.name.namespace`|string||
@@ -12881,6 +12944,15 @@
 |`routeGroups[].routes[].policies.extProc.metadataContext`|object|Additional metadata to send to the external processing service.<br>Maps to the `metadata_context.filter_metadata` field in ProcessingRequest, and allows dynamic CEL expressions.|
 |`routeGroups[].routes[].policies.extProc.requestAttributes`|object|Maps to the request `attributes` field in ProcessingRequest, and allows dynamic CEL expressions.|
 |`routeGroups[].routes[].policies.extProc.responseAttributes`|object|Maps to the response `attributes` field in ProcessingRequest, and allows dynamic CEL expressions.|
+|`routeGroups[].routes[].policies.extProc.processingOptions`|object||
+|`routeGroups[].routes[].policies.extProc.processingOptions.requestBodyMode`|enum|Possible values: `none`, `buffered`, `bufferedPartial`, `fullDuplexStreamed`.|
+|`routeGroups[].routes[].policies.extProc.processingOptions.responseBodyMode`|enum|Possible values: `none`, `buffered`, `bufferedPartial`, `fullDuplexStreamed`.|
+|`routeGroups[].routes[].policies.extProc.processingOptions.requestHeaderMode`|enum|Possible values: `send`, `skip`.|
+|`routeGroups[].routes[].policies.extProc.processingOptions.responseHeaderMode`|enum|Possible values: `send`, `skip`.|
+|`routeGroups[].routes[].policies.extProc.processingOptions.requestTrailerMode`|enum|Possible values: `send`, `skip`.|
+|`routeGroups[].routes[].policies.extProc.processingOptions.responseTrailerMode`|enum|Possible values: `send`, `skip`.|
+|`routeGroups[].routes[].policies.extProc.processingOptions.allowModeOverride`|boolean||
+|`routeGroups[].routes[].policies.extProc.processingOptions.sendBodyWithoutWaitingForHeaderResponse`|boolean||
 |`routeGroups[].routes[].policies.transformations`|object|Modify requests and responses|
 |`routeGroups[].routes[].policies.transformations.conditional`|[]object|conditional policy entries. An entry without a condition must be the final fallback.|
 |`routeGroups[].routes[].policies.transformations.conditional[].condition`|string|condition must evaluate to true for this policy to execute. If unset, the policy is the fallback.|
@@ -17486,6 +17558,15 @@
 |`llm.policies.extProc.conditional[].metadataContext`|object|Additional metadata to send to the external processing service.<br>Maps to the `metadata_context.filter_metadata` field in ProcessingRequest, and allows dynamic CEL expressions.|
 |`llm.policies.extProc.conditional[].requestAttributes`|object|Maps to the request `attributes` field in ProcessingRequest, and allows dynamic CEL expressions.|
 |`llm.policies.extProc.conditional[].responseAttributes`|object|Maps to the response `attributes` field in ProcessingRequest, and allows dynamic CEL expressions.|
+|`llm.policies.extProc.conditional[].processingOptions`|object||
+|`llm.policies.extProc.conditional[].processingOptions.requestBodyMode`|enum|Possible values: `none`, `buffered`, `bufferedPartial`, `fullDuplexStreamed`.|
+|`llm.policies.extProc.conditional[].processingOptions.responseBodyMode`|enum|Possible values: `none`, `buffered`, `bufferedPartial`, `fullDuplexStreamed`.|
+|`llm.policies.extProc.conditional[].processingOptions.requestHeaderMode`|enum|Possible values: `send`, `skip`.|
+|`llm.policies.extProc.conditional[].processingOptions.responseHeaderMode`|enum|Possible values: `send`, `skip`.|
+|`llm.policies.extProc.conditional[].processingOptions.requestTrailerMode`|enum|Possible values: `send`, `skip`.|
+|`llm.policies.extProc.conditional[].processingOptions.responseTrailerMode`|enum|Possible values: `send`, `skip`.|
+|`llm.policies.extProc.conditional[].processingOptions.allowModeOverride`|boolean||
+|`llm.policies.extProc.conditional[].processingOptions.sendBodyWithoutWaitingForHeaderResponse`|boolean||
 |`llm.policies.extProc.service`|object||
 |`llm.policies.extProc.service.name`|object||
 |`llm.policies.extProc.service.name.namespace`|string||
@@ -17594,6 +17675,15 @@
 |`llm.policies.extProc.metadataContext`|object|Additional metadata to send to the external processing service.<br>Maps to the `metadata_context.filter_metadata` field in ProcessingRequest, and allows dynamic CEL expressions.|
 |`llm.policies.extProc.requestAttributes`|object|Maps to the request `attributes` field in ProcessingRequest, and allows dynamic CEL expressions.|
 |`llm.policies.extProc.responseAttributes`|object|Maps to the response `attributes` field in ProcessingRequest, and allows dynamic CEL expressions.|
+|`llm.policies.extProc.processingOptions`|object||
+|`llm.policies.extProc.processingOptions.requestBodyMode`|enum|Possible values: `none`, `buffered`, `bufferedPartial`, `fullDuplexStreamed`.|
+|`llm.policies.extProc.processingOptions.responseBodyMode`|enum|Possible values: `none`, `buffered`, `bufferedPartial`, `fullDuplexStreamed`.|
+|`llm.policies.extProc.processingOptions.requestHeaderMode`|enum|Possible values: `send`, `skip`.|
+|`llm.policies.extProc.processingOptions.responseHeaderMode`|enum|Possible values: `send`, `skip`.|
+|`llm.policies.extProc.processingOptions.requestTrailerMode`|enum|Possible values: `send`, `skip`.|
+|`llm.policies.extProc.processingOptions.responseTrailerMode`|enum|Possible values: `send`, `skip`.|
+|`llm.policies.extProc.processingOptions.allowModeOverride`|boolean||
+|`llm.policies.extProc.processingOptions.sendBodyWithoutWaitingForHeaderResponse`|boolean||
 |`llm.policies.transformations`|object|Modify requests and responses|
 |`llm.policies.transformations.conditional`|[]object|conditional policy entries. An entry without a condition must be the final fallback.|
 |`llm.policies.transformations.conditional[].condition`|string|condition must evaluate to true for this policy to execute. If unset, the policy is the fallback.|
@@ -19501,6 +19591,15 @@
 |`mcp.policies.extProc.conditional[].metadataContext`|object|Additional metadata to send to the external processing service.<br>Maps to the `metadata_context.filter_metadata` field in ProcessingRequest, and allows dynamic CEL expressions.|
 |`mcp.policies.extProc.conditional[].requestAttributes`|object|Maps to the request `attributes` field in ProcessingRequest, and allows dynamic CEL expressions.|
 |`mcp.policies.extProc.conditional[].responseAttributes`|object|Maps to the response `attributes` field in ProcessingRequest, and allows dynamic CEL expressions.|
+|`mcp.policies.extProc.conditional[].processingOptions`|object||
+|`mcp.policies.extProc.conditional[].processingOptions.requestBodyMode`|enum|Possible values: `none`, `buffered`, `bufferedPartial`, `fullDuplexStreamed`.|
+|`mcp.policies.extProc.conditional[].processingOptions.responseBodyMode`|enum|Possible values: `none`, `buffered`, `bufferedPartial`, `fullDuplexStreamed`.|
+|`mcp.policies.extProc.conditional[].processingOptions.requestHeaderMode`|enum|Possible values: `send`, `skip`.|
+|`mcp.policies.extProc.conditional[].processingOptions.responseHeaderMode`|enum|Possible values: `send`, `skip`.|
+|`mcp.policies.extProc.conditional[].processingOptions.requestTrailerMode`|enum|Possible values: `send`, `skip`.|
+|`mcp.policies.extProc.conditional[].processingOptions.responseTrailerMode`|enum|Possible values: `send`, `skip`.|
+|`mcp.policies.extProc.conditional[].processingOptions.allowModeOverride`|boolean||
+|`mcp.policies.extProc.conditional[].processingOptions.sendBodyWithoutWaitingForHeaderResponse`|boolean||
 |`mcp.policies.extProc.service`|object||
 |`mcp.policies.extProc.service.name`|object||
 |`mcp.policies.extProc.service.name.namespace`|string||
@@ -19609,6 +19708,15 @@
 |`mcp.policies.extProc.metadataContext`|object|Additional metadata to send to the external processing service.<br>Maps to the `metadata_context.filter_metadata` field in ProcessingRequest, and allows dynamic CEL expressions.|
 |`mcp.policies.extProc.requestAttributes`|object|Maps to the request `attributes` field in ProcessingRequest, and allows dynamic CEL expressions.|
 |`mcp.policies.extProc.responseAttributes`|object|Maps to the response `attributes` field in ProcessingRequest, and allows dynamic CEL expressions.|
+|`mcp.policies.extProc.processingOptions`|object||
+|`mcp.policies.extProc.processingOptions.requestBodyMode`|enum|Possible values: `none`, `buffered`, `bufferedPartial`, `fullDuplexStreamed`.|
+|`mcp.policies.extProc.processingOptions.responseBodyMode`|enum|Possible values: `none`, `buffered`, `bufferedPartial`, `fullDuplexStreamed`.|
+|`mcp.policies.extProc.processingOptions.requestHeaderMode`|enum|Possible values: `send`, `skip`.|
+|`mcp.policies.extProc.processingOptions.responseHeaderMode`|enum|Possible values: `send`, `skip`.|
+|`mcp.policies.extProc.processingOptions.requestTrailerMode`|enum|Possible values: `send`, `skip`.|
+|`mcp.policies.extProc.processingOptions.responseTrailerMode`|enum|Possible values: `send`, `skip`.|
+|`mcp.policies.extProc.processingOptions.allowModeOverride`|boolean||
+|`mcp.policies.extProc.processingOptions.sendBodyWithoutWaitingForHeaderResponse`|boolean||
 |`mcp.policies.transformations`|object|Modify requests and responses|
 |`mcp.policies.transformations.conditional`|[]object|conditional policy entries. An entry without a condition must be the final fallback.|
 |`mcp.policies.transformations.conditional[].condition`|string|condition must evaluate to true for this policy to execute. If unset, the policy is the fallback.|

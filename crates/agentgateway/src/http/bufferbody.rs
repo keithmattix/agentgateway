@@ -1,4 +1,5 @@
-use crate::{http::Request, *};
+use crate::http::Request;
+use crate::*;
 
 #[cfg(test)]
 #[path = "bufferbody_tests.rs"]

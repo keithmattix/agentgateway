@@ -85,6 +85,7 @@ pub enum BodySendMode {
 	#[default]
 	None,
 	Buffered,
+	BufferedPartial,
 	FullDuplexStreamed,
 }
 
@@ -346,8 +347,9 @@ impl ModeStateMachine {
 	}
 
 	fn apply_envoy_mode_override(&mut self, phase: HeaderPhase, mode: &proto::ProcessingMode) {
-		use proto::processing_mode::BodySendMode as ProtoBodySendMode;
-		use proto::processing_mode::HeaderSendMode as ProtoHeaderSendMode;
+		use proto::processing_mode::{
+			BodySendMode as ProtoBodySendMode, HeaderSendMode as ProtoHeaderSendMode,
+		};
 		let phase_name = match phase {
 			HeaderPhase::Request => "request_headers",
 			HeaderPhase::Response => "response_headers",
@@ -390,8 +392,11 @@ impl ModeStateMachine {
 				ProtoBodySendMode::None => {
 					self.request_body_mode = BodySendMode::None;
 				},
-				ProtoBodySendMode::Buffered | ProtoBodySendMode::BufferedPartial => {
+				ProtoBodySendMode::Buffered => {
 					self.request_body_mode = BodySendMode::Buffered;
+				},
+				ProtoBodySendMode::BufferedPartial => {
+					self.request_body_mode = BodySendMode::BufferedPartial;
 				},
 				ProtoBodySendMode::FullDuplexStreamed => {
 					self.request_body_mode = BodySendMode::FullDuplexStreamed;
@@ -415,8 +420,11 @@ impl ModeStateMachine {
 				ProtoBodySendMode::None => {
 					self.response_body_mode = BodySendMode::None;
 				},
-				ProtoBodySendMode::Buffered | ProtoBodySendMode::BufferedPartial => {
+				ProtoBodySendMode::Buffered => {
 					self.response_body_mode = BodySendMode::Buffered;
+				},
+				ProtoBodySendMode::BufferedPartial => {
+					self.response_body_mode = BodySendMode::BufferedPartial;
 				},
 				ProtoBodySendMode::FullDuplexStreamed => {
 					self.response_body_mode = BodySendMode::FullDuplexStreamed;
@@ -497,7 +505,7 @@ impl RequestFlowFsm {
 	fn sync_body_path_from_mode(&mut self, mode: BodySendMode) {
 		self.body_path = match mode {
 			BodySendMode::None => BodyPath::None,
-			BodySendMode::Buffered => BodyPath::Buffered,
+			BodySendMode::Buffered | BodySendMode::BufferedPartial => BodyPath::Buffered,
 			BodySendMode::FullDuplexStreamed => BodyPath::FullDuplex,
 		};
 		self.expect_body_response = self.body_path != BodyPath::None && self.had_body;
@@ -944,12 +952,13 @@ impl ExtProcInstance {
 		let req_body_mode = match self.mode_state.request_body_mode {
 			BodySendMode::None => EnvoyBodySendMode::None,
 			BodySendMode::Buffered => EnvoyBodySendMode::Buffered,
+			BodySendMode::BufferedPartial => EnvoyBodySendMode::BufferedPartial,
 			BodySendMode::FullDuplexStreamed => EnvoyBodySendMode::FullDuplexStreamed,
 		};
 		let resp_body_mode = match self.mode_state.response_body_mode {
 			BodySendMode::None => EnvoyBodySendMode::None,
-			// Response-side buffered handling is currently streamed, so advertise streamed semantics.
-			BodySendMode::Buffered => EnvoyBodySendMode::FullDuplexStreamed,
+			BodySendMode::Buffered => EnvoyBodySendMode::Buffered,
+			BodySendMode::BufferedPartial => EnvoyBodySendMode::BufferedPartial,
 			BodySendMode::FullDuplexStreamed => EnvoyBodySendMode::FullDuplexStreamed,
 		};
 		ProtocolConfiguration {
@@ -1038,6 +1047,7 @@ impl ExtProcInstance {
 		let req_body_mode = match self.mode_state.request_body_mode {
 			BodySendMode::None => EnvoyBodySendMode::None,
 			BodySendMode::Buffered => EnvoyBodySendMode::Buffered,
+			BodySendMode::BufferedPartial => EnvoyBodySendMode::BufferedPartial,
 			BodySendMode::FullDuplexStreamed => EnvoyBodySendMode::FullDuplexStreamed,
 		};
 		// request_fsm is method-local execution state (what phase mutate_request is
@@ -1537,15 +1547,19 @@ impl ExtProcInstance {
 			return Ok((resp, None));
 		}
 
-		// The EPP will await for our headers and body. The body is going to be streaming in.
-		// We will spin off a task that is going to pipe the body to the ext_proc server as we read it.
+		// Response headers are allowed to change the effective body mode. Keep the upstream body
+		// local until the headers response has been applied, then start forwarding only if the
+		// response FSM still expects a body phase.
 		let tx = self.tx_req.clone();
-		if had_body {
+		let mut pending_response_body = Some(body);
+		if !send_response_headers && had_body {
 			let include_protocol = first_response_protocol_config.is_some();
 			tokio::task::spawn(Self::handle_body_stream(
-				metadata_context,
-				body,
-				tx,
+				metadata_context.clone(),
+				pending_response_body
+					.take()
+					.expect("response body should be available before streaming starts"),
+				tx.clone(),
 				Request::ResponseBody,
 				Request::ResponseTrailers,
 				send_response_trailers,
@@ -1584,13 +1598,31 @@ impl ExtProcInstance {
 				},
 			};
 			if transitioned {
-				if !eos {
+				if !eos && response_fsm.send_body {
+					if pending_response_body.is_some() {
+						let include_protocol = first_response_protocol_config.is_some();
+						trace!("spawn body!");
+						tokio::task::spawn(Self::handle_body_stream(
+							metadata_context.clone(),
+							pending_response_body
+								.take()
+								.expect("response body should be available before streaming continuation starts"),
+							tx.clone(),
+							Request::ResponseBody,
+							Request::ResponseTrailers,
+							send_response_trailers,
+							first_response_attributes.take(),
+							first_response_protocol_config.take(),
+						));
+						if include_protocol {
+							self.protocol_config_sent = true;
+						}
+					}
 					response_fsm.enter_streaming_continuation();
-					trace!("spawn body!");
 					tokio::task::spawn(Self::forward_response_stream_continuation(
 						rx,
 						tx_chunk,
-						response_fsm.send_body,
+						true,
 						send_response_headers,
 					));
 				}
@@ -1742,14 +1774,49 @@ fn apply_header_mutations_response(resp: &mut http::Response, h: Option<&HeaderM
 	}
 }
 
+fn merge_dynamic_metadata(
+	extensions: &mut ::http::Extensions,
+	metadata: &prost_wkt_types::Struct,
+) -> Result<(), Error> {
+	let mut dynamic_metadata = extensions
+		.remove::<ExtProcDynamicMetadata>()
+		.unwrap_or_default();
+
+	for (key, value) in &metadata.fields {
+		let json_val = envoy_proto_common::prost_value_to_json(value)
+			.map_err(|e| Error::MetadataConversion(format!("failed to convert key '{}': {}", key, e)))?;
+		dynamic_metadata.0.insert(key.clone(), json_val);
+	}
+
+	if !dynamic_metadata.0.is_empty() {
+		extensions.insert(dynamic_metadata);
+	}
+
+	Ok(())
+}
+
 // handle_response_for_response_mutation handles a single ext_proc response. If it returns 'true' we are done processing.
 async fn handle_response_for_response_mutation(
 	had_body: bool,
 	allow_header_mutations: bool,
-	resp: Option<&mut http::Response>,
+	mut resp: Option<&mut http::Response>,
 	body_tx: &mut Sender<Result<Frame<Bytes>, Infallible>>,
 	presp: ProcessingResponse,
 ) -> (bool, bool) {
+	if let Some(dm) = &presp.dynamic_metadata {
+		if let Some(resp) = resp.as_mut() {
+			if let Err(e) = extract_dynamic_metadata_response(resp, dm) {
+				warn!("Failed to extract ext_proc dynamic metadata: {}", e);
+			}
+		} else if !dm.fields.is_empty() {
+			warn!(
+				"ext_proc server sent dynamic_metadata after response headers were processed; \
+				 metadata cannot be attached and will be ignored. Consider sending \
+				 metadata in the ResponseHeaders response instead."
+			);
+		}
+	}
+
 	let res = matches!(presp.response, Some(Response::ResponseHeaders(_)));
 	let cr = match presp.response {
 		Some(Response::ResponseHeaders(HeadersResponse { response: None })) => {
@@ -1880,24 +1947,14 @@ pub(crate) fn extract_dynamic_metadata(
 	req: &mut http::Request,
 	metadata: &prost_wkt_types::Struct,
 ) -> Result<(), Error> {
-	// Get or create metadata container, merging with existing metadata
-	let mut dynamic_metadata = req
-		.extensions_mut()
-		.remove::<ExtProcDynamicMetadata>()
-		.unwrap_or_default();
+	merge_dynamic_metadata(req.extensions_mut(), metadata)
+}
 
-	// Merge new fields into existing metadata
-	for (key, value) in &metadata.fields {
-		let json_val = envoy_proto_common::prost_value_to_json(value)
-			.map_err(|e| Error::MetadataConversion(format!("failed to convert key '{}': {}", key, e)))?;
-		dynamic_metadata.0.insert(key.clone(), json_val);
-	}
-
-	if !dynamic_metadata.0.is_empty() {
-		req.extensions_mut().insert(dynamic_metadata);
-	}
-
-	Ok(())
+fn extract_dynamic_metadata_response(
+	resp: &mut http::Response,
+	metadata: &prost_wkt_types::Struct,
+) -> Result<(), Error> {
+	merge_dynamic_metadata(resp.extensions_mut(), metadata)
 }
 
 #[derive(Clone, Debug)]
