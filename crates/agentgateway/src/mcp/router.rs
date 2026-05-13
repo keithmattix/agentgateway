@@ -129,6 +129,9 @@ impl App {
 		if let Some(auth) = authn.as_ref()
 			&& let Some(resp) = auth::enforce_authentication(&mut req, auth, &client).await?
 		{
+			// Take a request snapshot so that response transformations can access request data
+			// even after a direct response/early return from authn.
+			Self::snapshot_request_for_early_response(&mut req, log);
 			return Ok(resp);
 		}
 
@@ -164,6 +167,14 @@ impl App {
 			))
 			.await
 		}
+	}
+
+	fn snapshot_request_for_early_response(req: &mut MustSnapshot<'_>, log: &mut RequestLog) {
+		log.request_snapshot = log
+			.cel
+			.cel_context
+			.maybe_snapshot_request(req, false)
+			.map(Arc::new);
 	}
 }
 

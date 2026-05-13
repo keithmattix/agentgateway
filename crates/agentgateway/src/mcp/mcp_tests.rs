@@ -667,6 +667,74 @@ async fn authorization_deny_with_request_header_filters_per_agent() {
 	);
 }
 
+#[tokio::test]
+async fn mcp_authentication_early_response_transformation_has_request_context() {
+	let mock = mock_streamable_http_server(true).await;
+	let authn = crate::types::agent::McpAuthentication {
+		issuer: "https://issuer.example.com".to_string(),
+		audiences: vec!["mcp".to_string()],
+		provider: None,
+		resource_metadata: crate::types::agent::ResourceMetadata {
+			extra: Default::default(),
+		},
+		jwt_validator: Arc::new(crate::http::jwt::Jwt::from_providers(
+			vec![],
+			crate::http::jwt::Mode::Strict,
+			crate::http::auth::AuthorizationLocation::bearer_header(),
+		)),
+		mode: crate::types::agent::McpAuthenticationMode::Strict,
+	};
+
+	let mut t = setup_proxy_test("{}")
+		.unwrap()
+		.with_mcp_backend_policies(
+			mock.addr,
+			true,
+			false,
+			vec![BackendTrafficPolicy::McpAuthentication(authn)],
+		)
+		.with_bind(simple_bind())
+		.with_route(basic_route(mock.addr));
+
+	t.attach_route_policy(serde_json::json!({
+		"transformations": {
+			"response": {
+				"set": {
+					"x-request-id-from-cel": "request.headers[\"x-regression-id\"]",
+					"x-request-path-from-cel": "request.path"
+				}
+			}
+		}
+	}))
+	.await;
+
+	let io = t.serve_real_listener(BIND_KEY).await;
+	let resp = reqwest::Client::new()
+		.get(format!(
+			"http://{io}/.well-known/oauth-protected-resource/mcp"
+		))
+		.header("x-regression-id", "mcp-authn-snapshot")
+		.send()
+		.await
+		.expect("metadata request should complete");
+
+	assert_eq!(resp.status(), reqwest::StatusCode::OK);
+	assert_eq!(
+		resp
+			.headers()
+			.get("x-request-id-from-cel")
+			.and_then(|v| v.to_str().ok()),
+		Some("mcp-authn-snapshot")
+	);
+	assert_eq!(
+		resp
+			.headers()
+			.get("x-request-path-from-cel")
+			.and_then(|v| v.to_str().ok()),
+		Some("/.well-known/oauth-protected-resource/mcp")
+	);
+}
+
 async fn standard_assertions(client: RunningService<RoleClient, InitializeRequestParams>) {
 	let tools = client.list_tools(None).await.unwrap();
 	let t = tools
