@@ -126,12 +126,13 @@ impl App {
 		// MCP context is added later. The context is inserted after
 		// authentication so it can include verified claims
 
+		// Take a request snapshot before authentication can mutate or partially consume the
+		// request. If authentication lets the request continue, the normal snapshot below
+		// replaces this with the post-authentication request state.
+		Self::snapshot_request_without_clearing_extensions(&mut req, log);
 		if let Some(auth) = authn.as_ref()
 			&& let Some(resp) = auth::enforce_authentication(&mut req, auth, &client).await?
 		{
-			// Take a request snapshot so that response transformations can access request data
-			// even after a direct response/early return from authn.
-			Self::snapshot_request_for_early_response(&mut req, log);
 			return Ok(resp);
 		}
 
@@ -169,7 +170,10 @@ impl App {
 		}
 	}
 
-	fn snapshot_request_for_early_response(req: &mut MustSnapshot<'_>, log: &mut RequestLog) {
+	fn snapshot_request_without_clearing_extensions(
+		req: &mut MustSnapshot<'_>,
+		log: &mut RequestLog,
+	) {
 		log.request_snapshot = log
 			.cel
 			.cel_context
