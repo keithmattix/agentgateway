@@ -7258,10 +7258,10 @@ spec:
                                       - Skip
                                       type: string
                                     requestTrailerMode:
-                                      default: Skip
+                                      default: Send
                                       description: |-
                                         requestTrailerMode controls whether request trailers are sent to the external processor.
-                                        Defaults to `Skip`.
+                                        Defaults to `Send`.
                                       enum:
                                       - Skip
                                       - Send
@@ -7289,10 +7289,10 @@ spec:
                                       - Skip
                                       type: string
                                     responseTrailerMode:
-                                      default: Skip
+                                      default: Send
                                       description: |-
                                         responseTrailerMode controls whether response trailers are sent to the external processor.
-                                        Defaults to `Skip`.
+                                        Defaults to `Send`.
                                       enum:
                                       - Skip
                                       - Send
@@ -7345,10 +7345,10 @@ spec:
                             - Skip
                             type: string
                           requestTrailerMode:
-                            default: Skip
+                            default: Send
                             description: |-
                               requestTrailerMode controls whether request trailers are sent to the external processor.
-                              Defaults to `Skip`.
+                              Defaults to `Send`.
                             enum:
                             - Skip
                             - Send
@@ -7376,10 +7376,10 @@ spec:
                             - Skip
                             type: string
                           responseTrailerMode:
-                            default: Skip
+                            default: Send
                             description: |-
                               responseTrailerMode controls whether response trailers are sent to the external processor.
-                              Defaults to `Skip`.
+                              Defaults to `Send`.
                             enum:
                             - Skip
                             - Send

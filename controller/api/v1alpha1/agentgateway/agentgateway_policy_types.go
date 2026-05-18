@@ -1678,15 +1678,15 @@ type ProcessingOptions struct {
 	ResponseHeaderMode *HeaderSendMode `json:"responseHeaderMode,omitempty"`
 
 	// requestTrailerMode controls whether request trailers are sent to the external processor.
-	// Defaults to `Skip`.
+	// Defaults to `Send`.
 	// +optional
-	// +kubebuilder:default=Skip
+	// +kubebuilder:default=Send
 	RequestTrailerMode *TrailerSendMode `json:"requestTrailerMode,omitempty"`
 
 	// responseTrailerMode controls whether response trailers are sent to the external processor.
-	// Defaults to `Skip`.
+	// Defaults to `Send`.
 	// +optional
-	// +kubebuilder:default=Skip
+	// +kubebuilder:default=Send
 	ResponseTrailerMode *TrailerSendMode `json:"responseTrailerMode,omitempty"`
 
 	// allowModeOverride allows ext_proc `mode_override` values from matching headers responses to update

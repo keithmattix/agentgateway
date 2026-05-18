@@ -130,7 +130,7 @@ where
 					let len: usize = buffer.remaining();
 					let bytes = buffer.copy_to_bytes(len);
 					this.handle.complete(bytes.clone());
-					// Emit exactly one data frame containing all buffered bytes. If trailers were
+					// Return all the buffered bytes as one (logical) data frame. If trailers were
 					// seen while buffering, replay them on the next poll instead of dropping them.
 					*this.state = if this.trailers.is_some() {
 						BufferedBodyState::EmitTrailers

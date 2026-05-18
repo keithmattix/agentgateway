@@ -4733,8 +4733,8 @@
             "responseBodyMode": "fullDuplexStreamed",
             "requestHeaderMode": "send",
             "responseHeaderMode": "send",
-            "requestTrailerMode": "skip",
-            "responseTrailerMode": "skip",
+            "requestTrailerMode": "send",
+            "responseTrailerMode": "send",
             "allowModeOverride": false
           }
         }
@@ -4829,11 +4829,11 @@
         },
         "requestTrailerMode": {
           "$ref": "#/$defs/TrailerSendMode",
-          "default": "skip"
+          "default": "send"
         },
         "responseTrailerMode": {
           "$ref": "#/$defs/TrailerSendMode",
-          "default": "skip"
+          "default": "send"
         },
         "allowModeOverride": {
           "description": "Allow ext_proc `mode_override` values from matching headers responses to update\nsubsequent request/response processing phases for this exchange.",
@@ -4925,8 +4925,8 @@
             "responseBodyMode": "fullDuplexStreamed",
             "requestHeaderMode": "send",
             "responseHeaderMode": "send",
-            "requestTrailerMode": "skip",
-            "responseTrailerMode": "skip",
+            "requestTrailerMode": "send",
+            "responseTrailerMode": "send",
             "allowModeOverride": false
           }
         }

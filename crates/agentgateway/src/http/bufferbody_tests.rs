@@ -1,8 +1,7 @@
 use std::convert::Infallible;
 
 use bytes::Bytes;
-use http_body::Body as _;
-use http_body::Frame;
+use http_body::{Body as _, Frame};
 use http_body_util::BodyExt;
 
 use crate::http::bufferbody;

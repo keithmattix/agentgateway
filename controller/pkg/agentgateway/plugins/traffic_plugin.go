@@ -1143,24 +1143,16 @@ func processExtProcTraffic(
 			spec.ProcessingOptions.ResponseBodyMode = toBodySendMode(*extProc.ProcessingOptions.ResponseBodyMode)
 		}
 		if extProc.ProcessingOptions.RequestHeaderMode != nil {
-			if mode := toHeaderSendMode(*extProc.ProcessingOptions.RequestHeaderMode); mode != api.TrafficPolicySpec_ExtProc_UNSET {
-				spec.ProcessingOptions.RequestHeaderMode = mode
-			}
+			spec.ProcessingOptions.RequestHeaderMode = toHeaderSendMode(*extProc.ProcessingOptions.RequestHeaderMode)
 		}
 		if extProc.ProcessingOptions.ResponseHeaderMode != nil {
-			if mode := toHeaderSendMode(*extProc.ProcessingOptions.ResponseHeaderMode); mode != api.TrafficPolicySpec_ExtProc_UNSET {
-				spec.ProcessingOptions.ResponseHeaderMode = mode
-			}
+			spec.ProcessingOptions.ResponseHeaderMode = toHeaderSendMode(*extProc.ProcessingOptions.ResponseHeaderMode)
 		}
 		if extProc.ProcessingOptions.RequestTrailerMode != nil {
-			if mode := toTrailerSendMode(*extProc.ProcessingOptions.RequestTrailerMode); mode != api.TrafficPolicySpec_ExtProc_UNSET {
-				spec.ProcessingOptions.RequestTrailerMode = mode
-			}
+			spec.ProcessingOptions.RequestTrailerMode = toTrailerSendMode(*extProc.ProcessingOptions.RequestTrailerMode)
 		}
 		if extProc.ProcessingOptions.ResponseTrailerMode != nil {
-			if mode := toTrailerSendMode(*extProc.ProcessingOptions.ResponseTrailerMode); mode != api.TrafficPolicySpec_ExtProc_UNSET {
-				spec.ProcessingOptions.ResponseTrailerMode = mode
-			}
+			spec.ProcessingOptions.ResponseTrailerMode = toTrailerSendMode(*extProc.ProcessingOptions.ResponseTrailerMode)
 		}
 	}
 
@@ -1204,7 +1196,7 @@ func toTrailerSendMode(mode agentgateway.TrailerSendMode) api.TrafficPolicySpec_
 	case agentgateway.TrailerSendModeSkip:
 		return api.TrafficPolicySpec_ExtProc_SKIP
 	default:
-		return api.TrafficPolicySpec_ExtProc_SKIP
+		return api.TrafficPolicySpec_ExtProc_SEND
 	}
 }
 

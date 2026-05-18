@@ -57,31 +57,6 @@ func TestAttachments(t *testing.T) {
 			},
 		},
 		{
-			name: "traffic-extproc-processing-options",
-			policy: `traffic:
-  extProc:
-    backendRef:
-      name: ext-processor
-      port: 80
-    processingOptions:
-      requestBodyMode: BufferedPartial
-      responseBodyMode: FullDuplexStreamed
-      requestHeaderMode: Skip
-      responseHeaderMode: Send
-      requestTrailerMode: Send
-      responseTrailerMode: Skip
-      allowModeOverride: true`,
-			attachments: Attachments{
-				Gateway:    true,
-				Port:       false,
-				Listener:   true,
-				Route:      true,
-				RouteRule:  true,
-				Backend:    false,
-				SubBackend: false,
-			},
-		},
-		{
 			name: "backend",
 			policy: `backend:
   tls: {}`,

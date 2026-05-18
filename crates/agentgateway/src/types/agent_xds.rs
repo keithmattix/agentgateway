@@ -3311,11 +3311,11 @@ mod tests {
 		));
 		assert!(matches!(
 			processing_options.request_trailer_mode,
-			crate::http::ext_proc::TrailerSendMode::Skip
+			crate::http::ext_proc::TrailerSendMode::Send
 		));
 		assert!(matches!(
 			processing_options.response_trailer_mode,
-			crate::http::ext_proc::TrailerSendMode::Skip
+			crate::http::ext_proc::TrailerSendMode::Send
 		));
 		Ok(())
 	}
