@@ -167,6 +167,9 @@ pub(super) async fn handle_response_for_request_mutation(
 			},
 			Mutation::Body(b) => {
 				// Used in Buffered mode: ext_proc replaces the entire body at once.
+				if validate_content_length && let Some(req) = req.as_deref() {
+					validate_content_length_header(req.headers(), b.len(), "request")?;
+				}
 				let _ = body_tx.send(Ok(Frame::data(b))).await;
 				return Ok((true, true));
 			},
@@ -271,6 +274,9 @@ pub(super) async fn handle_response_for_response_mutation(
 				return Ok((res, eos));
 			},
 			Mutation::Body(b) => {
+				if validate_content_length && let Some(resp) = resp.as_deref() {
+					validate_content_length_header(resp.headers(), b.len(), "response")?;
+				}
 				let _ = body_tx.send(Ok(Frame::data(b))).await;
 				return Ok((true, true));
 			},
