@@ -1589,7 +1589,7 @@ mod immediate_and_failure {
 	}
 
 	#[tokio::test]
-	async fn immediate_response_response_body_after_headers_falls_back_to_original_response() {
+	async fn immediate_response_response_body_phase_returns_direct_response() {
 		let mock = body_mock(b"upstream-response").await;
 		let processing_options = json!({
 			"requestBodyMode": "none",
@@ -1608,9 +1608,12 @@ mod immediate_and_failure {
 		)
 		.await;
 		let res = send_request(io, Method::GET, "http://lo").await;
-		assert_eq!(res.status(), 200);
+		// ImmediateResponse during body phase in the main loop is honored as a
+		// DirectResponse because the response has not yet been committed to the
+		// downstream client.
+		assert_eq!(res.status(), 400);
 		let body = read_body_raw(res.into_body()).await;
-		assert_eq!(body.as_ref(), b"upstream-response");
+		assert_eq!(body.as_ref(), b"late immediate");
 	}
 
 	#[tokio::test]

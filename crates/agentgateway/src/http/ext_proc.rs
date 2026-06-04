@@ -1427,36 +1427,7 @@ impl ExtProcInstance {
 		loop {
 			let msg = Self::recv_response_loop_message(&mut rx).await?;
 			let (transitioned, eos, streamed_body_mutation) = match msg {
-				ResponseLoopMessage::Immediate(dr) => {
-					if response_fsm.phase == ResponsePhase::AwaitingHeaders {
-						return Ok((resp, Some(dr)));
-					}
-					warn!(
-						"received ImmediateResponse after response headers/body processing started; falling back to original response when possible"
-					);
-					if let Some(original_body) =
-						BufferedBodyPhase::take_deferred_body(&mut pending_response_buffer)
-					{
-						let (parts, _) = resp.into_parts();
-						return Ok((http::Response::from_parts(parts, original_body), None));
-					}
-					if let Some(original_body) = pending_response_body.take() {
-						let (parts, _) = resp.into_parts();
-						return Ok((http::Response::from_parts(parts, original_body), None));
-					}
-					BufferedBodyPhase::restore_original_if(&mut pending_response_buffer, true, &mut tx_chunk)
-						.await;
-					if let Some(remainder) =
-						BufferedBodyPhase::take_partial_remainder(&mut pending_response_buffer)
-					{
-						Self::spawn_forward_body_to_channel(
-							remainder,
-							tx_chunk.clone(),
-							"failed to forward unprocessed response body remainder after ImmediateResponse",
-						);
-					}
-					return Ok((resp, None));
-				},
+				ResponseLoopMessage::Immediate(dr) => return Ok((resp, Some(dr))),
 				ResponseLoopMessage::Processing(presp) => {
 					let response_body_no_mutation = response_body_response_has_no_mutation(&presp);
 					let streamed_body_mutation = response_response_has_streamed_body_mutation(&presp);
