@@ -1630,6 +1630,31 @@ mod immediate_and_failure {
 	}
 
 	#[tokio::test]
+	async fn immediate_response_response_body_after_headers_falls_back_to_original_response() {
+		let mock = body_mock(b"upstream-response").await;
+		let processing_options = json!({
+			"requestBodyMode": "none",
+			"responseBodyMode": "buffered",
+			"requestHeaderMode": "send",
+			"responseHeaderMode": "send",
+			"requestTrailerMode": "send",
+			"responseTrailerMode": "send",
+		});
+		let (_mock, _ext_proc, _bind, io) = setup_ext_proc_mock_with_processing_options(
+			mock,
+			ext_proc::FailureMode::FailClosed,
+			ExtProcMock::new(ImmediateResponseResponseBodyBufferedFallbackExtProc::default),
+			"{}",
+			Some(processing_options),
+		)
+		.await;
+		let res = send_request(io, Method::GET, "http://lo").await;
+		assert_eq!(res.status(), 200);
+		let body = read_body_raw(res.into_body()).await;
+		assert_eq!(body.as_ref(), b"upstream-response");
+	}
+
+	#[tokio::test]
 	async fn failure_fail_closed() {
 		let mock = simple_mock().await;
 		let (_mock, _ext_proc, _bind, io) = setup_ext_proc_mock(
@@ -3258,6 +3283,47 @@ impl Handler for ImmediateResponseResponseBodyContinuationExtProc {
 				..Default::default()
 			})))
 			.await;
+		let _ = sender
+			.send(immediate_response(proto::ImmediateResponse {
+				status: Some(proto::HttpStatus { code: 400 }),
+				body: "late immediate".to_string(),
+				headers: None,
+				grpc_status: None,
+				details: "".to_string(),
+			}))
+			.await;
+		Ok(())
+	}
+}
+
+#[derive(Debug, Default)]
+struct ImmediateResponseResponseBodyBufferedFallbackExtProc;
+
+#[async_trait::async_trait]
+impl Handler for ImmediateResponseResponseBodyBufferedFallbackExtProc {
+	async fn handle_request_headers(
+		&mut self,
+		_: &HttpHeaders,
+		sender: &mpsc::Sender<Result<ProcessingResponse, Status>>,
+	) -> Result<(), Status> {
+		let _ = sender.send(request_header_response(None)).await;
+		Ok(())
+	}
+
+	async fn handle_response_headers(
+		&mut self,
+		_: &HttpHeaders,
+		sender: &Sender<Result<ProcessingResponse, Status>>,
+	) -> Result<(), Status> {
+		let _ = sender.send(response_header_response(None)).await;
+		Ok(())
+	}
+
+	async fn handle_response_body(
+		&mut self,
+		_: &proto::HttpBody,
+		sender: &mpsc::Sender<Result<ProcessingResponse, Status>>,
+	) -> Result<(), Status> {
 		let _ = sender
 			.send(immediate_response(proto::ImmediateResponse {
 				status: Some(proto::HttpStatus { code: 400 }),

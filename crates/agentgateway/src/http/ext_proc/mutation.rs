@@ -254,9 +254,7 @@ pub(super) async fn handle_response_for_response_mutation(
 			return Ok((res, true));
 		},
 		Some(Response::ImmediateResponse(_)) => {
-			warn!(
-				"received ImmediateResponse during response-body continuation; treating as terminal"
-			);
+			warn!("received ImmediateResponse during response-body continuation; treating as terminal");
 			return Ok((true, true));
 		},
 		msg => {
