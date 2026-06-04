@@ -301,6 +301,9 @@ spec:
                                     description: |-
                                       `ai` specifies settings for AI workloads. This is only applicable when
                                       connecting to a `Backend` of type `ai`.
+
+                                      When multiple policies apply, `backend.ai` settings compose field-wise
+                                      across applicable policies.
                                     properties:
                                       defaults:
                                         description: Provide defaults to merge with
@@ -6915,6 +6918,9 @@ spec:
                     description: |-
                       `ai` specifies settings for AI workloads. This is only applicable when
                       connecting to a `Backend` of type `ai`.
+
+                      When multiple policies apply, `backend.ai` settings compose field-wise
+                      across applicable policies.
                     properties:
                       defaults:
                         description: Provide defaults to merge with user input fields.
@@ -11512,6 +11518,9 @@ spec:
                     description: |-
                       `mcp` specifies settings for MCP workloads. This is only applicable when
                       connecting to a `Backend` of type `mcp`.
+
+                      When multiple policies apply, `backend.mcp` settings compose field-wise
+                      across applicable policies.
                     properties:
                       authentication:
                         description: |-

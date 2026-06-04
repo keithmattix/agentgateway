@@ -405,6 +405,11 @@ impl LLMRequestPolicies {
 			return Arc::new(route_policies);
 		};
 
+		route_policies.llm = Some(Self::merge_llm_policies(&be, &re));
+		Arc::new(route_policies)
+	}
+
+	fn merge_llm_policies(be: &Arc<llm::Policy>, re: &Arc<llm::Policy>) -> Arc<llm::Policy> {
 		// Backend aliases replace route aliases entirely (consistent with defaults/overrides)
 		let (merged_aliases, merged_wildcard_patterns) = if be.model_aliases.is_empty() {
 			(re.model_aliases.clone(), Arc::clone(&re.wildcard_patterns))
@@ -412,7 +417,7 @@ impl LLMRequestPolicies {
 			(be.model_aliases.clone(), Arc::clone(&be.wildcard_patterns))
 		};
 
-		route_policies.llm = Some(Arc::new(llm::Policy {
+		Arc::new(llm::Policy {
 			prompt_guard: be.prompt_guard.clone().or_else(|| re.prompt_guard.clone()),
 			defaults: be.defaults.clone().or_else(|| re.defaults.clone()),
 			overrides: be.overrides.clone().or_else(|| re.overrides.clone()),
@@ -432,8 +437,7 @@ impl LLMRequestPolicies {
 			} else {
 				be.routes.clone()
 			},
-		}));
-		Arc::new(route_policies)
+		})
 	}
 }
 
@@ -987,7 +991,11 @@ impl Store {
 					pol.ext_authz.set_if_unset(p);
 				},
 				BackendTrafficPolicy::AI(p) => {
-					pol.llm.get_or_insert_with(|| p.clone());
+					// Compose applicable AI backend policies while preserving existing field semantics.
+					pol.llm = Some(match pol.llm.take() {
+						Some(existing) => LLMRequestPolicies::merge_llm_policies(&existing, p),
+						None => p.clone(),
+					});
 				},
 
 				BackendTrafficPolicy::HTTP(p) => {
@@ -2533,6 +2541,57 @@ mod tests {
 			(strng::new("x-foo"), strng::new("bar3")),
 			"Section attached policy (bar3) should win over backend attached policy (bar)"
 		);
+	}
+
+	#[test]
+	fn backend_ai_policy_merge_preserves_routes_and_prompt_guard() {
+		use crate::llm::policy::{
+			PromptGuard, RegexRule, RegexRules, RequestGuard, RequestGuardKind, SortedRoutes,
+		};
+		use crate::llm::{self, RouteType};
+
+		let mut routes = SortedRoutes::default();
+		routes.insert(strng::new("/v1/messages"), RouteType::Messages);
+		routes.insert(strng::new("*"), RouteType::Passthrough);
+
+		let routes_policy = BackendTrafficPolicy::AI(Arc::new(llm::Policy {
+			routes,
+			..Default::default()
+		}));
+		let prompt_guard_policy = BackendTrafficPolicy::AI(Arc::new(llm::Policy {
+			prompt_guard: Some(PromptGuard {
+				request: vec![RequestGuard {
+					rejection: Default::default(),
+					kind: RequestGuardKind::Regex(RegexRules {
+						action: Default::default(),
+						rules: vec![RegexRule::Regex {
+							pattern: regex::Regex::new("secret").unwrap(),
+						}],
+					}),
+				}],
+				response: vec![],
+			}),
+			..Default::default()
+		}));
+
+		let inline_policies = vec![prompt_guard_policy, routes_policy];
+		let policies = Store::default().backend_policies(
+			BackendTargetRef::Backend {
+				name: "test-backend",
+				namespace: "test-ns",
+				section: None,
+			},
+			&[&inline_policies],
+			None,
+		);
+		let policy = policies.llm.expect("expected merged AI policy");
+
+		assert!(
+			policy.prompt_guard.is_some(),
+			"prompt guard config should be preserved"
+		);
+		assert_eq!(policy.resolve_route("/v1/messages"), RouteType::Messages);
+		assert_eq!(policy.resolve_route("/v1/models"), RouteType::Passthrough);
 	}
 
 	#[test]

@@ -224,6 +224,9 @@ type BackendWithAI struct {
 
 	// `ai` specifies settings for AI workloads. This is only applicable when
 	// connecting to a `Backend` of type `ai`.
+	//
+	// When multiple policies apply, `backend.ai` settings compose field-wise
+	// across applicable policies.
 	// +optional
 	AI *BackendAI `json:"ai,omitempty"`
 
@@ -242,11 +245,17 @@ type BackendFull struct {
 
 	// `ai` specifies settings for AI workloads. This is only applicable when
 	// connecting to a `Backend` of type `ai`.
+	//
+	// When multiple policies apply, `backend.ai` settings compose field-wise
+	// across applicable policies.
 	// +optional
 	AI *BackendAI `json:"ai,omitempty"`
 
 	// `mcp` specifies settings for MCP workloads. This is only applicable when
 	// connecting to a `Backend` of type `mcp`.
+	//
+	// When multiple policies apply, `backend.mcp` settings compose field-wise
+	// across applicable policies.
 	//
 	// +optional
 	MCP *BackendMCP `json:"mcp,omitempty"`
