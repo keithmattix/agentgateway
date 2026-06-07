@@ -284,7 +284,7 @@ type LLMProvider struct {
 // It is intended for local, self-hosted, or OpenAI-compatible providers whose
 // supported request/response formats are not fully described by the managed
 // provider types.
-// +kubebuilder:validation:XValidation:rule="!has(self.backendRef) || !has(self.backendRef.namespace)",message="custom provider backendRef must be namespace-local"
+// TODO: enable this rule when we don't need to support older k8s versions where this rule breaks (namespace is optional with no default) // +kubebuilder:validation:XValidation:rule="!has(self.backendRef) || !has(self.backendRef.namespace)",message="custom provider backendRef must be namespace-local"
 // +kubebuilder:validation:XValidation:rule="!has(self.backendRef) || (((!has(self.backendRef.group) || self.backendRef.group == \"\") && (!has(self.backendRef.kind) || self.backendRef.kind == 'Service')) || (has(self.backendRef.group) && self.backendRef.group == 'inference.networking.k8s.io' && has(self.backendRef.kind) && self.backendRef.kind == 'InferencePool'))",message="custom provider backendRef may target only Service or InferencePool"
 type CustomProvider struct {
 	// BackendRef references the Kubernetes backend that serves this provider.

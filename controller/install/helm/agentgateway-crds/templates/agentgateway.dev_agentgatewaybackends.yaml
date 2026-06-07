@@ -364,8 +364,6 @@ spec:
                                 - formats
                                 type: object
                                 x-kubernetes-validations:
-                                - message: custom provider backendRef must be namespace-local
-                                  rule: '!has(self.backendRef) || !has(self.backendRef.namespace)'
                                 - message: custom provider backendRef may target only
                                     Service or InferencePool
                                   rule: '!has(self.backendRef) || (((!has(self.backendRef.group)
@@ -6343,8 +6341,6 @@ spec:
                         - formats
                         type: object
                         x-kubernetes-validations:
-                        - message: custom provider backendRef must be namespace-local
-                          rule: '!has(self.backendRef) || !has(self.backendRef.namespace)'
                         - message: custom provider backendRef may target only Service
                             or InferencePool
                           rule: '!has(self.backendRef) || (((!has(self.backendRef.group)
