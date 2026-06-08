@@ -504,8 +504,8 @@ func TestBuildAIBackend(t *testing.T) {
 						LLM: &agentgateway.LLMProvider{
 							Custom: &agentgateway.CustomProvider{
 								BackendRef: &agentgateway.LocalBackendObjectReference{
-									Group: ptr.Of(wellknown.InferencePoolGVK.Group),
-									Kind:  ptr.Of(wellknown.InferencePoolGVK.Kind),
+									Group: new(wellknown.InferencePoolGVK.Group),
+									Kind:  new(wellknown.InferencePoolGVK.Kind),
 									Name:  "llm-pool",
 								},
 								Formats: []agentgateway.ProviderFormatConfig{
