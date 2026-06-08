@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"google.golang.org/protobuf/proto"
-	"istio.io/istio/pkg/ptr"
 	"istio.io/istio/pkg/slices"
 	"istio.io/istio/pkg/test/util/assert"
 	"istio.io/istio/pkg/util/protomarshal"
@@ -50,7 +49,7 @@ func TestBuildMCP(t *testing.T) {
 									Host:     shortStringPtr("mcp-server.example.com"),
 									Port:     8080,
 									Path:     new("override-sse"),
-									Protocol: ptr.Of(agentgateway.MCPProtocolSSE),
+									Protocol: new(agentgateway.MCPProtocolSSE),
 								},
 							},
 						},
@@ -480,7 +479,7 @@ func TestBuildAIBackend(t *testing.T) {
 							Custom: &agentgateway.CustomProvider{
 								BackendRef: &agentgateway.LocalBackendObjectReference{
 									Name: "llm-service",
-									Port: ptr.Of(int32(8080)),
+									Port: new(int32(8080)),
 								},
 								Formats: []agentgateway.ProviderFormatConfig{
 									{Type: agentgateway.ProviderFormatCompletions},
@@ -793,7 +792,7 @@ func TestBuildAgwBackendReferencesIncludesCustomProviderBackendRefs(t *testing.T
 					Custom: &agentgateway.CustomProvider{
 						BackendRef: &agentgateway.LocalBackendObjectReference{
 							Name: "llm-service",
-							Port: ptr.Of(int32(8080)),
+							Port: new(int32(8080)),
 						},
 						Formats: []agentgateway.ProviderFormatConfig{
 							{Type: agentgateway.ProviderFormatCompletions},
@@ -808,8 +807,8 @@ func TestBuildAgwBackendReferencesIncludesCustomProviderBackendRefs(t *testing.T
 								LLMProvider: agentgateway.LLMProvider{
 									Custom: &agentgateway.CustomProvider{
 										BackendRef: &agentgateway.LocalBackendObjectReference{
-											Group: ptr.Of(wellknown.InferencePoolGVK.Group),
-											Kind:  ptr.Of(wellknown.InferencePoolGVK.Kind),
+											Group: new(wellknown.InferencePoolGVK.Group),
+											Kind:  new(wellknown.InferencePoolGVK.Kind),
 											Name:  "llm-pool",
 										},
 										Formats: []agentgateway.ProviderFormatConfig{
