@@ -118,15 +118,15 @@ func appendLLMProviderBackendReferences(llm *agentgateway.LLMProvider, app func(
 	}
 	var group *gwv1.Group
 	if llm.Custom.BackendRef.Group != nil {
-		group = ptr.Of(gwv1.Group(*llm.Custom.BackendRef.Group))
+		group = new(gwv1.Group(*llm.Custom.BackendRef.Group))
 	}
 	var kind *gwv1.Kind
 	if llm.Custom.BackendRef.Kind != nil {
-		kind = ptr.Of(gwv1.Kind(*llm.Custom.BackendRef.Kind))
+		kind = new(gwv1.Kind(*llm.Custom.BackendRef.Kind))
 	}
 	var port *gwv1.PortNumber
 	if llm.Custom.BackendRef.Port != nil {
-		port = ptr.Of(gwv1.PortNumber(*llm.Custom.BackendRef.Port))
+		port = new(gwv1.PortNumber(*llm.Custom.BackendRef.Port))
 	}
 	app(gwv1.BackendObjectReference{Group: group, Kind: kind, Name: gwv1.ObjectName(llm.Custom.BackendRef.Name), Port: port})
 }
@@ -619,7 +619,7 @@ func translateCustomProviderBackendRef(ctx plugins.PolicyCtx, namespace string, 
 
 	var port *gwv1.PortNumber
 	if ref.Port != nil {
-		port = ptr.Of(gwv1.PortNumber(*ref.Port))
+		port = new(gwv1.PortNumber(*ref.Port))
 	}
 
 	return ctx.References.RouteBackend(ctx.Krt, namespace, gk, gwv1.ObjectName(ref.Name), nil, port)
