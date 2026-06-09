@@ -431,7 +431,7 @@ func translateBackendHTTP(policy *agentgateway.AgentgatewayPolicy) *api.Policy {
 func translateBackendTunnel(ctx PolicyCtx, policy *agentgateway.AgentgatewayPolicy) (*api.Policy, error) {
 	tunnel := policy.Spec.Backend.Tunnel
 
-	proxy, err := buildBackendRef(ctx, tunnel.BackendRef, policy.Namespace)
+	proxy, err := BuildBackendRef(ctx, tunnel.BackendRef, policy.Namespace)
 
 	tunnelPolicy := &api.Policy{
 		Key:  policy.Namespace + "/" + policy.Name + backendTunnelPolicySuffix,
