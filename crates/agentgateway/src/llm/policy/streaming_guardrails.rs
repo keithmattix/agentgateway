@@ -31,10 +31,9 @@ use tokio_util::codec::Decoder;
 use tracing::warn;
 
 use super::{
-	AzureContentSafety, BedrockGuardrails, FailureMode, GoogleModelArmor, RegexRules, ResponseGuard,
-	ResponseGuardKind, StreamingEvaluator, StreamingGuardrailOutcome, Webhook,
+	FailureMode, ResponseGuard, ResponseGuardKind, StreamingEvaluator, StreamingGuardrailOutcome,
 };
-use crate::llm::policy::Policy;
+use crate::llm::policy::PromptGuard;
 use crate::proxy::httpproxy::PolicyClient;
 
 /// Text bytes accumulated before triggering a guardrail evaluation.
@@ -58,19 +57,22 @@ pub fn tail_chars(s: &str, max_bytes: usize) -> &str {
 	&s[start..]
 }
 
-/// Run all evaluators against a window. Returns `true` if any evaluator blocked.
-pub async fn evaluate_window(evaluators: &mut [Box<dyn StreamingEvaluator>], window: &str) -> bool {
+/// Run all evaluators against a window. Returns the rejection body if any evaluator blocked.
+pub async fn evaluate_window(
+	evaluators: &mut [Box<dyn StreamingEvaluator>],
+	window: &str,
+) -> Option<Bytes> {
 	for ev in evaluators.iter_mut() {
 		match ev.evaluate(window).await {
-			Ok(Some(StreamingGuardrailOutcome::Blocked(reason))) => {
-				tracing::debug!(reason = %reason, "streaming guardrail blocked response window");
-				return true;
+			Ok(Some(StreamingGuardrailOutcome::Blocked(body))) => {
+				tracing::debug!("streaming guardrail blocked response window");
+				return Some(body);
 			},
 			Ok(None) => {},
 			Err(e) => match ev.failure_mode() {
 				FailureMode::FailClosed => {
 					warn!("streaming guardrail error, failing closed: {e}");
-					return true;
+					return Some(Bytes::from_static(b"Content blocked by guardrail policy"));
 				},
 				FailureMode::FailOpen => {
 					warn!("streaming guardrail error, failing open: {e}");
@@ -78,7 +80,7 @@ pub async fn evaluate_window(evaluators: &mut [Box<dyn StreamingEvaluator>], win
 			},
 		}
 	}
-	false
+	None
 }
 
 // ---------------------------------------------------------------------------
@@ -91,213 +93,36 @@ pub fn make_evaluator(
 	client: PolicyClient,
 	http_headers: HeaderMap,
 ) -> Box<dyn StreamingEvaluator> {
-	match &guard.kind {
-		ResponseGuardKind::Regex(rg) => Box::new(RegexEvaluator { rules: rg.clone() }),
-		ResponseGuardKind::Webhook(wh) => Box::new(WebhookEvaluator {
-			webhook: wh.clone(),
-			client,
-			http_headers,
-		}),
-		ResponseGuardKind::BedrockGuardrails(bg) => Box::new(BedrockEvaluator {
-			config: bg.clone(),
-			client,
-		}),
-		ResponseGuardKind::GoogleModelArmor(gma) => Box::new(GoogleModelArmorEvaluator {
-			config: gma.clone(),
-			client,
-		}),
-		ResponseGuardKind::AzureContentSafety(acs) => Box::new(AzureContentSafetyEvaluator {
-			config: acs.clone(),
-			client,
-		}),
-	}
+	Box::new(ResponseGuardEvaluator {
+		guard: guard.clone(),
+		client,
+		http_headers,
+	})
 }
 
-// ---------------------------------------------------------------------------
-// Regex evaluator
-// ---------------------------------------------------------------------------
-
-struct RegexEvaluator {
-	rules: RegexRules,
-}
-
-#[async_trait::async_trait]
-impl StreamingEvaluator for RegexEvaluator {
-	async fn evaluate(&mut self, window: &str) -> anyhow::Result<Option<StreamingGuardrailOutcome>> {
-		use super::{Action, RegexRule, pii};
-
-		// TODO: masking is not supported in streaming mode. Applying masks would require
-		// re-encoding the held SSE frames with the modified text, which is expensive
-		// and error-prone. Until that is implemented, mask rules pass through unchanged.
-		for rule in &self.rules.rules {
-			if !matches!(self.rules.action, Action::Reject) {
-				continue;
-			}
-			let matched = match rule {
-				RegexRule::Builtin { builtin } => {
-					use super::Builtin;
-					let rec = match builtin {
-						Builtin::Ssn => &*pii::SSN,
-						Builtin::CreditCard => &*pii::CC,
-						Builtin::PhoneNumber => &*pii::PHONE,
-						Builtin::Email => &*pii::EMAIL,
-						Builtin::CaSin => &*pii::CA_SIN,
-					};
-					!pii::recognizer(rec, window).is_empty()
-				},
-				RegexRule::Regex { pattern } => pattern.is_match(window),
-			};
-			if matched {
-				return Ok(Some(StreamingGuardrailOutcome::Blocked(
-					"regex guardrail blocked content".to_string(),
-				)));
-			}
-		}
-		Ok(None)
-	}
-}
-
-// ---------------------------------------------------------------------------
-// Webhook evaluator
-// ---------------------------------------------------------------------------
-
-struct WebhookEvaluator {
-	webhook: Webhook,
+struct ResponseGuardEvaluator {
+	guard: ResponseGuard,
 	client: PolicyClient,
 	http_headers: HeaderMap,
 }
 
 #[async_trait::async_trait]
-impl StreamingEvaluator for WebhookEvaluator {
+impl StreamingEvaluator for ResponseGuardEvaluator {
 	fn failure_mode(&self) -> FailureMode {
-		self.webhook.failure_mode
+		match &self.guard.kind {
+			ResponseGuardKind::Webhook(wh) => wh.failure_mode,
+			_ => FailureMode::FailOpen,
+		}
 	}
 
 	async fn evaluate(&mut self, window: &str) -> anyhow::Result<Option<StreamingGuardrailOutcome>> {
-		use crate::llm::SimpleChatCompletionMessage;
-		use crate::llm::policy::webhook::{ResponseAction, ResponseChoice};
-
-		// TODO: if the webhook advertises streaming support (e.g. via a capability header or
-		// config flag), forward raw chunks incrementally instead of sending each window as a
-		// standalone completion, so the webhook can do its own session-aware accumulation.
-		let choices = vec![ResponseChoice {
-			message: SimpleChatCompletionMessage {
-				role: "assistant".into(),
-				content: window.to_string().into(),
-			},
-		}];
-
-		let headers =
-			Policy::get_webhook_forward_headers(&self.http_headers, &self.webhook.forward_header_matches);
-		let whr =
-			super::webhook::send_response(&self.client, &self.webhook.target, &headers, choices).await?;
-
-		match whr.action {
-			ResponseAction::Reject(rej) => Ok(Some(StreamingGuardrailOutcome::Blocked(format!(
-				"webhook rejected response: {}",
-				rej.reason.unwrap_or_default()
-			)))),
-			_ => Ok(None),
-		}
-	}
-}
-
-// ---------------------------------------------------------------------------
-// Bedrock guardrails evaluator
-// ---------------------------------------------------------------------------
-
-struct BedrockEvaluator {
-	config: BedrockGuardrails,
-	client: PolicyClient,
-}
-
-#[async_trait::async_trait]
-impl StreamingEvaluator for BedrockEvaluator {
-	async fn evaluate(&mut self, window: &str) -> anyhow::Result<Option<StreamingGuardrailOutcome>> {
-		if window.is_empty() {
-			return Ok(None);
-		}
-		let resp = super::bedrock_guardrails::send_response(
-			vec![window.to_string()],
-			None,
+		PromptGuard::evaluate_streaming_response_window(
+			&self.guard,
+			window,
 			&self.client,
-			&self.config,
+			&self.http_headers,
 		)
-		.await?;
-		if resp.is_blocked() {
-			Ok(Some(StreamingGuardrailOutcome::Blocked(
-				"Bedrock guardrail blocked streaming response content".to_string(),
-			)))
-		} else {
-			Ok(None)
-		}
-	}
-}
-
-// ---------------------------------------------------------------------------
-// Google Model Armor evaluator
-// ---------------------------------------------------------------------------
-
-struct GoogleModelArmorEvaluator {
-	config: GoogleModelArmor,
-	client: PolicyClient,
-}
-
-#[async_trait::async_trait]
-impl StreamingEvaluator for GoogleModelArmorEvaluator {
-	async fn evaluate(&mut self, window: &str) -> anyhow::Result<Option<StreamingGuardrailOutcome>> {
-		if window.is_empty() {
-			return Ok(None);
-		}
-		let resp = super::google_model_armor::send_response(
-			vec![window.to_string()],
-			None,
-			&self.client,
-			&self.config,
-		)
-		.await?;
-		if resp.is_blocked() {
-			Ok(Some(StreamingGuardrailOutcome::Blocked(
-				"Google Model Armor blocked streaming response content".to_string(),
-			)))
-		} else {
-			Ok(None)
-		}
-	}
-}
-
-// ---------------------------------------------------------------------------
-// Azure Content Safety evaluator
-// ---------------------------------------------------------------------------
-
-struct AzureContentSafetyEvaluator {
-	config: AzureContentSafety,
-	client: PolicyClient,
-}
-
-#[async_trait::async_trait]
-impl StreamingEvaluator for AzureContentSafetyEvaluator {
-	async fn evaluate(&mut self, window: &str) -> anyhow::Result<Option<StreamingGuardrailOutcome>> {
-		if window.is_empty() {
-			return Ok(None);
-		}
-		if let Some(ref analyze_text) = self.config.analyze_text {
-			let resp = super::azure_content_safety::send_analyze_text_for_response(
-				vec![window.to_string()],
-				None,
-				&self.client,
-				&self.config,
-				analyze_text,
-			)
-			.await?;
-			let threshold = analyze_text.severity_threshold.unwrap_or(2);
-			if resp.is_blocked(threshold) {
-				return Ok(Some(StreamingGuardrailOutcome::Blocked(
-					"Azure Content Safety blocked streaming response content".to_string(),
-				)));
-			}
-		}
-		Ok(None)
+		.await
 	}
 }
 
@@ -308,14 +133,20 @@ impl StreamingEvaluator for AzureContentSafetyEvaluator {
 /// Synthetic SSE error event sent to the client when a guardrail blocks content.
 ///
 /// Encoded as a single `data: {...}\n\n` SSE frame.
-fn guardrail_blocked_sse_bytes() -> Bytes {
-	Bytes::from_static(
-		b"data: {\"error\":{\"type\":\"guardrail_blocked\",\"code\":\"guardrail_intervention\",\"message\":\"Content blocked by guardrail policy\"}}\n\n",
-	)
+fn guardrail_blocked_sse_bytes(body: Bytes) -> Bytes {
+	let message = String::from_utf8_lossy(&body);
+	let event = serde_json::json!({
+		"error": {
+			"type": "guardrail_blocked",
+			"code": "guardrail_intervention",
+			"message": message,
+		}
+	});
+	Bytes::from(format!("data: {event}\n\n"))
 }
 
 type EvalFuture =
-	Pin<Box<dyn Future<Output = (Vec<Box<dyn StreamingEvaluator>>, bool)> + Send + 'static>>;
+	Pin<Box<dyn Future<Output = (Vec<Box<dyn StreamingEvaluator>>, Option<Bytes>)> + Send + 'static>>;
 
 /// Internal state machine for `GuardedSseBody`.
 enum GuardedBodyState {
@@ -327,7 +158,7 @@ enum GuardedBodyState {
 	/// Yield held frames in order, then return to `Buffering` (or `Done` if `eof`).
 	Flushing { queue: VecDeque<Bytes>, eof: bool },
 	/// Send the synthetic error event then close.
-	Blocked,
+	Blocked(Bytes),
 	/// Done – no more frames.
 	Done,
 }
@@ -410,6 +241,12 @@ impl GuardedSseBody {
 			return None;
 		}
 		if let Ok(v) = serde_json::from_slice::<serde_json::Value>(&data) {
+			// OpenAI responses: response.output_text.delta
+			if v.get("type").and_then(|t| t.as_str()) == Some("response.output_text.delta")
+				&& let Some(text) = v.get("delta").and_then(|s| s.as_str())
+			{
+				return Some(text.to_string());
+			}
 			// OpenAI completions: choices[0].delta.content
 			if let Some(text) = v
 				.get("choices")
@@ -461,9 +298,10 @@ impl http_body::Body for GuardedSseBody {
 				// -----------------------------------------------------------------
 				// Blocked: yield synthetic error event, then done.
 				// -----------------------------------------------------------------
-				GuardedBodyState::Blocked => {
+				GuardedBodyState::Blocked(body) => {
+					let body = std::mem::take(body);
 					*this.state = GuardedBodyState::Done;
-					return Poll::Ready(Some(Ok(Frame::data(guardrail_blocked_sse_bytes()))));
+					return Poll::Ready(Some(Ok(Frame::data(guardrail_blocked_sse_bytes(body)))));
 				},
 				// -----------------------------------------------------------------
 				// Done: stream exhausted.
@@ -476,12 +314,12 @@ impl http_body::Body for GuardedSseBody {
 				// -----------------------------------------------------------------
 				GuardedBodyState::Evaluating { fut, eof } => match fut.as_mut().poll(cx) {
 					Poll::Pending => return Poll::Pending,
-					Poll::Ready((evaluators, blocked)) => {
+					Poll::Ready((evaluators, blocked_body)) => {
 						*this.evaluators = evaluators;
-						if blocked {
+						if let Some(body) = blocked_body {
 							this.held_frames.clear();
 							*this.held_bytes = 0;
-							*this.state = GuardedBodyState::Blocked;
+							*this.state = GuardedBodyState::Blocked(body);
 						} else {
 							let queue: VecDeque<Bytes> = this.held_frames.drain(..).collect();
 							*this.held_bytes = 0;
@@ -541,8 +379,8 @@ impl http_body::Body for GuardedSseBody {
 								*this.overlap_tail = tail_chars(&window, OVERLAP_BYTES).to_string();
 								let mut evaluators = std::mem::take(this.evaluators);
 								let fut: EvalFuture = Box::pin(async move {
-									let blocked = evaluate_window(&mut evaluators, &window).await;
-									(evaluators, blocked)
+									let blocked_body = evaluate_window(&mut evaluators, &window).await;
+									(evaluators, blocked_body)
 								});
 								*this.state = GuardedBodyState::Evaluating { fut, eof: false };
 							}
@@ -576,8 +414,8 @@ impl http_body::Body for GuardedSseBody {
 							this.overlap_tail.clear();
 							let mut evaluators = std::mem::take(this.evaluators);
 							let fut: EvalFuture = Box::pin(async move {
-								let blocked = evaluate_window(&mut evaluators, &window).await;
-								(evaluators, blocked)
+								let blocked_body = evaluate_window(&mut evaluators, &window).await;
+								(evaluators, blocked_body)
 							});
 							*this.state = GuardedBodyState::Evaluating { fut, eof: true };
 						},
@@ -593,7 +431,6 @@ mod tests {
 	use http_body_util::BodyExt as _;
 
 	use super::*;
-	use crate::llm::policy::{Action, RegexRule};
 
 	struct PassEvaluator;
 
@@ -615,7 +452,28 @@ mod tests {
 			&mut self,
 			_window: &str,
 		) -> anyhow::Result<Option<StreamingGuardrailOutcome>> {
-			Ok(Some(StreamingGuardrailOutcome::Blocked("blocked".into())))
+			Ok(Some(StreamingGuardrailOutcome::Blocked(
+				Bytes::from_static(b"blocked"),
+			)))
+		}
+	}
+
+	struct PatternEvaluator {
+		pattern: regex::Regex,
+	}
+
+	#[async_trait::async_trait]
+	impl StreamingEvaluator for PatternEvaluator {
+		async fn evaluate(
+			&mut self,
+			window: &str,
+		) -> anyhow::Result<Option<StreamingGuardrailOutcome>> {
+			if self.pattern.is_match(window) {
+				return Ok(Some(StreamingGuardrailOutcome::Blocked(
+					Bytes::from_static(b"blocked"),
+				)));
+			}
+			Ok(None)
 		}
 	}
 
@@ -685,14 +543,9 @@ mod tests {
 		assert!(!contains(&bytes, b"bad content"));
 	}
 
-	fn regex_evaluator(pattern: &str) -> RegexEvaluator {
-		RegexEvaluator {
-			rules: RegexRules {
-				action: Action::Reject,
-				rules: vec![RegexRule::Regex {
-					pattern: regex::Regex::new(pattern).unwrap(),
-				}],
-			},
+	fn pattern_evaluator(pattern: &str) -> PatternEvaluator {
+		PatternEvaluator {
+			pattern: regex::Regex::new(pattern).unwrap(),
 		}
 	}
 
@@ -704,7 +557,7 @@ mod tests {
 
 		let guarded = GuardedSseBody::new(
 			body,
-			vec![Box::new(regex_evaluator("SSN"))],
+			vec![Box::new(pattern_evaluator("SSN"))],
 			1024 * 1024,
 			None,
 		);
@@ -722,7 +575,7 @@ mod tests {
 
 		let guarded = GuardedSseBody::new(
 			body,
-			vec![Box::new(regex_evaluator("SSN"))],
+			vec![Box::new(pattern_evaluator("SSN"))],
 			1024 * 1024,
 			None,
 		);
@@ -741,7 +594,7 @@ mod tests {
 
 		let guarded = GuardedSseBody::new(
 			body,
-			vec![Box::new(regex_evaluator("credit card"))],
+			vec![Box::new(pattern_evaluator("credit card"))],
 			1024 * 1024,
 			None,
 		);
@@ -760,7 +613,7 @@ mod tests {
 
 		let guarded = GuardedSseBody::with_threshold(
 			body,
-			vec![Box::new(regex_evaluator("forbidden"))],
+			vec![Box::new(pattern_evaluator("forbidden"))],
 			1024 * 1024,
 			None,
 			4,
@@ -781,7 +634,7 @@ mod tests {
 
 		let guarded = GuardedSseBody::with_threshold(
 			body,
-			vec![Box::new(regex_evaluator("credit card"))],
+			vec![Box::new(pattern_evaluator("credit card"))],
 			1024 * 1024,
 			None,
 			4,
@@ -809,7 +662,10 @@ mod tests {
 		let mut evs: Vec<Box<dyn StreamingEvaluator>> = vec![Box::new(ErrorEvaluator {
 			mode: FailureMode::FailClosed,
 		})];
-		assert!(evaluate_window(&mut evs, "some text").await);
+		assert_eq!(
+			evaluate_window(&mut evs, "some text").await.as_deref(),
+			Some(&b"Content blocked by guardrail policy"[..])
+		);
 	}
 
 	#[tokio::test]
@@ -818,6 +674,6 @@ mod tests {
 		let mut evs: Vec<Box<dyn StreamingEvaluator>> = vec![Box::new(ErrorEvaluator {
 			mode: FailureMode::FailOpen,
 		})];
-		assert!(!evaluate_window(&mut evs, "some text").await);
+		assert!(evaluate_window(&mut evs, "some text").await.is_none());
 	}
 }

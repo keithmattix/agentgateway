@@ -619,21 +619,10 @@ impl HTTPProxy {
 			let Some(req_upgrade) = resp.extensions_mut().remove::<RequestUpgrade>() else {
 				return ProxyError::UpgradeFailed(None, None).into_response_with_grpc(is_grpc_request);
 			};
-			let mut realtime_prompt_guard: Option<crate::llm::policy::PromptGuard> = None;
-			let mut upgrade_policy_client = self.policy_client();
-			if let Some(ctx) = resp.extensions_mut().remove::<RealtimeUpgradeContext>() {
-				realtime_prompt_guard = ctx.prompt_guard;
-				upgrade_policy_client = ctx.policy_client;
-			}
-			handle_upgrade(
-				req_upgrade,
-				resp,
-				log,
-				realtime_prompt_guard,
-				upgrade_policy_client,
-			)
-			.await
-			.unwrap_or_else(|e| e.into_response_with_grpc(is_grpc_request))
+			let realtime_guard_context = resp.extensions_mut().remove::<RealtimeGuardContext>();
+			handle_upgrade(req_upgrade, resp, log, realtime_guard_context)
+				.await
+				.unwrap_or_else(|e| e.into_response_with_grpc(is_grpc_request))
 		} else {
 			resp.map(move |b| http::Body::new(LogBody::new(b, log)))
 		}
@@ -1351,14 +1340,16 @@ impl HTTPProxy {
 			};
 			resp.extensions_mut().insert(upgrade);
 			// Store prompt guard + policy client for the WebSocket upgrade path.
-			let prompt_guard = route_policies
+			if let Some(prompt_guard) = route_policies
 				.llm
 				.as_deref()
-				.and_then(|p| p.prompt_guard.clone());
-			resp.extensions_mut().insert(RealtimeUpgradeContext {
-				prompt_guard,
-				policy_client: self.policy_client(),
-			});
+				.and_then(|p| p.prompt_guard.clone())
+			{
+				resp.extensions_mut().insert(RealtimeGuardContext {
+					prompt_guard,
+					policy_client: self.policy_client(),
+				});
+			}
 		}
 
 		// gRPC status can be in the initial headers or a trailer, add if they are here
@@ -1389,8 +1380,7 @@ async fn handle_upgrade(
 	req_upgrade_type: RequestUpgrade,
 	mut resp: Response,
 	log: DropOnLog,
-	prompt_guard: Option<crate::llm::policy::PromptGuard>,
-	policy_client: PolicyClient,
+	realtime_guard_context: Option<RealtimeGuardContext>,
 ) -> Result<Response, ProxyError> {
 	let RequestUpgrade {
 		upgrade_type,
@@ -1429,12 +1419,12 @@ async fn handle_upgrade(
 			let llm = log.llm_response.clone();
 			let llm_info = LLMInfo::new(llm_req.clone(), LLMResponse::default());
 			llm.store(Some(llm_info));
-			if let Some(guard) = prompt_guard {
+			if let Some(guard_context) = realtime_guard_context {
 				parse::websocket::guarded_realtime_proxy(
 					TokioIo::new(req),
 					server,
-					guard,
-					policy_client,
+					guard_context.prompt_guard,
+					guard_context.policy_client,
 					llm,
 				)
 				.await;
@@ -3377,11 +3367,9 @@ struct ConnectTunnel {
 	upstream: Arc<Mutex<Option<Socket>>>,
 }
 
-/// Carries an optional `PromptGuard` and `PolicyClient` through response extensions
-/// so `handle_upgrade` can use them for the WebSocket realtime path.
 #[derive(Clone)]
-struct RealtimeUpgradeContext {
-	prompt_guard: Option<crate::llm::policy::PromptGuard>,
+struct RealtimeGuardContext {
+	prompt_guard: crate::llm::policy::PromptGuard,
 	policy_client: PolicyClient,
 }
 

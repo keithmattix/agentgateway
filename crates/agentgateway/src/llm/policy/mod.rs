@@ -1,5 +1,6 @@
 use ::http::HeaderMap;
 use bytes::Bytes;
+use http_body_util::BodyExt as _;
 use itertools::Itertools;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -274,8 +275,41 @@ pub trait StreamingEvaluator: Send {
 
 /// Outcome returned by a `StreamingEvaluator`.
 pub enum StreamingGuardrailOutcome {
-	/// Content was blocked; include the human-readable reason if available.
-	Blocked(String),
+	/// Content was blocked; include the rejection body to encode for the stream.
+	Blocked(Bytes),
+}
+
+struct TextResponse {
+	content: String,
+}
+
+impl crate::llm::ResponseType for TextResponse {
+	fn to_llm_response(&self, include_completion_in_log: bool) -> crate::llm::LLMResponse {
+		crate::llm::LLMResponse {
+			completion: include_completion_in_log.then(|| vec![self.content.clone()]),
+			..Default::default()
+		}
+	}
+
+	fn to_webhook_choices(&self) -> Vec<webhook::ResponseChoice> {
+		vec![webhook::ResponseChoice {
+			message: crate::llm::SimpleChatCompletionMessage {
+				role: "assistant".into(),
+				content: self.content.clone().into(),
+			},
+		}]
+	}
+
+	fn set_webhook_choices(&mut self, resp: Vec<webhook::ResponseChoice>) -> anyhow::Result<()> {
+		if let Some(choice) = resp.into_iter().next() {
+			self.content = choice.message.content.to_string();
+		}
+		Ok(())
+	}
+
+	fn serialize(&self) -> serde_json::Result<Vec<u8>> {
+		serde_json::to_vec(&self.to_webhook_choices())
+	}
 }
 
 /// Adapter that wraps plain text extracted from a realtime WebSocket event as a `RequestType`.
@@ -326,26 +360,32 @@ impl crate::llm::RequestType for TextRequest {
 impl PromptGuard {
 	/// Apply request guards to a plain-text string extracted from a realtime WebSocket frame.
 	///
-	/// Returns `true` if the content should be blocked. Masking outcomes are treated as pass
-	/// because the realtime path cannot rewrite WebSocket frames in place.
+	/// Returns the rejection body if the content should be blocked. Masking outcomes are
+	/// treated as pass because the realtime path cannot rewrite WebSocket frames in place.
 	pub async fn apply_realtime_request_guards(
 		&self,
 		text: &str,
 		client: &crate::proxy::httpproxy::PolicyClient,
-	) -> bool {
+	) -> Option<Bytes> {
 		let headers = ::http::HeaderMap::new();
 		let mut req = TextRequest {
 			content: text.to_string(),
 		};
 		for g in &self.request {
 			match Policy::apply_single_request_guard(g, &mut req, &headers, client, None).await {
-				Ok(GuardrailOutcome::Rejected(_)) => {
+				Ok(GuardrailOutcome::Rejected(rejected)) => {
 					Policy::record_guardrail_trip(
 						client,
 						crate::telemetry::metrics::GuardrailPhase::Request,
 						crate::telemetry::metrics::GuardrailAction::Reject,
 					);
-					return true;
+					let body = rejected
+						.into_body()
+						.collect()
+						.await
+						.map(|b| b.to_bytes())
+						.unwrap_or_else(|_| g.rejection.body.clone());
+					return Some(body);
 				},
 				// Masking is not supported in the realtime path; treat as pass but still record.
 				Ok(GuardrailOutcome::Masked) => {
@@ -370,7 +410,7 @@ impl PromptGuard {
 							crate::telemetry::metrics::GuardrailPhase::Request,
 							crate::telemetry::metrics::GuardrailAction::Reject,
 						);
-						return true;
+						return Some(g.rejection.body.clone());
 					},
 					FailureMode::FailOpen => {
 						tracing::warn!("request guard error in realtime path, failing open: {e}");
@@ -383,7 +423,7 @@ impl PromptGuard {
 				},
 			}
 		}
-		false
+		None
 	}
 
 	/// Returns `true` if there is at least one response guard configured.
@@ -405,6 +445,34 @@ impl PromptGuard {
 			.iter()
 			.map(|g| streaming_guardrails::make_evaluator(g, client.clone(), http_headers.clone()))
 			.collect()
+	}
+
+	pub async fn evaluate_streaming_response_window(
+		guard: &ResponseGuard,
+		window: &str,
+		client: &crate::proxy::httpproxy::PolicyClient,
+		http_headers: &HeaderMap,
+	) -> anyhow::Result<Option<StreamingGuardrailOutcome>> {
+		if window.is_empty() {
+			return Ok(None);
+		}
+		let mut resp = TextResponse {
+			content: window.to_string(),
+		};
+		match Policy::apply_single_response_guard(guard, &mut resp, http_headers, client).await? {
+			GuardrailOutcome::Rejected(rejected) => {
+				let body = rejected.into_body().collect().await?.to_bytes();
+				Ok(Some(StreamingGuardrailOutcome::Blocked(body)))
+			},
+			GuardrailOutcome::Masked => {
+				debug_assert!(
+					false,
+					"streaming response guard unexpectedly returned Masked; streaming masking is not supported"
+				);
+				Ok(None)
+			},
+			GuardrailOutcome::None => Ok(None),
+		}
 	}
 }
 
@@ -1185,108 +1253,68 @@ impl Policy {
 		guards: &Vec<ResponseGuard>,
 	) -> anyhow::Result<Option<Response>> {
 		for g in guards {
-			match &g.kind {
-				ResponseGuardKind::Regex(rg) => match Self::apply_regex_response(resp, rg, &g.rejection)? {
-					GuardrailOutcome::Rejected(res) => {
-						Self::record_guardrail_trip(
-							client,
-							crate::telemetry::metrics::GuardrailPhase::Response,
-							crate::telemetry::metrics::GuardrailAction::Reject,
-						);
-						return Ok(Some(res));
-					},
-					GuardrailOutcome::Masked => {
-						Self::record_guardrail_trip(
-							client,
-							crate::telemetry::metrics::GuardrailPhase::Response,
-							crate::telemetry::metrics::GuardrailAction::Mask,
-						);
-					},
-					GuardrailOutcome::None => {
-						Self::record_guardrail_trip(
-							client,
-							crate::telemetry::metrics::GuardrailPhase::Response,
-							crate::telemetry::metrics::GuardrailAction::Allow,
-						);
-					},
+			match Self::apply_single_response_guard(g, resp, http_headers, client).await? {
+				GuardrailOutcome::Rejected(res) => {
+					Self::record_guardrail_trip(
+						client,
+						crate::telemetry::metrics::GuardrailPhase::Response,
+						crate::telemetry::metrics::GuardrailAction::Reject,
+					);
+					return Ok(Some(res));
 				},
-				ResponseGuardKind::Webhook(wh) => {
-					if let Some(res) = Self::apply_webhook_response(resp, http_headers, client, wh).await? {
-						Self::record_guardrail_trip(
-							client,
-							crate::telemetry::metrics::GuardrailPhase::Response,
-							crate::telemetry::metrics::GuardrailAction::Reject,
-						);
-						return Ok(Some(res));
-					}
+				GuardrailOutcome::Masked => {
+					Self::record_guardrail_trip(
+						client,
+						crate::telemetry::metrics::GuardrailPhase::Response,
+						crate::telemetry::metrics::GuardrailAction::Mask,
+					);
 				},
-				ResponseGuardKind::BedrockGuardrails(bg) => {
-					match Self::apply_bedrock_guardrails_response(resp, None, client, &g.rejection, bg)
-						.await?
-					{
-						GuardrailOutcome::Rejected(res) => {
-							Self::record_guardrail_trip(
-								client,
-								crate::telemetry::metrics::GuardrailPhase::Response,
-								crate::telemetry::metrics::GuardrailAction::Reject,
-							);
-							return Ok(Some(res));
-						},
-						GuardrailOutcome::Masked => {
-							Self::record_guardrail_trip(
-								client,
-								crate::telemetry::metrics::GuardrailPhase::Response,
-								crate::telemetry::metrics::GuardrailAction::Mask,
-							);
-						},
-						GuardrailOutcome::None => {
-							Self::record_guardrail_trip(
-								client,
-								crate::telemetry::metrics::GuardrailPhase::Response,
-								crate::telemetry::metrics::GuardrailAction::Allow,
-							);
-						},
-					}
-				},
-				ResponseGuardKind::GoogleModelArmor(gma) => {
-					if let Some(res) =
-						Self::apply_google_model_armor_response(resp, None, client, &g.rejection, gma).await?
-					{
-						Self::record_guardrail_trip(
-							client,
-							crate::telemetry::metrics::GuardrailPhase::Response,
-							crate::telemetry::metrics::GuardrailAction::Reject,
-						);
-						return Ok(Some(res));
-					} else {
-						Self::record_guardrail_trip(
-							client,
-							crate::telemetry::metrics::GuardrailPhase::Response,
-							crate::telemetry::metrics::GuardrailAction::Allow,
-						);
-					}
-				},
-				ResponseGuardKind::AzureContentSafety(acs) => {
-					if let Some(res) =
-						Self::apply_azure_content_safety_response(resp, None, client, &g.rejection, acs).await?
-					{
-						Self::record_guardrail_trip(
-							client,
-							crate::telemetry::metrics::GuardrailPhase::Response,
-							crate::telemetry::metrics::GuardrailAction::Reject,
-						);
-						return Ok(Some(res));
-					} else {
-						Self::record_guardrail_trip(
-							client,
-							crate::telemetry::metrics::GuardrailPhase::Response,
-							crate::telemetry::metrics::GuardrailAction::Allow,
-						);
-					}
+				GuardrailOutcome::None => {
+					Self::record_guardrail_trip(
+						client,
+						crate::telemetry::metrics::GuardrailPhase::Response,
+						crate::telemetry::metrics::GuardrailAction::Allow,
+					);
 				},
 			}
 		}
 		Ok(None)
+	}
+
+	async fn apply_single_response_guard(
+		guard: &ResponseGuard,
+		resp: &mut dyn ResponseType,
+		http_headers: &HeaderMap,
+		client: &PolicyClient,
+	) -> anyhow::Result<GuardrailOutcome> {
+		match &guard.kind {
+			ResponseGuardKind::Regex(rg) => Self::apply_regex_response(resp, rg, &guard.rejection),
+			ResponseGuardKind::Webhook(wh) => {
+				match Self::apply_webhook_response(resp, http_headers, client, wh).await? {
+					Some(res) => Ok(GuardrailOutcome::Rejected(res)),
+					None => Ok(GuardrailOutcome::None),
+				}
+			},
+			ResponseGuardKind::BedrockGuardrails(bg) => {
+				Self::apply_bedrock_guardrails_response(resp, None, client, &guard.rejection, bg).await
+			},
+			ResponseGuardKind::GoogleModelArmor(gma) => {
+				match Self::apply_google_model_armor_response(resp, None, client, &guard.rejection, gma)
+					.await?
+				{
+					Some(res) => Ok(GuardrailOutcome::Rejected(res)),
+					None => Ok(GuardrailOutcome::None),
+				}
+			},
+			ResponseGuardKind::AzureContentSafety(acs) => {
+				match Self::apply_azure_content_safety_response(resp, None, client, &guard.rejection, acs)
+					.await?
+				{
+					Some(res) => Ok(GuardrailOutcome::Rejected(res)),
+					None => Ok(GuardrailOutcome::None),
+				}
+			},
+		}
 	}
 }
 
