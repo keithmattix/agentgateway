@@ -29,8 +29,8 @@ pub struct ResponseResource {
 
 struct Parser<IO> {
 	inner: IO,
-	decoder: websocket_sans_io::WebsocketFrameDecoder,
-	buf: BytesMut,
+	frames: WsFrameAccumulator,
+	text_buffer: BytesMut,
 	buffer_limit: usize,
 	disabled: bool,
 	log: AsyncLog<LLMInfo>,
@@ -38,12 +38,12 @@ struct Parser<IO> {
 
 impl<IO> Parser<IO> {
 	fn record_text_payload(&mut self, data: &[u8]) -> bool {
-		if self.buf.len() + data.len() > self.buffer_limit {
-			self.buf = Default::default();
+		if self.text_buffer.len() + data.len() > self.buffer_limit {
+			self.text_buffer = Default::default();
 			self.disabled = true;
 			return false;
 		}
-		self.buf.extend_from_slice(data);
+		self.text_buffer.extend_from_slice(data);
 		true
 	}
 
@@ -133,34 +133,18 @@ impl<IO: AsyncRead + Unpin + 'static> AsyncRead for Parser<IO> {
 		if self.disabled {
 			return Poll::Ready(Ok(()));
 		}
-		let mut processed_offset = 0;
-		loop {
-			let unprocessed_part_of_buf = &buf.filled()[processed_offset..buf.filled().len()];
-			// Websocket logic needs owned copy to apply the mask. However, we need to keep the untouched stuff
-			// so we are not modifying the response.
-			let Ok(ret) = self.decoder.add_data(&mut unprocessed_part_of_buf.to_vec());
-			processed_offset += ret.consumed_bytes;
-
-			if ret.event.is_none() && ret.consumed_bytes == 0 {
-				return Poll::Ready(Ok(()));
-			}
-
-			match ret.event {
-				Some(WebsocketFrameEvent::PayloadChunk {
-					original_opcode: Opcode::Text,
-				}) if !self.record_text_payload(&unprocessed_part_of_buf[0..ret.consumed_bytes]) => {
+		let new_bytes = &buf.filled()[orig..];
+		self.frames.push(new_bytes);
+		for frame in self.frames.drain_frames() {
+			if let WsCompletedFrame::Text { payload, .. } = frame {
+				if !self.record_text_payload(&payload) {
 					return Poll::Ready(Ok(()));
-				},
-				Some(WebsocketFrameEvent::End {
-					frame_info: FrameInfo { fin: true, .. },
-					original_opcode: Opcode::Text,
-				}) => {
-					let got = self.buf.split();
-					self.emit(got.freeze());
-				},
-				_ => (),
+				}
+				let got = self.text_buffer.split();
+				self.emit(got.freeze());
 			}
 		}
+		Poll::Ready(Ok(()))
 	}
 }
 
@@ -184,8 +168,8 @@ where
 {
 	Parser {
 		inner: body,
-		decoder: websocket_sans_io::WebsocketFrameDecoder::new(),
-		buf: Default::default(),
+		frames: WsFrameAccumulator::new(),
+		text_buffer: Default::default(),
 		buffer_limit,
 		disabled: false,
 		log,
@@ -233,9 +217,17 @@ fn encode_ws_text_frame_masked(payload: &[u8], mask: [u8; 4]) -> Bytes {
 }
 
 /// Synthetic WebSocket error event sent when a guardrail blocks content.
-fn guardrail_blocked_ws_event_bytes() -> Bytes {
-	let json = br#"{"type":"error","error":{"type":"guardrail_blocked","code":"guardrail_intervention","message":"Content blocked by guardrail policy"}}"#;
-	encode_ws_text_frame(json)
+fn guardrail_blocked_ws_event_bytes(body: Bytes) -> Bytes {
+	let message = String::from_utf8_lossy(&body);
+	let event = serde_json::json!({
+		"type": "error",
+		"error": {
+			"type": "guardrail_blocked",
+			"code": "guardrail_intervention",
+			"message": message,
+		}
+	});
+	encode_ws_text_frame(event.to_string().as_bytes())
 }
 
 /// Synthetic `response.cancel` event sent to the server when a response guard blocks.
@@ -410,11 +402,13 @@ pub async fn guarded_realtime_proxy<C, S>(
 								}
 
 								if !input_text.is_empty()
-									&& guard
+									&& let Some(blocked_body) = guard
 										.apply_realtime_request_guards(input_text.trim(), &policy_client)
 										.await
 								{
-									let _ = client_tx_err.send(guardrail_blocked_ws_event_bytes()).await;
+									let _ = client_tx_err
+										.send(guardrail_blocked_ws_event_bytes(blocked_body))
+										.await;
 									continue;
 								}
 							}
@@ -468,10 +462,12 @@ pub async fn guarded_realtime_proxy<C, S>(
 										let window = format!("{overlap_tail}{batch}");
 										overlap_tail = tail_chars(&window, OVERLAP_BYTES).to_string();
 
-										if evaluate_window(&mut evaluators, &window).await {
+										if let Some(blocked_body) = evaluate_window(&mut evaluators, &window).await {
 											delta_hold.clear();
 											response_blocked = true;
-											let _ = client_tx.send(guardrail_blocked_ws_event_bytes()).await;
+											let _ = client_tx
+												.send(guardrail_blocked_ws_event_bytes(blocked_body))
+												.await;
 											let _ = server_tx
 												.send(response_cancel_event_bytes([0, 0, 0, 0]))
 												.await;
@@ -491,20 +487,22 @@ pub async fn guarded_realtime_proxy<C, S>(
 										continue;
 									}
 
-									let mut blocked = false;
+									let mut blocked_body = None;
 									if !pending_text.is_empty() {
 										let batch = std::mem::take(&mut pending_text);
 										let window = format!("{overlap_tail}{batch}");
-										blocked = evaluate_window(&mut evaluators, &window).await;
+										blocked_body = evaluate_window(&mut evaluators, &window).await;
 									}
 									overlap_tail.clear();
 
-									if blocked {
+									if let Some(blocked_body) = blocked_body {
 										delta_hold.clear();
 										// Prevent stale deltas from a race between the cancel
 										// reaching the server and buffered frames arriving here.
 										response_blocked = true;
-										let _ = client_tx.send(guardrail_blocked_ws_event_bytes()).await;
+										let _ = client_tx
+											.send(guardrail_blocked_ws_event_bytes(blocked_body))
+											.await;
 										let _ = server_tx
 											.send(response_cancel_event_bytes([0, 0, 0, 0]))
 											.await;
@@ -594,19 +592,19 @@ mod tests {
 		let (io, _) = tokio::io::duplex(1);
 		let mut parser = Parser {
 			inner: io,
-			decoder: websocket_sans_io::WebsocketFrameDecoder::new(),
-			buf: Default::default(),
+			frames: WsFrameAccumulator::new(),
+			text_buffer: Default::default(),
 			buffer_limit: 4,
 			disabled: false,
 			log: AsyncLog::default(),
 		};
 
 		assert!(parser.record_text_payload(b"abc"));
-		assert_eq!(&parser.buf[..], b"abc");
-		parser.buf.reserve(1024);
+		assert_eq!(&parser.text_buffer[..], b"abc");
+		parser.text_buffer.reserve(1024);
 		assert!(!parser.record_text_payload(b"de"));
 		assert!(parser.disabled);
-		assert!(parser.buf.is_empty());
-		assert_eq!(parser.buf.capacity(), 0);
+		assert!(parser.text_buffer.is_empty());
+		assert_eq!(parser.text_buffer.capacity(), 0);
 	}
 }

@@ -39,6 +39,7 @@ pub mod cost;
 pub mod policy;
 mod types;
 
+use policy::streaming_guardrails::GuardedSseBody;
 pub use types::SimpleChatCompletionMessage;
 
 use crate::cel::{Executor, LLMContext, RequestSnapshot};
@@ -1775,7 +1776,6 @@ impl AIProvider {
 		};
 
 		if !evaluators.is_empty() {
-			use policy::streaming_guardrails::GuardedSseBody;
 			// `logger` is owned by the translated body; pass None to avoid double-logging.
 			return Ok(translated.map(|b| GuardedSseBody::new(b, evaluators, buffer, None)));
 		}
