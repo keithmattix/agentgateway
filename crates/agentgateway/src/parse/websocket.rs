@@ -367,7 +367,6 @@ pub async fn guarded_realtime_proxy<C, S>(
 	let guard_clone = guard.clone();
 	let policy_client_clone = policy_client.clone();
 	let log_clone = log.clone();
-	let req_headers_clone = req_headers;
 
 	let client_to_server = {
 		let server_tx = server_tx.clone();
@@ -431,7 +430,7 @@ pub async fn guarded_realtime_proxy<C, S>(
 			let mut accum = WsFrameAccumulator::new();
 			let mut read_buf = [0u8; 4096];
 			let mut evaluators =
-				guard_clone.begin_streaming_response_guard(&policy_client_clone, &req_headers_clone);
+				guard_clone.begin_streaming_response_guard(&policy_client_clone, &req_headers);
 			let mut delta_hold: Vec<Bytes> = Vec::new();
 			let mut pending_text = String::new();
 			let mut overlap_tail = String::new();
