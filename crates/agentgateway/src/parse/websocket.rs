@@ -238,7 +238,7 @@ fn response_cancel_event_bytes(mask: [u8; 4]) -> Bytes {
 	// NOTE: response.cancel is sent without a response_id; the server cancels its most-recent
 	// active response. Correctly targeting a specific response in the Realtime API's out-of-band
 	// (concurrent) response pattern requires a response_id here and per-response blocked tracking
-	// — that is a known gap tracked in a follow-up issue.
+	// — see https://github.com/agentgateway/agentgateway/issues/2213.
 	let json = r#"{"type":"response.cancel"}"#;
 	encode_ws_text_frame_masked(json.as_bytes(), mask)
 }
