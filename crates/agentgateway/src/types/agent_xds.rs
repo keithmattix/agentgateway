@@ -887,7 +887,20 @@ fn convert_backend_ai_policy(
 			Some(llm::policy::ResponseGuard { rejection, kind })
 		});
 
+		let streaming =
+			match proto::agent::backend_policy_spec::ai::prompt_guard::Streaming::try_from(pg.streaming)
+				.map_err(|_| ProtoError::EnumParse("invalid prompt guard streaming mode".to_string()))?
+			{
+				proto::agent::backend_policy_spec::ai::prompt_guard::Streaming::Enabled => {
+					llm::policy::PromptGuardStreamingMode::Enabled
+				},
+				proto::agent::backend_policy_spec::ai::prompt_guard::Streaming::Disabled => {
+					llm::policy::PromptGuardStreamingMode::Disabled
+				},
+			};
+
 		Ok(llm::policy::PromptGuard {
+			streaming,
 			request,
 			response: response.collect_vec(),
 		})

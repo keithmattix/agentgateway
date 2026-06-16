@@ -1620,6 +1620,7 @@ impl AIProvider {
 		{
 			use policy::PromptGuard;
 			let temp_guard = PromptGuard {
+				streaming: policy::PromptGuardStreamingMode::Enabled,
 				request: vec![],
 				response: response_policies.prompt_guard.clone(),
 			};

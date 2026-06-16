@@ -2402,6 +2402,9 @@ fn merge_prompt_guards(
 		(None, None) => None,
 		(Some(guardrails), None) | (None, Some(guardrails)) => Some(guardrails),
 		(Some(mut shared), Some(model)) => {
+			if model.streaming.is_enabled() {
+				shared.streaming = model.streaming;
+			}
 			shared.request.extend(model.request);
 			shared.response.extend(model.response);
 			Some(shared)

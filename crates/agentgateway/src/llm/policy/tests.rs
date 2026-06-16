@@ -10,6 +10,7 @@ async fn webhook_fail_open_emits_single_metric() {
 	use crate::types::agent::SimpleBackendReference;
 
 	let guard = PromptGuard {
+		streaming: Default::default(),
 		request: vec![RequestGuard {
 			rejection: Default::default(),
 			kind: RequestGuardKind::Webhook(Webhook {
@@ -1075,6 +1076,7 @@ mod prompt_guard_config_tests {
 		let policy: Policy = serde_json::from_value(json).unwrap();
 		let prompt_guard = policy.prompt_guard.unwrap();
 		assert_eq!(prompt_guard.response.len(), 1);
+		assert!(prompt_guard.streaming.is_disabled());
 
 		match &prompt_guard.response[0].kind {
 			ResponseGuardKind::BedrockGuardrails(bg) => {
@@ -1084,6 +1086,56 @@ mod prompt_guard_config_tests {
 			},
 			_ => panic!("Expected BedrockGuardrails response guard kind"),
 		}
+	}
+
+	#[test]
+	fn test_streaming_response_guards_are_opt_in() {
+		let json = json!({
+			"promptGuard": {
+				"response": [{
+					"regex": {
+						"action": "reject",
+						"rules": [{
+							"pattern": "secret"
+						}]
+					}
+				}]
+			}
+		});
+
+		let policy: Policy = serde_json::from_value(json).unwrap();
+
+		assert!(
+			policy
+				.prompt_guard
+				.as_ref()
+				.unwrap()
+				.streaming
+				.is_disabled()
+		);
+		assert!(!policy.has_streaming_response_guards());
+	}
+
+	#[test]
+	fn test_streaming_response_guards_enable_with_streaming_true() {
+		let json = json!({
+			"promptGuard": {
+				"streaming": "ENABLED",
+				"response": [{
+					"regex": {
+						"action": "reject",
+						"rules": [{
+							"pattern": "secret"
+						}]
+					}
+				}]
+			}
+		});
+
+		let policy: Policy = serde_json::from_value(json).unwrap();
+
+		assert!(policy.prompt_guard.as_ref().unwrap().streaming.is_enabled());
+		assert!(policy.has_streaming_response_guards());
 	}
 
 	#[test]

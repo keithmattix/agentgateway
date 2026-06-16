@@ -2857,6 +2857,7 @@ mod tests {
 		}));
 		let prompt_guard_policy = BackendTrafficPolicy::AI(Arc::new(llm::Policy {
 			prompt_guard: Some(PromptGuard {
+				streaming: Default::default(),
 				request: vec![RequestGuard {
 					rejection: Default::default(),
 					kind: RequestGuardKind::Regex(RegexRules {

@@ -453,6 +453,7 @@ async fn apply_llm_request_policies(
 			.llm
 			.as_deref()
 			.and_then(|llm| llm.prompt_guard.as_ref())
+			.filter(|g| g.streaming.is_enabled())
 			.map(|g| g.response.clone())
 			.unwrap_or_default(),
 	})
@@ -1345,6 +1346,7 @@ impl HTTPProxy {
 				.llm
 				.as_deref()
 				.and_then(|p| p.prompt_guard.clone())
+				.filter(|g| g.streaming.is_enabled())
 			{
 				resp.extensions_mut().insert(RealtimeGuardContext {
 					prompt_guard,
@@ -2923,21 +2925,27 @@ fn should_retry(
 mod tests {
 	use std::collections::{HashMap, HashSet};
 	use std::net::SocketAddr;
+	use std::sync::Arc;
 
 	use ::http::Method;
 	use serde_json::json;
 	use wiremock::{Mock, ResponseTemplate};
 
 	use super::{
-		apply_auto_hostname, hop_by_hop_headers, resolved_workload_target_hostname,
-		select_service_target_port,
+		apply_auto_hostname, apply_llm_request_policies, hop_by_hop_headers,
+		resolved_workload_target_hostname, select_service_target_port,
 	};
-	use crate::http;
 	use crate::http::filters::AutoHostname;
+	use crate::llm::policy::{
+		PromptGuard, PromptGuardStreamingMode, RegexRule, RegexRules, RequestRejection, ResponseGuard,
+		ResponseGuardKind,
+	};
+	use crate::store::LLMRequestPolicies;
 	use crate::test_helpers::proxymock;
 	use crate::types::agent::{Backend, ResourceName, Target};
 	use crate::types::discovery::{AppProtocol, Endpoint, HealthStatus, Service};
 	use crate::types::local::LocalAIBackend;
+	use crate::{http, llm};
 
 	fn retry_policy(codes: &[u16], condition: Option<&str>) -> crate::http::retry::Policy {
 		crate::http::retry::Policy {
@@ -2951,6 +2959,79 @@ mod tests {
 			condition: condition
 				.map(|e| std::sync::Arc::new(crate::cel::Expression::new_strict(e).unwrap())),
 		}
+	}
+
+	fn response_regex_guard() -> ResponseGuard {
+		ResponseGuard {
+			rejection: RequestRejection::default(),
+			kind: ResponseGuardKind::Regex(RegexRules {
+				action: Default::default(),
+				rules: vec![RegexRule::Regex {
+					pattern: regex::Regex::new("secret").unwrap(),
+				}],
+			}),
+		}
+	}
+
+	fn llm_request() -> llm::LLMRequest {
+		llm::LLMRequest {
+			input_tokens: None,
+			input_format: llm::InputFormat::Completions,
+			native_format: Some(llm::custom::ProviderFormat::Completions),
+			cache_convention: llm::CacheTokenConvention::pending(),
+			request_model: "test-model".into(),
+			provider: "test-provider".into(),
+			streaming: true,
+			params: Default::default(),
+			prompt: None,
+		}
+	}
+
+	async fn response_prompt_guards_for_streaming_mode(
+		streaming: PromptGuardStreamingMode,
+	) -> Vec<ResponseGuard> {
+		let policy = llm::Policy {
+			prompt_guard: Some(PromptGuard {
+				streaming,
+				request: vec![],
+				response: vec![response_regex_guard()],
+			}),
+			..Default::default()
+		};
+		let policies = LLMRequestPolicies {
+			llm: Some(Arc::new(policy)),
+			..Default::default()
+		};
+		let mut req = ::http::Request::builder()
+			.body(http::Body::empty())
+			.unwrap();
+		let mut response_headers = ::http::HeaderMap::new();
+
+		apply_llm_request_policies(
+			&policies,
+			crate::test_helpers::policy_client(),
+			&mut req,
+			&llm_request(),
+			&mut response_headers,
+		)
+		.await
+		.expect("LLM request policies should apply")
+		.prompt_guard
+	}
+
+	#[tokio::test]
+	async fn apply_llm_request_policies_skips_streaming_guardrails_when_disabled() {
+		let guards =
+			response_prompt_guards_for_streaming_mode(PromptGuardStreamingMode::Disabled).await;
+
+		assert!(guards.is_empty());
+	}
+
+	#[tokio::test]
+	async fn apply_llm_request_policies_includes_streaming_guardrails_when_enabled() {
+		let guards = response_prompt_guards_for_streaming_mode(PromptGuardStreamingMode::Enabled).await;
+
+		assert_eq!(guards.len(), 1);
 	}
 
 	#[test]

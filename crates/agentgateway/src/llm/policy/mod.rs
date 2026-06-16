@@ -236,12 +236,37 @@ pub struct PromptEnrichment {
 
 #[apply(schema!)]
 pub struct PromptGuard {
+	/// Apply prompt guards to streaming responses and realtime websocket messages.
+	#[serde(default, skip_serializing_if = "PromptGuardStreamingMode::is_disabled")]
+	pub streaming: PromptGuardStreamingMode,
 	/// Guards applied to client requests before they reach the LLM.
 	#[serde(default, skip_serializing_if = "Vec::is_empty")]
 	pub request: Vec<RequestGuard>,
 	/// Guards applied to LLM responses before they reach the client.
 	#[serde(default, skip_serializing_if = "Vec::is_empty")]
 	pub response: Vec<ResponseGuard>,
+}
+
+#[apply(schema!)]
+#[derive(Default, Copy, PartialEq, Eq)]
+pub enum PromptGuardStreamingMode {
+	/// Do not apply prompt guards to streaming responses or realtime websocket messages.
+	#[default]
+	#[serde(rename = "DISABLED")]
+	Disabled,
+	/// Apply prompt guards to streaming responses and realtime websocket messages.
+	#[serde(rename = "ENABLED")]
+	Enabled,
+}
+
+impl PromptGuardStreamingMode {
+	pub(crate) fn is_disabled(&self) -> bool {
+		*self == Self::Disabled
+	}
+
+	pub(crate) fn is_enabled(&self) -> bool {
+		*self == Self::Enabled
+	}
 }
 
 enum GuardrailOutcome {
@@ -493,7 +518,7 @@ impl Policy {
 		self
 			.prompt_guard
 			.as_ref()
-			.map(|g| g.has_response_guards())
+			.map(|g| g.streaming.is_enabled() && g.has_response_guards())
 			.unwrap_or(false)
 	}
 }
