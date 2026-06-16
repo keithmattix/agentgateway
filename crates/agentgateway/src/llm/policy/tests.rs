@@ -2,7 +2,7 @@ use ::http::{HeaderName, HeaderValue};
 
 use super::*;
 
-/// Regression test for Bug 5: `apply_webhook` previously recorded `GuardrailAction::FailOpen`
+/// Regression test for: `apply_webhook` previously recorded `GuardrailAction::FailOpen`
 /// internally and then returned `GuardrailOutcome::None`, causing callers to also record
 /// `GuardrailAction::Allow`. Only one metric should be emitted.
 #[tokio::test]
