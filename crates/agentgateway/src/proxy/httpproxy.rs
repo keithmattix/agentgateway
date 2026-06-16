@@ -1289,6 +1289,7 @@ impl HTTPProxy {
 				.extensions_mut()
 				.insert(BackendRequestTimeout(backend_timeout));
 		}
+		let upgrade_req_headers = req.headers().clone();
 		let mut req_opt = Some(req);
 		let timeout = response_policies
 			.timeout
@@ -1348,6 +1349,7 @@ impl HTTPProxy {
 				resp.extensions_mut().insert(RealtimeGuardContext {
 					prompt_guard,
 					policy_client: self.policy_client(),
+					req_headers: upgrade_req_headers,
 				});
 			}
 		}
@@ -1426,6 +1428,7 @@ async fn handle_upgrade(
 					guard_context.prompt_guard,
 					guard_context.policy_client,
 					llm,
+					guard_context.req_headers,
 				)
 				.await;
 				return;
@@ -3371,6 +3374,7 @@ struct ConnectTunnel {
 struct RealtimeGuardContext {
 	prompt_guard: crate::llm::policy::PromptGuard,
 	policy_client: PolicyClient,
+	req_headers: ::http::HeaderMap,
 }
 
 fn hop_by_hop_headers(req: &mut Request) -> Option<RequestUpgrade> {

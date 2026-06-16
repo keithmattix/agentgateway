@@ -235,8 +235,12 @@ fn guardrail_blocked_ws_event_bytes(body: Bytes) -> Bytes {
 /// The WebSocket spec requires client→server frames to be masked. We use a zero mask
 /// so the XOR is identity (payload bytes are unchanged) while the frame is formally masked.
 fn response_cancel_event_bytes(mask: [u8; 4]) -> Bytes {
-	let json = br#"{"type":"response.cancel"}"#;
-	encode_ws_text_frame_masked(json, mask)
+	// NOTE: response.cancel is sent without a response_id; the server cancels its most-recent
+	// active response. Correctly targeting a specific response in the Realtime API's out-of-band
+	// (concurrent) response pattern requires a response_id here and per-response blocked tracking
+	// — see https://github.com/agentgateway/agentgateway/issues/2213.
+	let json = r#"{"type":"response.cancel"}"#;
+	encode_ws_text_frame_masked(json.as_bytes(), mask)
 }
 
 // ---------------------------------------------------------------------------
@@ -349,6 +353,7 @@ pub async fn guarded_realtime_proxy<C, S>(
 	guard: PromptGuard,
 	policy_client: PolicyClient,
 	log: AsyncLog<LLMInfo>,
+	req_headers: ::http::HeaderMap,
 ) where
 	C: AsyncRead + AsyncWrite + Unpin + Send + 'static,
 	S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
@@ -429,7 +434,7 @@ pub async fn guarded_realtime_proxy<C, S>(
 			let mut accum = WsFrameAccumulator::new();
 			let mut read_buf = [0u8; 4096];
 			let mut evaluators =
-				guard_clone.begin_streaming_response_guard(&policy_client_clone, &::http::HeaderMap::new());
+				guard_clone.begin_streaming_response_guard(&policy_client_clone, &req_headers);
 			let mut delta_hold: Vec<Bytes> = Vec::new();
 			let mut pending_text = String::new();
 			let mut overlap_tail = String::new();
@@ -464,6 +469,10 @@ pub async fn guarded_realtime_proxy<C, S>(
 
 										if let Some(blocked_body) = evaluate_window(&mut evaluators, &window).await {
 											delta_hold.clear();
+											// Clear text-state so a blocked response's content does not
+											// bleed into the next response's evaluation window.
+											overlap_tail.clear();
+											pending_text.clear();
 											response_blocked = true;
 											let _ = client_tx
 												.send(guardrail_blocked_ws_event_bytes(blocked_body))
@@ -497,8 +506,6 @@ pub async fn guarded_realtime_proxy<C, S>(
 
 									if let Some(blocked_body) = blocked_body {
 										delta_hold.clear();
-										// Prevent stale deltas from a race between the cancel
-										// reaching the server and buffered frames arriving here.
 										response_blocked = true;
 										let _ = client_tx
 											.send(guardrail_blocked_ws_event_bytes(blocked_body))
@@ -559,28 +566,31 @@ pub async fn guarded_realtime_proxy<C, S>(
 		}
 	};
 
-	let client_writer_task = async move {
+	// Spawn writer tasks as independent tokio tasks so they drain their channels
+	// concurrently with the reader loops. Without independent tasks, the writers
+	// would only run after a reader exits, which would drop buffered frames.
+	let client_writer_join = tokio::spawn(async move {
 		while let Some(bytes) = client_rx.recv().await {
 			if client_writer_io.write_all(&bytes).await.is_err() {
 				break;
 			}
 		}
-	};
+	});
 
-	let server_writer_task = async move {
+	let server_writer_join = tokio::spawn(async move {
 		while let Some(bytes) = server_rx.recv().await {
 			if server_writer_io.write_all(&bytes).await.is_err() {
 				break;
 			}
 		}
-	};
+	});
 
+	// Exit when either reader closes; then wait for writers to drain remaining frames.
 	tokio::select! {
 		_ = client_to_server => {},
 		_ = server_to_client => {},
-		_ = client_writer_task => {},
-		_ = server_writer_task => {},
 	}
+	let _ = tokio::join!(client_writer_join, server_writer_join);
 }
 
 #[cfg(test)]
