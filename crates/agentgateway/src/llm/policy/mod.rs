@@ -247,6 +247,9 @@ enum GuardrailOutcome {
 	None,
 	Masked,
 	Rejected(Response),
+	/// Guard service was unreachable and `failure_mode = FailOpen`; request is allowed
+	/// through but must be recorded as `FailOpen`, not `Allow`.
+	FailOpen,
 }
 
 /// A streaming guardrail evaluator. Each guard kind gets one stateless implementation
@@ -360,6 +363,13 @@ impl PromptGuard {
 						client,
 						crate::telemetry::metrics::GuardrailPhase::Request,
 						crate::telemetry::metrics::GuardrailAction::Allow,
+					);
+				},
+				Ok(GuardrailOutcome::FailOpen) => {
+					Policy::record_guardrail_trip(
+						client,
+						crate::telemetry::metrics::GuardrailPhase::Request,
+						crate::telemetry::metrics::GuardrailAction::FailOpen,
 					);
 				},
 				Err(e) => match g.failure_mode() {
@@ -587,6 +597,13 @@ impl Policy {
 						&client,
 						crate::telemetry::metrics::GuardrailPhase::Request,
 						crate::telemetry::metrics::GuardrailAction::Allow,
+					);
+				},
+				GuardrailOutcome::FailOpen => {
+					Self::record_guardrail_trip(
+						&client,
+						crate::telemetry::metrics::GuardrailPhase::Request,
+						crate::telemetry::metrics::GuardrailAction::FailOpen,
 					);
 				},
 			}
@@ -904,12 +921,7 @@ impl Policy {
 				return match webhook.failure_mode {
 					FailureMode::FailOpen => {
 						warn!("webhook guardrail unavailable, failing open: {}", e);
-						Self::record_guardrail_trip(
-							client,
-							crate::telemetry::metrics::GuardrailPhase::Request,
-							crate::telemetry::metrics::GuardrailAction::FailOpen,
-						);
-						Ok(GuardrailOutcome::None)
+						Ok(GuardrailOutcome::FailOpen)
 					},
 					FailureMode::FailClosed => Err(e),
 				};
@@ -1209,6 +1221,13 @@ impl Policy {
 							crate::telemetry::metrics::GuardrailAction::Allow,
 						);
 					},
+					GuardrailOutcome::FailOpen => {
+						Self::record_guardrail_trip(
+							client,
+							crate::telemetry::metrics::GuardrailPhase::Response,
+							crate::telemetry::metrics::GuardrailAction::FailOpen,
+						);
+					},
 				},
 				ResponseGuardKind::Webhook(wh) => {
 					if let Some(res) = Self::apply_webhook_response(resp, http_headers, client, wh).await? {
@@ -1244,6 +1263,13 @@ impl Policy {
 								client,
 								crate::telemetry::metrics::GuardrailPhase::Response,
 								crate::telemetry::metrics::GuardrailAction::Allow,
+							);
+						},
+						GuardrailOutcome::FailOpen => {
+							Self::record_guardrail_trip(
+								client,
+								crate::telemetry::metrics::GuardrailPhase::Response,
+								crate::telemetry::metrics::GuardrailAction::FailOpen,
 							);
 						},
 					}

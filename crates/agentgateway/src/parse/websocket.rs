@@ -242,9 +242,9 @@ fn guardrail_blocked_ws_event_bytes() -> Bytes {
 ///
 /// The WebSocket spec requires client→server frames to be masked. We use a zero mask
 /// so the XOR is identity (payload bytes are unchanged) while the frame is formally masked.
-fn response_cancel_event_bytes(mask: [u8; 4]) -> Bytes {
-	let json = br#"{"type":"response.cancel"}"#;
-	encode_ws_text_frame_masked(json, mask)
+fn response_cancel_event_bytes(response_id: &str, mask: [u8; 4]) -> Bytes {
+	let json = format!(r#"{{"type":"response.cancel","response_id":"{response_id}"}}"#);
+	encode_ws_text_frame_masked(json.as_bytes(), mask)
 }
 
 // ---------------------------------------------------------------------------
@@ -357,10 +357,15 @@ pub async fn guarded_realtime_proxy<C, S>(
 	guard: PromptGuard,
 	policy_client: PolicyClient,
 	log: AsyncLog<LLMInfo>,
+	// Original HTTP upgrade request headers — forwarded to webhook response guards via
+	// begin_streaming_response_guard so that forward_header_matches works on this path.
+	req_headers: ::http::HeaderMap,
 ) where
 	C: AsyncRead + AsyncWrite + Unpin + Send + 'static,
 	S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
 {
+	use std::collections::HashSet;
+
 	use crate::llm::policy::streaming_guardrails::{
 		DEFAULT_EVAL_THRESHOLD, OVERLAP_BYTES, evaluate_window, tail_chars,
 	};
@@ -435,11 +440,13 @@ pub async fn guarded_realtime_proxy<C, S>(
 			let mut accum = WsFrameAccumulator::new();
 			let mut read_buf = [0u8; 4096];
 			let mut evaluators =
-				guard_clone.begin_streaming_response_guard(&policy_client_clone, &::http::HeaderMap::new());
+				guard_clone.begin_streaming_response_guard(&policy_client_clone, &req_headers);
 			let mut delta_hold: Vec<Bytes> = Vec::new();
 			let mut pending_text = String::new();
 			let mut overlap_tail = String::new();
-			let mut response_blocked = false;
+			// Keyed by response_id so that blocking one concurrent response does not
+			// suppress deltas from unrelated concurrent responses.
+			let mut blocked_responses: HashSet<String> = HashSet::new();
 
 			loop {
 				let n = match server_reader.read(&mut read_buf).await {
@@ -457,7 +464,7 @@ pub async fn guarded_realtime_proxy<C, S>(
 
 							match event {
 								Some(RealtimeServerEvent::ResponseOutputTextDelta(ref delta_event)) => {
-									if response_blocked {
+									if blocked_responses.contains(&delta_event.response_id) {
 										continue;
 									}
 									pending_text.push_str(&delta_event.delta);
@@ -470,10 +477,17 @@ pub async fn guarded_realtime_proxy<C, S>(
 
 										if evaluate_window(&mut evaluators, &window).await {
 											delta_hold.clear();
-											response_blocked = true;
+											// Clear shared text-state so a blocked response's content
+											// does not bleed into subsequent concurrent responses.
+											overlap_tail.clear();
+											pending_text.clear();
+											blocked_responses.insert(delta_event.response_id.clone());
 											let _ = client_tx.send(guardrail_blocked_ws_event_bytes()).await;
 											let _ = server_tx
-												.send(response_cancel_event_bytes([0, 0, 0, 0]))
+												.send(response_cancel_event_bytes(
+													&delta_event.response_id,
+													[0, 0, 0, 0],
+												))
 												.await;
 										} else {
 											for f in delta_hold.drain(..) {
@@ -482,9 +496,9 @@ pub async fn guarded_realtime_proxy<C, S>(
 										}
 									}
 								},
-								Some(RealtimeServerEvent::ResponseOutputTextDone(_)) => {
-									if response_blocked {
-										response_blocked = false;
+								Some(RealtimeServerEvent::ResponseOutputTextDone(ref done_event)) => {
+									if blocked_responses.contains(&done_event.response_id) {
+										blocked_responses.remove(&done_event.response_id);
 										overlap_tail.clear();
 										pending_text.clear();
 										delta_hold.clear();
@@ -503,10 +517,13 @@ pub async fn guarded_realtime_proxy<C, S>(
 										delta_hold.clear();
 										// Prevent stale deltas from a race between the cancel
 										// reaching the server and buffered frames arriving here.
-										response_blocked = true;
+										blocked_responses.insert(done_event.response_id.clone());
 										let _ = client_tx.send(guardrail_blocked_ws_event_bytes()).await;
 										let _ = server_tx
-											.send(response_cancel_event_bytes([0, 0, 0, 0]))
+											.send(response_cancel_event_bytes(
+												&done_event.response_id,
+												[0, 0, 0, 0],
+											))
 											.await;
 									} else {
 										for f in delta_hold.drain(..) {
@@ -577,16 +594,24 @@ pub async fn guarded_realtime_proxy<C, S>(
 		}
 	};
 
+	// Wait for one read direction to close (server EOF or client disconnect).
+	// When either reader task exits or is cancelled, it drops its channel senders,
+	// allowing the writer tasks to drain naturally.
 	tokio::select! {
 		_ = client_to_server => {},
 		_ = server_to_client => {},
-		_ = client_writer_task => {},
-		_ = server_writer_task => {},
 	}
+	// Join the writer tasks so queued frames are flushed before this function returns.
+	// They exit quickly because all senders are dropped by this point.
+	tokio::join!(client_writer_task, server_writer_task);
 }
 
 #[cfg(test)]
 mod tests {
+	use std::time::Duration;
+
+	use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
 	use super::*;
 
 	#[test]
@@ -608,5 +633,159 @@ mod tests {
 		assert!(parser.disabled);
 		assert!(parser.buf.is_empty());
 		assert_eq!(parser.buf.capacity(), 0);
+	}
+
+	// -------------------------------------------------------------------------
+	// Bug regression tests
+	// -------------------------------------------------------------------------
+
+	/// Bug: response_cancel_event_bytes produced {"type":"response.cancel"} with no
+	/// response_id, so the server cancelled whatever it treated as the current response
+	/// rather than the specific blocked one.
+	///
+	/// Fix: include the response_id of the blocked response in the cancel payload.
+	#[test]
+	fn response_cancel_includes_response_id() {
+		let bytes = response_cancel_event_bytes("resp_X", [0, 0, 0, 0]);
+		let mut accum = WsFrameAccumulator::new();
+		accum.push(&bytes);
+		let frames = accum.drain_frames();
+		let WsCompletedFrame::Text { payload, .. } = &frames[0] else {
+			panic!("expected text frame");
+		};
+		let json: serde_json::Value = serde_json::from_slice(payload).unwrap();
+		assert_eq!(
+			json.get("response_id").and_then(|v| v.as_str()),
+			Some("resp_X"),
+			"response.cancel must carry response_id to target the correct response; got: {json}"
+		);
+	}
+
+	/// Bug: response_blocked was a single bool shared across all concurrent Realtime API
+	/// responses. Blocking response A set response_blocked=true, which then silently
+	/// dropped all ResponseOutputTextDelta events for unrelated concurrent response B.
+	///
+	/// Fix: key blocked state on response_id (HashSet<String>).
+	#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+	async fn blocked_response_does_not_suppress_concurrent_response() {
+		use crate::llm::LLMInfo;
+		use crate::llm::policy::{
+			Action, PromptGuard, RegexRule, RegexRules, ResponseGuard, ResponseGuardKind,
+		};
+		use crate::telemetry::log::AsyncLog;
+
+		let guard = PromptGuard {
+			request: vec![],
+			response: vec![ResponseGuard {
+				rejection: Default::default(),
+				kind: ResponseGuardKind::Regex(RegexRules {
+					action: Action::Reject,
+					rules: vec![RegexRule::Regex {
+						pattern: regex::Regex::new("BLOCK_THIS").unwrap(),
+					}],
+				}),
+			}],
+		};
+
+		let (client_io, mut test_client) = tokio::io::duplex(1 << 20);
+		let (mut test_server, server_io) = tokio::io::duplex(1 << 20);
+
+		let policy = crate::test_helpers::policy_client();
+		let log = AsyncLog::<LLMInfo>::default();
+
+		tokio::spawn(guarded_realtime_proxy(
+			client_io,
+			server_io,
+			guard,
+			policy,
+			log,
+			::http::HeaderMap::new(),
+		));
+
+		// Frame 1 – resp_A delta: 1025 chars including trigger word.
+		// Crosses DEFAULT_EVAL_THRESHOLD (1024) → guard fires → blocks resp_A.
+		let padding = "x".repeat(1020);
+		let delta_a = serde_json::json!({
+			"type": "response.output_text.delta",
+			"event_id": "e1",
+			"response_id": "resp_A",
+			"item_id": "i1",
+			"output_index": 0,
+			"content_index": 0,
+			"delta": format!("{padding}BLOCK_THIS")
+		});
+		test_server
+			.write_all(&encode_ws_text_frame(delta_a.to_string().as_bytes()))
+			.await
+			.unwrap();
+
+		// Frame 2 – resp_B delta: clean content from a different concurrent response.
+		// With the fix this accumulates in delta_hold for resp_B.
+		let delta_b = serde_json::json!({
+			"type": "response.output_text.delta",
+			"event_id": "e2",
+			"response_id": "resp_B",
+			"item_id": "i2",
+			"output_index": 0,
+			"content_index": 0,
+			"delta": "clean content from B"
+		});
+		test_server
+			.write_all(&encode_ws_text_frame(delta_b.to_string().as_bytes()))
+			.await
+			.unwrap();
+
+		// Frame 3 – resp_B TextDone: triggers final evaluation of accumulated resp_B text
+		// ("clean content from B" has no match → flush delta_hold to client).
+		let done_b = serde_json::json!({
+			"type": "response.output_text.done",
+			"event_id": "e3",
+			"response_id": "resp_B",
+			"item_id": "i2",
+			"output_index": 0,
+			"content_index": 0,
+			"text": "clean content from B"
+		});
+		test_server
+			.write_all(&encode_ws_text_frame(done_b.to_string().as_bytes()))
+			.await
+			.unwrap();
+
+		// Close the server write half so the proxy can exit cleanly.
+		drop(test_server);
+
+		// Give the proxy and channel-writer tasks time to drain.
+		tokio::time::sleep(Duration::from_millis(300)).await;
+
+		let mut buf = vec![0u8; 1 << 20];
+		let n = tokio::time::timeout(Duration::from_millis(500), test_client.read(&mut buf))
+			.await
+			.unwrap_or(Ok(0))
+			.unwrap_or(0);
+
+		let mut accum = WsFrameAccumulator::new();
+		accum.push(&buf[..n]);
+		let frames = accum.drain_frames();
+		let events: Vec<serde_json::Value> = frames
+			.into_iter()
+			.filter_map(|f| {
+				if let WsCompletedFrame::Text { payload, .. } = f {
+					serde_json::from_slice(&payload).ok()
+				} else {
+					None
+				}
+			})
+			.collect();
+
+		// resp_B's delta must reach the client.
+		// Fails without the fix: response_blocked=true drops all deltas regardless of response_id.
+		assert!(
+			events.iter().any(|e| {
+				e.get("type").and_then(|t| t.as_str())
+					== Some("response.output_text.delta")
+					&& e.get("response_id").and_then(|r| r.as_str()) == Some("resp_B")
+			}),
+			"resp_B delta must reach the client; received events: {events:?}"
+		);
 	}
 }

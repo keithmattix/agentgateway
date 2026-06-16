@@ -2,6 +2,62 @@ use ::http::{HeaderName, HeaderValue};
 
 use super::*;
 
+// -------------------------------------------------------------------------
+// Bug regression tests
+// -------------------------------------------------------------------------
+
+/// Bug: apply_webhook records GuardrailAction::FailOpen internally (line ~907-911)
+/// then returns Ok(GuardrailOutcome::None). The caller (apply_realtime_request_guards)
+/// then also records GuardrailAction::Allow for the None outcome, resulting in two
+/// metric increments for a single guard evaluation.
+///
+/// Fix: don't record metrics inside apply_webhook; let all callers record uniformly
+/// after inspecting the returned GuardrailOutcome.
+#[tokio::test]
+async fn webhook_fail_open_emits_single_metric() {
+	use crate::telemetry::metrics::{GuardrailAction, GuardrailLabels, GuardrailPhase};
+	use crate::types::agent::SimpleBackendReference;
+
+	let guard = PromptGuard {
+		request: vec![RequestGuard {
+			rejection: Default::default(),
+			kind: RequestGuardKind::Webhook(Webhook {
+				target: SimpleBackendReference::Invalid,
+				forward_header_matches: vec![],
+				failure_mode: FailureMode::FailOpen,
+			}),
+		}],
+		response: vec![],
+	};
+
+	let client = crate::test_helpers::policy_client();
+	let blocked = guard.apply_realtime_request_guards("hello world", &client).await;
+	assert!(!blocked, "FailOpen must not block the request");
+
+	let fail_open = client
+		.inputs
+		.metrics
+		.guardrail_checks
+		.get_or_create(&GuardrailLabels {
+			phase: GuardrailPhase::Request,
+			action: GuardrailAction::FailOpen,
+		})
+		.get();
+	let allow = client
+		.inputs
+		.metrics
+		.guardrail_checks
+		.get_or_create(&GuardrailLabels {
+			phase: GuardrailPhase::Request,
+			action: GuardrailAction::Allow,
+		})
+		.get();
+
+	assert_eq!(fail_open, 1, "FailOpen should be recorded exactly once");
+	// FAILS today: apply_webhook records FailOpen then returns None; caller records Allow too
+	assert_eq!(allow, 0, "Allow must not be recorded for a FailOpen outcome");
+}
+
 #[test]
 fn test_get_webhook_forward_headers() {
 	let mut headers = HeaderMap::new();

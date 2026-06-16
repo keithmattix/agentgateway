@@ -605,9 +605,11 @@ impl HTTPProxy {
 			};
 			let mut realtime_prompt_guard: Option<crate::llm::policy::PromptGuard> = None;
 			let mut upgrade_policy_client = self.policy_client();
+			let mut realtime_req_headers = ::http::HeaderMap::new();
 			if let Some(ctx) = resp.extensions_mut().remove::<RealtimeUpgradeContext>() {
 				realtime_prompt_guard = ctx.prompt_guard;
 				upgrade_policy_client = ctx.policy_client;
+				realtime_req_headers = ctx.req_headers;
 			}
 			handle_upgrade(
 				req_upgrade,
@@ -615,6 +617,7 @@ impl HTTPProxy {
 				log,
 				realtime_prompt_guard,
 				upgrade_policy_client,
+				realtime_req_headers,
 			)
 			.await
 			.unwrap_or_else(|e| e.into_response_with_grpc(is_grpc_request))
@@ -1240,6 +1243,7 @@ impl HTTPProxy {
 				.extensions_mut()
 				.insert(BackendRequestTimeout(backend_timeout));
 		}
+		let upgrade_req_headers = req.headers().clone();
 		let mut req_opt = Some(req);
 		let timeout = response_policies
 			.timeout
@@ -1298,6 +1302,7 @@ impl HTTPProxy {
 			resp.extensions_mut().insert(RealtimeUpgradeContext {
 				prompt_guard,
 				policy_client: self.policy_client(),
+				req_headers: upgrade_req_headers,
 			});
 		}
 
@@ -1331,6 +1336,7 @@ async fn handle_upgrade(
 	log: DropOnLog,
 	prompt_guard: Option<crate::llm::policy::PromptGuard>,
 	policy_client: PolicyClient,
+	req_headers: ::http::HeaderMap,
 ) -> Result<Response, ProxyError> {
 	let RequestUpgrade {
 		upgrade_type,
@@ -1376,6 +1382,7 @@ async fn handle_upgrade(
 					guard,
 					policy_client,
 					llm,
+					req_headers,
 				)
 				.await;
 				return;
@@ -3254,6 +3261,7 @@ struct ConnectTunnel {
 struct RealtimeUpgradeContext {
 	prompt_guard: Option<crate::llm::policy::PromptGuard>,
 	policy_client: PolicyClient,
+	req_headers: ::http::HeaderMap,
 }
 
 fn hop_by_hop_headers(req: &mut Request) -> Option<RequestUpgrade> {
