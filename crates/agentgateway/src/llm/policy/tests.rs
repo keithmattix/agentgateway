@@ -22,7 +22,9 @@ async fn webhook_fail_open_emits_single_metric() {
 	};
 
 	let client = crate::test_helpers::policy_client();
-	let blocked = guard.apply_realtime_request_guards("hello world", &client).await;
+	let blocked = guard
+		.apply_realtime_request_guards("hello world", &client)
+		.await;
 	assert!(blocked.is_none(), "FailOpen must not block the request");
 
 	let fail_open = client
@@ -45,7 +47,10 @@ async fn webhook_fail_open_emits_single_metric() {
 		.get();
 
 	assert_eq!(fail_open, 1, "FailOpen should be recorded exactly once");
-	assert_eq!(allow, 0, "Allow must not be recorded for a FailOpen outcome");
+	assert_eq!(
+		allow, 0,
+		"Allow must not be recorded for a FailOpen outcome"
+	);
 }
 
 #[test]
