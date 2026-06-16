@@ -603,8 +603,8 @@ pub async fn guarded_realtime_proxy<C, S>(
 mod tests {
 	use super::*;
 
-	/// Regression test for Bug 4: `response.cancel` must include `response_id` so the server
-	/// cancels the correct response in a multi-response session.
+	/// `response.cancel` must include `response_id` so the server cancels the correct response
+	/// in a multi-response session.
 	#[test]
 	fn response_cancel_includes_response_id() {
 		let bytes = response_cancel_event_bytes("resp_X", [0, 0, 0, 0]);
@@ -623,12 +623,9 @@ mod tests {
 		);
 	}
 
-	/// Regression test for Bugs 1, 2, 3: blocking resp_A must not suppress resp_B deltas.
-	///
-	/// Specifically exercises:
-	/// - Bug 1: `response_blocked` bool replaced with `HashSet<String>` keyed on response_id
-	/// - Bug 2: `tokio::select!` writer drain replaced with `tokio::join!` after readers exit
-	/// - Bug 3: `begin_streaming_response_guard` receives `req_headers` not `HeaderMap::new()`
+	/// Blocking one response must not suppress deltas from a concurrent response on the same
+	/// connection. Exercises per-response-id blocked tracking, writer-task drain ordering,
+	/// and correct header forwarding to the response guard.
 	#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 	async fn blocked_response_does_not_suppress_concurrent_response() {
 		use crate::llm::policy::{

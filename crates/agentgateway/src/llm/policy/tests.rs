@@ -2,9 +2,8 @@ use ::http::{HeaderName, HeaderValue};
 
 use super::*;
 
-/// Regression test for: `apply_webhook` previously recorded `GuardrailAction::FailOpen`
-/// internally and then returned `GuardrailOutcome::None`, causing callers to also record
-/// `GuardrailAction::Allow`. Only one metric should be emitted.
+/// When a webhook guard fails open, exactly one metric must be emitted (`FailOpen`); the caller
+/// must not additionally record `Allow`.
 #[tokio::test]
 async fn webhook_fail_open_emits_single_metric() {
 	use crate::telemetry::metrics::{GuardrailAction, GuardrailLabels, GuardrailPhase};
