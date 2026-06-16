@@ -248,6 +248,9 @@ enum GuardrailOutcome {
 	None,
 	Masked,
 	Rejected(Response),
+	/// Guard service was unreachable and `failure_mode = FailOpen`; request is allowed
+	/// through but must be recorded as `FailOpen`, not `Allow`.
+	FailOpen,
 }
 
 /// A streaming guardrail evaluator. Each guard kind gets one stateless implementation
@@ -402,6 +405,13 @@ impl PromptGuard {
 						crate::telemetry::metrics::GuardrailAction::Allow,
 					);
 				},
+				Ok(GuardrailOutcome::FailOpen) => {
+					Policy::record_guardrail_trip(
+						client,
+						crate::telemetry::metrics::GuardrailPhase::Request,
+						crate::telemetry::metrics::GuardrailAction::FailOpen,
+					);
+				},
 				Err(e) => match g.failure_mode() {
 					FailureMode::FailClosed => {
 						tracing::warn!("request guard error in realtime path, failing closed: {e}");
@@ -472,6 +482,7 @@ impl PromptGuard {
 				Ok(None)
 			},
 			GuardrailOutcome::None => Ok(None),
+			GuardrailOutcome::FailOpen => Ok(None),
 		}
 	}
 }
@@ -655,6 +666,13 @@ impl Policy {
 						&client,
 						crate::telemetry::metrics::GuardrailPhase::Request,
 						crate::telemetry::metrics::GuardrailAction::Allow,
+					);
+				},
+				GuardrailOutcome::FailOpen => {
+					Self::record_guardrail_trip(
+						&client,
+						crate::telemetry::metrics::GuardrailPhase::Request,
+						crate::telemetry::metrics::GuardrailAction::FailOpen,
 					);
 				},
 			}
@@ -972,12 +990,7 @@ impl Policy {
 				return match webhook.failure_mode {
 					FailureMode::FailOpen => {
 						warn!("webhook guardrail unavailable, failing open: {}", e);
-						Self::record_guardrail_trip(
-							client,
-							crate::telemetry::metrics::GuardrailPhase::Request,
-							crate::telemetry::metrics::GuardrailAction::FailOpen,
-						);
-						Ok(GuardrailOutcome::None)
+						Ok(GuardrailOutcome::FailOpen)
 					},
 					FailureMode::FailClosed => Err(e),
 				};
@@ -1027,7 +1040,7 @@ impl Policy {
 		http_headers: &HeaderMap,
 		client: &PolicyClient,
 		webhook: &Webhook,
-	) -> anyhow::Result<Option<Response>> {
+	) -> anyhow::Result<GuardrailOutcome> {
 		let messsages = resp.to_webhook_choices();
 		let headers = Self::get_webhook_forward_headers(http_headers, &webhook.forward_header_matches);
 		let whr = match webhook::send_response(client, &webhook.target, &headers, messsages).await {
@@ -1036,12 +1049,7 @@ impl Policy {
 				return match webhook.failure_mode {
 					FailureMode::FailOpen => {
 						warn!("webhook guardrail unavailable, failing open: {}", e);
-						Self::record_guardrail_trip(
-							client,
-							crate::telemetry::metrics::GuardrailPhase::Response,
-							crate::telemetry::metrics::GuardrailAction::FailOpen,
-						);
-						Ok(None)
+						Ok(GuardrailOutcome::FailOpen)
 					},
 					FailureMode::FailClosed => Err(e),
 				};
@@ -1060,11 +1068,7 @@ impl Policy {
 				};
 				let msgs = body.choices;
 				resp.set_webhook_choices(msgs)?;
-				Self::record_guardrail_trip(
-					client,
-					crate::telemetry::metrics::GuardrailPhase::Response,
-					crate::telemetry::metrics::GuardrailAction::Mask,
-				);
+				Ok(GuardrailOutcome::Masked)
 			},
 			ResponseAction::Reject(rej) => {
 				debug!(
@@ -1073,16 +1077,11 @@ impl Policy {
 						.reason
 						.unwrap_or_else(|| "no reason specified".to_string())
 				);
-				Self::record_guardrail_trip(
-					client,
-					crate::telemetry::metrics::GuardrailPhase::Response,
-					crate::telemetry::metrics::GuardrailAction::Reject,
-				);
-				return Ok(Some(
+				Ok(GuardrailOutcome::Rejected(
 					::http::response::Builder::new()
 						.status(rej.status_code)
 						.body(http::Body::from(rej.body))?,
-				));
+				))
 			},
 			ResponseAction::Pass(pass) => {
 				debug!(
@@ -1091,14 +1090,9 @@ impl Policy {
 						.reason
 						.unwrap_or_else(|| "no reason specified".to_string())
 				);
-				Self::record_guardrail_trip(
-					client,
-					crate::telemetry::metrics::GuardrailPhase::Response,
-					crate::telemetry::metrics::GuardrailAction::Allow,
-				);
+				Ok(GuardrailOutcome::None)
 			},
 		}
-		Ok(None)
 	}
 
 	fn get_webhook_forward_headers(
@@ -1276,6 +1270,13 @@ impl Policy {
 						crate::telemetry::metrics::GuardrailAction::Allow,
 					);
 				},
+				GuardrailOutcome::FailOpen => {
+					Self::record_guardrail_trip(
+						client,
+						crate::telemetry::metrics::GuardrailPhase::Response,
+						crate::telemetry::metrics::GuardrailAction::FailOpen,
+					);
+				},
 			}
 		}
 		Ok(None)
@@ -1290,10 +1291,7 @@ impl Policy {
 		match &guard.kind {
 			ResponseGuardKind::Regex(rg) => Self::apply_regex_response(resp, rg, &guard.rejection),
 			ResponseGuardKind::Webhook(wh) => {
-				match Self::apply_webhook_response(resp, http_headers, client, wh).await? {
-					Some(res) => Ok(GuardrailOutcome::Rejected(res)),
-					None => Ok(GuardrailOutcome::None),
-				}
+				Self::apply_webhook_response(resp, http_headers, client, wh).await
 			},
 			ResponseGuardKind::BedrockGuardrails(bg) => {
 				Self::apply_bedrock_guardrails_response(resp, None, client, &guard.rejection, bg).await

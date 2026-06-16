@@ -2,6 +2,53 @@ use ::http::{HeaderName, HeaderValue};
 
 use super::*;
 
+/// Regression test for Bug 5: `apply_webhook` previously recorded `GuardrailAction::FailOpen`
+/// internally and then returned `GuardrailOutcome::None`, causing callers to also record
+/// `GuardrailAction::Allow`. Only one metric should be emitted.
+#[tokio::test]
+async fn webhook_fail_open_emits_single_metric() {
+	use crate::telemetry::metrics::{GuardrailAction, GuardrailLabels, GuardrailPhase};
+	use crate::types::agent::SimpleBackendReference;
+
+	let guard = PromptGuard {
+		request: vec![RequestGuard {
+			rejection: Default::default(),
+			kind: RequestGuardKind::Webhook(Webhook {
+				target: SimpleBackendReference::Invalid,
+				forward_header_matches: vec![],
+				failure_mode: FailureMode::FailOpen,
+			}),
+		}],
+		response: vec![],
+	};
+
+	let client = crate::test_helpers::policy_client();
+	let blocked = guard.apply_realtime_request_guards("hello world", &client).await;
+	assert!(blocked.is_none(), "FailOpen must not block the request");
+
+	let fail_open = client
+		.inputs
+		.metrics
+		.guardrail_checks
+		.get_or_create(&GuardrailLabels {
+			phase: GuardrailPhase::Request,
+			action: GuardrailAction::FailOpen,
+		})
+		.get();
+	let allow = client
+		.inputs
+		.metrics
+		.guardrail_checks
+		.get_or_create(&GuardrailLabels {
+			phase: GuardrailPhase::Request,
+			action: GuardrailAction::Allow,
+		})
+		.get();
+
+	assert_eq!(fail_open, 1, "FailOpen should be recorded exactly once");
+	assert_eq!(allow, 0, "Allow must not be recorded for a FailOpen outcome");
+}
+
 #[test]
 fn test_get_webhook_forward_headers() {
 	let mut headers = HeaderMap::new();
