@@ -252,10 +252,10 @@ pub struct PromptGuard {
 pub enum PromptGuardStreamingMode {
 	/// Do not apply prompt guards to streaming responses or realtime websocket messages.
 	#[default]
-	#[serde(rename = "DISABLED")]
+	#[serde(rename = "Disabled")]
 	Disabled,
 	/// Apply prompt guards to streaming responses and realtime websocket messages.
-	#[serde(rename = "ENABLED")]
+	#[serde(rename = "Enabled")]
 	Enabled,
 }
 

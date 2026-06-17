@@ -319,6 +319,7 @@
 |`binds[].listeners[].routes[].policies.a2a`|object|Mark this traffic as A2A to enable A2A processing and telemetry.|
 |`binds[].listeners[].routes[].policies.ai`|object|Mark this as LLM traffic to enable LLM processing.|
 |`binds[].listeners[].routes[].policies.ai.promptGuard`|object|Prompt and response guardrails to apply to LLM traffic.|
+|`binds[].listeners[].routes[].policies.ai.promptGuard.streaming`|enum|Apply prompt guards to streaming responses and realtime websocket messages.<br>Possible values: `Disabled`, `Enabled`.|
 |`binds[].listeners[].routes[].policies.ai.promptGuard.request`|[]object|Guards applied to client requests before they reach the LLM.|
 |`binds[].listeners[].routes[].policies.ai.promptGuard.request[].regex`|object|Apply regex-based masking or rejection rules.|
 |`binds[].listeners[].routes[].policies.ai.promptGuard.request[].regex.action`|enum|Action to take when a regex rule matches.<br>Possible values: `mask`, `reject`.|
@@ -2777,6 +2778,7 @@
 |`binds[].listeners[].routes[].backends[].ai.policies.inferenceRouting.destinationMode`|enum|How to use the destination returned by the endpoint picker.<br>Possible values: `validated`, `passthrough`.|
 |`binds[].listeners[].routes[].backends[].ai.policies.ai`|object|Mark this as LLM traffic to enable LLM processing.|
 |`binds[].listeners[].routes[].backends[].ai.policies.ai.promptGuard`|object|Prompt and response guardrails to apply to LLM traffic.|
+|`binds[].listeners[].routes[].backends[].ai.policies.ai.promptGuard.streaming`|enum|Apply prompt guards to streaming responses and realtime websocket messages.<br>Possible values: `Disabled`, `Enabled`.|
 |`binds[].listeners[].routes[].backends[].ai.policies.ai.promptGuard.request`|[]object|Guards applied to client requests before they reach the LLM.|
 |`binds[].listeners[].routes[].backends[].ai.policies.ai.promptGuard.request[].regex`|object|Apply regex-based masking or rejection rules.|
 |`binds[].listeners[].routes[].backends[].ai.policies.ai.promptGuard.request[].regex.action`|enum|Action to take when a regex rule matches.<br>Possible values: `mask`, `reject`.|
@@ -4028,6 +4030,7 @@
 |`binds[].listeners[].routes[].backends[].ai.groups[].providers[].policies.inferenceRouting.destinationMode`|enum|How to use the destination returned by the endpoint picker.<br>Possible values: `validated`, `passthrough`.|
 |`binds[].listeners[].routes[].backends[].ai.groups[].providers[].policies.ai`|object|Mark this as LLM traffic to enable LLM processing.|
 |`binds[].listeners[].routes[].backends[].ai.groups[].providers[].policies.ai.promptGuard`|object|Prompt and response guardrails to apply to LLM traffic.|
+|`binds[].listeners[].routes[].backends[].ai.groups[].providers[].policies.ai.promptGuard.streaming`|enum|Apply prompt guards to streaming responses and realtime websocket messages.<br>Possible values: `Disabled`, `Enabled`.|
 |`binds[].listeners[].routes[].backends[].ai.groups[].providers[].policies.ai.promptGuard.request`|[]object|Guards applied to client requests before they reach the LLM.|
 |`binds[].listeners[].routes[].backends[].ai.groups[].providers[].policies.ai.promptGuard.request[].regex`|object|Apply regex-based masking or rejection rules.|
 |`binds[].listeners[].routes[].backends[].ai.groups[].providers[].policies.ai.promptGuard.request[].regex.action`|enum|Action to take when a regex rule matches.<br>Possible values: `mask`, `reject`.|
@@ -5249,6 +5252,7 @@
 |`binds[].listeners[].routes[].backends[].policies.inferenceRouting.destinationMode`|enum|How to use the destination returned by the endpoint picker.<br>Possible values: `validated`, `passthrough`.|
 |`binds[].listeners[].routes[].backends[].policies.ai`|object|Mark this as LLM traffic to enable LLM processing.|
 |`binds[].listeners[].routes[].backends[].policies.ai.promptGuard`|object|Prompt and response guardrails to apply to LLM traffic.|
+|`binds[].listeners[].routes[].backends[].policies.ai.promptGuard.streaming`|enum|Apply prompt guards to streaming responses and realtime websocket messages.<br>Possible values: `Disabled`, `Enabled`.|
 |`binds[].listeners[].routes[].backends[].policies.ai.promptGuard.request`|[]object|Guards applied to client requests before they reach the LLM.|
 |`binds[].listeners[].routes[].backends[].policies.ai.promptGuard.request[].regex`|object|Apply regex-based masking or rejection rules.|
 |`binds[].listeners[].routes[].backends[].policies.ai.promptGuard.request[].regex.action`|enum|Action to take when a regex rule matches.<br>Possible values: `mask`, `reject`.|
@@ -7367,6 +7371,7 @@
 |`policies[].policy.a2a`|object|Mark this traffic as A2A to enable A2A processing and telemetry.|
 |`policies[].policy.ai`|object|Mark this as LLM traffic to enable LLM processing.|
 |`policies[].policy.ai.promptGuard`|object|Prompt and response guardrails to apply to LLM traffic.|
+|`policies[].policy.ai.promptGuard.streaming`|enum|Apply prompt guards to streaming responses and realtime websocket messages.<br>Possible values: `Disabled`, `Enabled`.|
 |`policies[].policy.ai.promptGuard.request`|[]object|Guards applied to client requests before they reach the LLM.|
 |`policies[].policy.ai.promptGuard.request[].regex`|object|Apply regex-based masking or rejection rules.|
 |`policies[].policy.ai.promptGuard.request[].regex.action`|enum|Action to take when a regex rule matches.<br>Possible values: `mask`, `reject`.|
@@ -9820,6 +9825,7 @@
 |`backends[].ai.policies.inferenceRouting.destinationMode`|enum|How to use the destination returned by the endpoint picker.<br>Possible values: `validated`, `passthrough`.|
 |`backends[].ai.policies.ai`|object|Mark this as LLM traffic to enable LLM processing.|
 |`backends[].ai.policies.ai.promptGuard`|object|Prompt and response guardrails to apply to LLM traffic.|
+|`backends[].ai.policies.ai.promptGuard.streaming`|enum|Apply prompt guards to streaming responses and realtime websocket messages.<br>Possible values: `Disabled`, `Enabled`.|
 |`backends[].ai.policies.ai.promptGuard.request`|[]object|Guards applied to client requests before they reach the LLM.|
 |`backends[].ai.policies.ai.promptGuard.request[].regex`|object|Apply regex-based masking or rejection rules.|
 |`backends[].ai.policies.ai.promptGuard.request[].regex.action`|enum|Action to take when a regex rule matches.<br>Possible values: `mask`, `reject`.|
@@ -11071,6 +11077,7 @@
 |`backends[].ai.groups[].providers[].policies.inferenceRouting.destinationMode`|enum|How to use the destination returned by the endpoint picker.<br>Possible values: `validated`, `passthrough`.|
 |`backends[].ai.groups[].providers[].policies.ai`|object|Mark this as LLM traffic to enable LLM processing.|
 |`backends[].ai.groups[].providers[].policies.ai.promptGuard`|object|Prompt and response guardrails to apply to LLM traffic.|
+|`backends[].ai.groups[].providers[].policies.ai.promptGuard.streaming`|enum|Apply prompt guards to streaming responses and realtime websocket messages.<br>Possible values: `Disabled`, `Enabled`.|
 |`backends[].ai.groups[].providers[].policies.ai.promptGuard.request`|[]object|Guards applied to client requests before they reach the LLM.|
 |`backends[].ai.groups[].providers[].policies.ai.promptGuard.request[].regex`|object|Apply regex-based masking or rejection rules.|
 |`backends[].ai.groups[].providers[].policies.ai.promptGuard.request[].regex.action`|enum|Action to take when a regex rule matches.<br>Possible values: `mask`, `reject`.|
@@ -12290,6 +12297,7 @@
 |`backends[].policies.inferenceRouting.destinationMode`|enum|How to use the destination returned by the endpoint picker.<br>Possible values: `validated`, `passthrough`.|
 |`backends[].policies.ai`|object|Mark this as LLM traffic to enable LLM processing.|
 |`backends[].policies.ai.promptGuard`|object|Prompt and response guardrails to apply to LLM traffic.|
+|`backends[].policies.ai.promptGuard.streaming`|enum|Apply prompt guards to streaming responses and realtime websocket messages.<br>Possible values: `Disabled`, `Enabled`.|
 |`backends[].policies.ai.promptGuard.request`|[]object|Guards applied to client requests before they reach the LLM.|
 |`backends[].policies.ai.promptGuard.request[].regex`|object|Apply regex-based masking or rejection rules.|
 |`backends[].policies.ai.promptGuard.request[].regex.action`|enum|Action to take when a regex rule matches.<br>Possible values: `mask`, `reject`.|
@@ -13348,6 +13356,7 @@
 |`routeGroups[].routes[].policies.a2a`|object|Mark this traffic as A2A to enable A2A processing and telemetry.|
 |`routeGroups[].routes[].policies.ai`|object|Mark this as LLM traffic to enable LLM processing.|
 |`routeGroups[].routes[].policies.ai.promptGuard`|object|Prompt and response guardrails to apply to LLM traffic.|
+|`routeGroups[].routes[].policies.ai.promptGuard.streaming`|enum|Apply prompt guards to streaming responses and realtime websocket messages.<br>Possible values: `Disabled`, `Enabled`.|
 |`routeGroups[].routes[].policies.ai.promptGuard.request`|[]object|Guards applied to client requests before they reach the LLM.|
 |`routeGroups[].routes[].policies.ai.promptGuard.request[].regex`|object|Apply regex-based masking or rejection rules.|
 |`routeGroups[].routes[].policies.ai.promptGuard.request[].regex.action`|enum|Action to take when a regex rule matches.<br>Possible values: `mask`, `reject`.|
@@ -15806,6 +15815,7 @@
 |`routeGroups[].routes[].backends[].ai.policies.inferenceRouting.destinationMode`|enum|How to use the destination returned by the endpoint picker.<br>Possible values: `validated`, `passthrough`.|
 |`routeGroups[].routes[].backends[].ai.policies.ai`|object|Mark this as LLM traffic to enable LLM processing.|
 |`routeGroups[].routes[].backends[].ai.policies.ai.promptGuard`|object|Prompt and response guardrails to apply to LLM traffic.|
+|`routeGroups[].routes[].backends[].ai.policies.ai.promptGuard.streaming`|enum|Apply prompt guards to streaming responses and realtime websocket messages.<br>Possible values: `Disabled`, `Enabled`.|
 |`routeGroups[].routes[].backends[].ai.policies.ai.promptGuard.request`|[]object|Guards applied to client requests before they reach the LLM.|
 |`routeGroups[].routes[].backends[].ai.policies.ai.promptGuard.request[].regex`|object|Apply regex-based masking or rejection rules.|
 |`routeGroups[].routes[].backends[].ai.policies.ai.promptGuard.request[].regex.action`|enum|Action to take when a regex rule matches.<br>Possible values: `mask`, `reject`.|
@@ -17057,6 +17067,7 @@
 |`routeGroups[].routes[].backends[].ai.groups[].providers[].policies.inferenceRouting.destinationMode`|enum|How to use the destination returned by the endpoint picker.<br>Possible values: `validated`, `passthrough`.|
 |`routeGroups[].routes[].backends[].ai.groups[].providers[].policies.ai`|object|Mark this as LLM traffic to enable LLM processing.|
 |`routeGroups[].routes[].backends[].ai.groups[].providers[].policies.ai.promptGuard`|object|Prompt and response guardrails to apply to LLM traffic.|
+|`routeGroups[].routes[].backends[].ai.groups[].providers[].policies.ai.promptGuard.streaming`|enum|Apply prompt guards to streaming responses and realtime websocket messages.<br>Possible values: `Disabled`, `Enabled`.|
 |`routeGroups[].routes[].backends[].ai.groups[].providers[].policies.ai.promptGuard.request`|[]object|Guards applied to client requests before they reach the LLM.|
 |`routeGroups[].routes[].backends[].ai.groups[].providers[].policies.ai.promptGuard.request[].regex`|object|Apply regex-based masking or rejection rules.|
 |`routeGroups[].routes[].backends[].ai.groups[].providers[].policies.ai.promptGuard.request[].regex.action`|enum|Action to take when a regex rule matches.<br>Possible values: `mask`, `reject`.|
@@ -18278,6 +18289,7 @@
 |`routeGroups[].routes[].backends[].policies.inferenceRouting.destinationMode`|enum|How to use the destination returned by the endpoint picker.<br>Possible values: `validated`, `passthrough`.|
 |`routeGroups[].routes[].backends[].policies.ai`|object|Mark this as LLM traffic to enable LLM processing.|
 |`routeGroups[].routes[].backends[].policies.ai.promptGuard`|object|Prompt and response guardrails to apply to LLM traffic.|
+|`routeGroups[].routes[].backends[].policies.ai.promptGuard.streaming`|enum|Apply prompt guards to streaming responses and realtime websocket messages.<br>Possible values: `Disabled`, `Enabled`.|
 |`routeGroups[].routes[].backends[].policies.ai.promptGuard.request`|[]object|Guards applied to client requests before they reach the LLM.|
 |`routeGroups[].routes[].backends[].policies.ai.promptGuard.request[].regex`|object|Apply regex-based masking or rejection rules.|
 |`routeGroups[].routes[].backends[].policies.ai.promptGuard.request[].regex.action`|enum|Action to take when a regex rule matches.<br>Possible values: `mask`, `reject`.|
@@ -19382,6 +19394,7 @@
 |`llm.models[].backendTunnel.proxy.host`|string|Hostname or IP address|
 |`llm.models[].backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
 |`llm.models[].guardrails`|object|guardrails to apply to the request or response|
+|`llm.models[].guardrails.streaming`|enum|Apply prompt guards to streaming responses and realtime websocket messages.<br>Possible values: `Disabled`, `Enabled`.|
 |`llm.models[].guardrails.request`|[]object|Guards applied to client requests before they reach the LLM.|
 |`llm.models[].guardrails.request[].regex`|object|Apply regex-based masking or rejection rules.|
 |`llm.models[].guardrails.request[].regex.action`|enum|Action to take when a regex rule matches.<br>Possible values: `mask`, `reject`.|
@@ -20836,6 +20849,7 @@
 |`llm.policies.apiKey.location.expression`|object|Read the credential from a CEL expression evaluated against the incoming request.|
 |`llm.policies.apiKey.location.expression.expression`|string|CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
 |`llm.policies.guardrails`|object|Guardrails to apply to every configured model.|
+|`llm.policies.guardrails.streaming`|enum|Apply prompt guards to streaming responses and realtime websocket messages.<br>Possible values: `Disabled`, `Enabled`.|
 |`llm.policies.guardrails.request`|[]object|Guards applied to client requests before they reach the LLM.|
 |`llm.policies.guardrails.request[].regex`|object|Apply regex-based masking or rejection rules.|
 |`llm.policies.guardrails.request[].regex.action`|enum|Action to take when a regex rule matches.<br>Possible values: `mask`, `reject`.|
@@ -22232,6 +22246,7 @@
 |`mcp.policies.a2a`|object|Mark this traffic as A2A to enable A2A processing and telemetry.|
 |`mcp.policies.ai`|object|Mark this as LLM traffic to enable LLM processing.|
 |`mcp.policies.ai.promptGuard`|object|Prompt and response guardrails to apply to LLM traffic.|
+|`mcp.policies.ai.promptGuard.streaming`|enum|Apply prompt guards to streaming responses and realtime websocket messages.<br>Possible values: `Disabled`, `Enabled`.|
 |`mcp.policies.ai.promptGuard.request`|[]object|Guards applied to client requests before they reach the LLM.|
 |`mcp.policies.ai.promptGuard.request[].regex`|object|Apply regex-based masking or rejection rules.|
 |`mcp.policies.ai.promptGuard.request[].regex.action`|enum|Action to take when a regex rule matches.<br>Possible values: `mask`, `reject`.|

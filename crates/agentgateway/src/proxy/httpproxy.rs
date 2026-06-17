@@ -445,17 +445,16 @@ async fn apply_llm_request_policies(
 		(http::PolicyResponse::default(), None)
 	};
 	rl_resp.apply(response_headers)?;
+	let prompt_guard = policies
+		.llm
+		.as_deref()
+		.and_then(|llm| llm.prompt_guard.as_ref());
 	Ok(store::LLMResponsePolicies {
 		local_rate_limit,
 		remote_rate_limit: response,
 		request_traceparent: req.headers().get(TRACEPARENT).cloned(),
-		prompt_guard: policies
-			.llm
-			.as_deref()
-			.and_then(|llm| llm.prompt_guard.as_ref())
-			.filter(|g| g.streaming.is_enabled())
-			.map(|g| g.response.clone())
-			.unwrap_or_default(),
+		prompt_guard: prompt_guard.map(|g| g.response.clone()).unwrap_or_default(),
+		streaming_prompt_guard_enabled: prompt_guard.is_some_and(|g| g.streaming.is_enabled()),
 	})
 }
 
@@ -2989,7 +2988,7 @@ mod tests {
 
 	async fn response_prompt_guards_for_streaming_mode(
 		streaming: PromptGuardStreamingMode,
-	) -> Vec<ResponseGuard> {
+	) -> crate::store::LLMResponsePolicies {
 		let policy = llm::Policy {
 			prompt_guard: Some(PromptGuard {
 				streaming,
@@ -3016,22 +3015,24 @@ mod tests {
 		)
 		.await
 		.expect("LLM request policies should apply")
-		.prompt_guard
 	}
 
 	#[tokio::test]
 	async fn apply_llm_request_policies_skips_streaming_guardrails_when_disabled() {
-		let guards =
+		let policies =
 			response_prompt_guards_for_streaming_mode(PromptGuardStreamingMode::Disabled).await;
 
-		assert!(guards.is_empty());
+		assert_eq!(policies.prompt_guard.len(), 1);
+		assert!(!policies.streaming_prompt_guard_enabled);
 	}
 
 	#[tokio::test]
 	async fn apply_llm_request_policies_includes_streaming_guardrails_when_enabled() {
-		let guards = response_prompt_guards_for_streaming_mode(PromptGuardStreamingMode::Enabled).await;
+		let policies =
+			response_prompt_guards_for_streaming_mode(PromptGuardStreamingMode::Enabled).await;
 
-		assert_eq!(guards.len(), 1);
+		assert_eq!(policies.prompt_guard.len(), 1);
+		assert!(policies.streaming_prompt_guard_enabled);
 	}
 
 	#[test]

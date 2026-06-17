@@ -1120,7 +1120,7 @@ mod prompt_guard_config_tests {
 	fn test_streaming_response_guards_enable_with_streaming_true() {
 		let json = json!({
 			"promptGuard": {
-				"streaming": "ENABLED",
+				"streaming": "Enabled",
 				"response": [{
 					"regex": {
 						"action": "reject",

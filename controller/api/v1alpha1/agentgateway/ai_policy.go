@@ -102,7 +102,7 @@ type PromptGuardStreamingMode string
 
 const (
 	// Enable prompt guards for streaming responses and realtime websocket messages.
-	PromptGuardStreamingModeEnabled PromptGuardStreamingMode = "ENABLED"
+	PromptGuardStreamingModeEnabled PromptGuardStreamingMode = "Enabled"
 )
 
 // Regular expression matching for prompt guards and data masking.
@@ -302,7 +302,6 @@ type PromptguardResponse struct {
 type AIPromptGuard struct {
 	// Apply prompt guards to streaming responses and realtime websocket messages.
 	// Defaults to disabled to preserve streaming throughput unless explicitly enabled.
-	// +kubebuilder:validation:Enum=ENABLED
 	// +optional
 	Streaming PromptGuardStreamingMode `json:"streaming,omitempty"`
 

@@ -1615,7 +1615,8 @@ impl AIProvider {
 		// SSE output, not raw upstream bytes. Applying them before translation silently
 		// breaks Bedrock (AWS Event Stream is binary, not SSE) and any provider whose
 		// wire format differs from SSE. Detect paths are raw pass-throughs; skip them.
-		let evaluators = if !response_policies.prompt_guard.is_empty()
+		let evaluators = if response_policies.streaming_prompt_guard_enabled
+			&& !response_policies.prompt_guard.is_empty()
 			&& !matches!(input_format, InputFormat::Detect)
 		{
 			use policy::PromptGuard;

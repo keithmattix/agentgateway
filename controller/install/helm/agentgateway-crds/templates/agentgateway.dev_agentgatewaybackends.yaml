@@ -4813,7 +4813,7 @@ spec:
                                               Apply prompt guards to streaming responses and realtime websocket messages.
                                               Defaults to disabled to preserve streaming throughput unless explicitly enabled.
                                             enum:
-                                            - ENABLED
+                                            - Enabled
                                             type: string
                                         type: object
                                         x-kubernetes-validations:
@@ -11117,7 +11117,7 @@ spec:
                               Apply prompt guards to streaming responses and realtime websocket messages.
                               Defaults to disabled to preserve streaming throughput unless explicitly enabled.
                             enum:
-                            - ENABLED
+                            - Enabled
                             type: string
                         type: object
                         x-kubernetes-validations:
