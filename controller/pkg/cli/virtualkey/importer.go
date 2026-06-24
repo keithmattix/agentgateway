@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"sort"
 	"strings"
@@ -223,13 +224,9 @@ func newSecretManifest(name, namespace string, labels map[string]string) secretM
 func cloneSecretManifest(secret secretManifest) secretManifest {
 	clone := secret
 	clone.Metadata.Labels = map[string]string{}
-	for k, v := range secret.Metadata.Labels {
-		clone.Metadata.Labels[k] = v
-	}
+	maps.Copy(clone.Metadata.Labels, secret.Metadata.Labels)
 	clone.StringData = map[string]string{}
-	for k, v := range secret.StringData {
-		clone.StringData[k] = v
-	}
+	maps.Copy(clone.StringData, secret.StringData)
 	return clone
 }
 
@@ -401,10 +398,9 @@ func escapeID(value string) string {
 }
 
 func secretLabels(extra map[string]string) map[string]string {
-	labels := map[string]string{virtualKeysLabel: "true"}
-	for k, v := range extra {
-		labels[k] = v
-	}
+	labels := map[string]string{}
+	maps.Copy(labels, extra)
+	labels[virtualKeysLabel] = "true"
 	return labels
 }
 

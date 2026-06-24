@@ -88,7 +88,7 @@ agctl virtualkey import -f virtual-keys.csv --secret-name agw-virtual-keys --esc
 			cmd.Flags().BoolVar(&flags.escapeSpecialChars, "escape-special-characters", false, "Escape reserved id values (<missing>, |, ^, or backtick) instead of rejecting them")
 			cmd.Flags().StringArrayVar(&flags.labels, "label", nil, "Additional Secret label in key=value form (may be repeated)")
 			cmd.Flags().StringVar(&flags.kubecontext, "kubecontext", "", "Kubeconfig context for collision checks")
-			cmd.Flags().StringVar(&flags.collisionCheckSecret, "collision-check-secret", "", "Existing Secret name to check for imported API key collisions")
+			cmd.Flags().StringVar(&flags.collisionCheckSecret, "collision-check-secret", "", "Existing Secret name to check for imported API key collisions; may be namespace/name")
 			cmd.Flags().StringVar(&flags.collisionCheckSelector, "collision-check-selector", "", "Label selector for existing Secrets to check for imported API key collisions")
 			_ = cmd.MarkFlagRequired("file")
 			_ = cmd.MarkFlagRequired("secret-name")
@@ -134,7 +134,8 @@ func runImport(cmd *cobra.Command, flags *importFlags) error {
 		return err
 	}
 	if flags.collisionCheckSecret != "" || flags.collisionCheckSelector != "" {
-		keys, err := loadCollisionKeys(cmd.Context(), namespace, flags.kubecontext, flags.collisionCheckSecret, flags.collisionCheckSelector)
+		collisionNamespace, collisionSecret := splitNamespacedSecret(namespace, flags.collisionCheckSecret)
+		keys, err := loadCollisionKeys(cmd.Context(), collisionNamespace, flags.kubecontext, collisionSecret, flags.collisionCheckSelector)
 		if err != nil {
 			return err
 		}
@@ -267,7 +268,7 @@ func runGenerate(cmd *cobra.Command, flags *generateFlags) error {
 }
 
 func generateNonCollidingKey(label string, existing []existingKey) (string, error) {
-	for attempt := 0; attempt < 3; attempt++ {
+	for range 3 {
 		key, err := generateAPIKey(label)
 		if err != nil {
 			return "", err

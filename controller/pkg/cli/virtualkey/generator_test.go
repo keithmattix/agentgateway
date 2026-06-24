@@ -33,7 +33,7 @@ func TestGenerateAPIKeyFallbackLabel(t *testing.T) {
 
 func TestGenerateAPIKeyUnique(t *testing.T) {
 	seen := map[string]struct{}{}
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		key, err := generateAPIKey("alice")
 		if err != nil {
 			t.Fatal(err)
