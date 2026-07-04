@@ -743,8 +743,6 @@ istio.io/api v1.30.0-alpha.1.0.20260626010135-ac56ebb29e59 h1:8VgMOLCCCptQb5USAH
 istio.io/api v1.30.0-alpha.1.0.20260626010135-ac56ebb29e59/go.mod h1:+brQWcBHoROuyA6fv8rbgg8Kfn0RCGuqoY0duCMuSLA=
 istio.io/client-go v1.30.0-beta.0 h1:lZhK5Kbkw0Z+lw1+zySH0m1ST1VYsMrXOpAJQdlY+T0=
 istio.io/client-go v1.30.0-beta.0/go.mod h1:HRZAHMJsEmf/oDYBoCpDO9wZEEnqWeMsP20iuEA77qY=
-istio.io/istio v0.0.0-20260701162249-99f2f4f55d5c h1:fGJlheN+3GC5BtnAk13zCXVHA5G71U3wbRdHBfcUnLA=
-istio.io/istio v0.0.0-20260701162249-99f2f4f55d5c/go.mod h1:bY0H3K7VwsLVrhENlfu4NlSxA5zfFdovXqLom4TurFQ=
 istio.io/istio v0.0.0-20260704181517-116e8ec30db4 h1:464ea9D1k9bUklbPEFDrCmHMdZBoyS4bzm6V2L4K9Pc=
 istio.io/istio v0.0.0-20260704181517-116e8ec30db4/go.mod h1:Hv+gSktTtaTnYikCEgi/TI1ygh0oD+FU66476mh5TTk=
 k8s.io/api v0.36.2 h1:TF6YDLIzKfccK7cq9YpTcGX8TJmEkHVRv78DM51fRYY=
@@ -779,14 +777,10 @@ sigs.k8s.io/controller-runtime v0.24.1 h1:miPEwrmirImAvgME1L9qebGHrOnGJoVmVdtOU9
 sigs.k8s.io/controller-runtime v0.24.1/go.mod h1:vFkfY5fGt5xAC/sKb8IBFKgWPNKG9OUG29dR8Y2wImw=
 sigs.k8s.io/controller-tools v0.21.0 h1:KXDQza3bgjlPY6xLR63tI/40gzjhyUAvkCrwzd2/6cs=
 sigs.k8s.io/controller-tools v0.21.0/go.mod h1:DLIypi3Q2+azVAP8jr/mHXJgveYYHFjhnNOUuBJ10JE=
-sigs.k8s.io/gateway-api v1.6.0-rc.1 h1:P0WmBguVrYPnkiFiW/rmxVq3adEGufbPEnOs1kjfBEQ=
-sigs.k8s.io/gateway-api v1.6.0-rc.1/go.mod h1:FVfx3t389ybeXOqvDghLbdvJdSCfI/PReqCUI3lu3mY=
 sigs.k8s.io/gateway-api v1.6.0 h1:735YBRj5NXFrOGX0GoSjwzUIzbz8kiEOfADsqHFmHgE=
 sigs.k8s.io/gateway-api v1.6.0/go.mod h1:FVfx3t389ybeXOqvDghLbdvJdSCfI/PReqCUI3lu3mY=
 sigs.k8s.io/gateway-api-inference-extension v1.5.0 h1:w9Awt60cmI1vM7Y6N81h8wDCBP0WkmxpdI7GKY0v070=
 sigs.k8s.io/gateway-api-inference-extension v1.5.0/go.mod h1:ZeIlzI43XH2qWKipFq/Qa12yB2s/D+Xp1XJVlpMxklA=
-sigs.k8s.io/gateway-api/conformance v1.6.0-rc.1 h1:pULw1PTazpxoubhu9GdYOhXe5tLbDB116J8yi5hDmAk=
-sigs.k8s.io/gateway-api/conformance v1.6.0-rc.1/go.mod h1:JD6CHFrpzVyvgivIzhu0My27sOk3I3IphxJe4CIjGb4=
 sigs.k8s.io/gateway-api/conformance v1.6.0 h1:jyH7Jtx46hEeBQnmSErn2cbp0k4OmT3FLRBnu77c4Ko=
 sigs.k8s.io/gateway-api/conformance v1.6.0/go.mod h1:JD6CHFrpzVyvgivIzhu0My27sOk3I3IphxJe4CIjGb4=
 sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 h1:IpInykpT6ceI+QxKBbEflcR5EXP7sU1kvOlxwZh5txg=
