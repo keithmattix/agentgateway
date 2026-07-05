@@ -129,6 +129,13 @@ step_deploy_metallb() {
     fi
   fi
 
+  # Reserve one IP from the far end before building the auto-assigned pool.
+  # GatewayStaticAddresses needs this address to remain unused until the test
+  # explicitly requests it.
+  STATIC_CONFORMANCE_INDEX=$((${#METALLB_IPS4[@]} - 1))
+  STATIC_CONFORMANCE_IP="${METALLB_IPS4[$STATIC_CONFORMANCE_INDEX]}"
+  unset 'METALLB_IPS4[$STATIC_CONFORMANCE_INDEX]'
+
   # Give this cluster some auto-assigned IPs, plus one static-only IP that
   # conformance can request without racing parallel LoadBalancer allocations.
   RANGE="["
@@ -141,8 +148,6 @@ step_deploy_metallb() {
     fi
   done
   RANGE="${RANGE%?}]"
-  STATIC_CONFORMANCE_IP="${METALLB_IPS4[1]}"
-  METALLB_IPS4=("${METALLB_IPS4[@]:1}")
 
   echo '
 apiVersion: metallb.io/v1beta1

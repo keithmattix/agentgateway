@@ -286,6 +286,20 @@ type metalLBAddressPool struct {
 }
 
 func chooseMetallbAddress(pools []metalLBAddressPool, usedAddresses map[string]struct{}) (string, error) {
+	autoAssignedCandidates := map[string]struct{}{}
+	hasStaticPool := false
+	for _, pool := range pools {
+		if !pool.autoAssign {
+			hasStaticPool = true
+			continue
+		}
+		for _, address := range pool.addresses {
+			for _, candidate := range candidateIPv4Addresses(address) {
+				autoAssignedCandidates[candidate] = struct{}{}
+			}
+		}
+	}
+
 	slices.SortStableFunc(pools, func(a, b metalLBAddressPool) int {
 		if a.autoAssign != b.autoAssign {
 			if !a.autoAssign {
@@ -304,6 +318,9 @@ func chooseMetallbAddress(pools []metalLBAddressPool, usedAddresses map[string]s
 					continue
 				}
 				if !pool.autoAssign {
+					if _, overlaps := autoAssignedCandidates[candidate]; overlaps {
+						continue
+					}
 					return candidate, nil
 				}
 				if firstAutoAssigned == "" {
@@ -311,6 +328,9 @@ func chooseMetallbAddress(pools []metalLBAddressPool, usedAddresses map[string]s
 				}
 			}
 		}
+	}
+	if hasStaticPool {
+		return "", fmt.Errorf("no unused IPv4 addresses found in non-auto-assigned MetalLB address pools")
 	}
 	if firstAutoAssigned != "" {
 		return firstAutoAssigned, nil
