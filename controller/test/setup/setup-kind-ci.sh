@@ -129,7 +129,8 @@ step_deploy_metallb() {
     fi
   fi
 
-  # Give this cluster of those IPs
+  # Give this cluster some auto-assigned IPs, plus one static-only IP that
+  # conformance can request without racing parallel LoadBalancer allocations.
   RANGE="["
   for i in {0..19}; do
     RANGE+="${METALLB_IPS4[1]},"
@@ -140,6 +141,8 @@ step_deploy_metallb() {
     fi
   done
   RANGE="${RANGE%?}]"
+  STATIC_CONFORMANCE_IP="${METALLB_IPS4[1]}"
+  METALLB_IPS4=("${METALLB_IPS4[@]:1}")
 
   echo '
 apiVersion: metallb.io/v1beta1
@@ -151,6 +154,16 @@ spec:
   addresses: '"$RANGE"'
 ---
 apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: static-conformance-pool
+  namespace: metallb-system
+spec:
+  autoAssign: false
+  addresses:
+  - '"${STATIC_CONFORMANCE_IP}"'
+---
+apiVersion: metallb.io/v1beta1
 kind: L2Advertisement
 metadata:
   name: default-l2
@@ -158,6 +171,7 @@ metadata:
 spec:
   ipAddressPools:
   - default-pool
+  - static-conformance-pool
 ' | kubectl apply -f -
 }
 
