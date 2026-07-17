@@ -244,6 +244,16 @@ binds:
 	);
 }
 
+#[test]
+fn test_local_backend_policies_reject_unknown_fields() {
+	// serde(flatten) disables deny_unknown_fields on the outer struct, but the
+	// flattened SimpleLocalBackendPolicies still rejects leftover unknown keys.
+	let err =
+		crate::serdes::yamlviajson::from_str::<super::LocalBackendPolicies>("mcpAuthorizatoin: {}")
+			.unwrap_err();
+	assert!(err.to_string().contains("unknown field"), "{err}");
+}
+
 #[tokio::test]
 async fn test_multiple_wildcard_binds_rejected() {
 	let err = normalize_test_yaml(
@@ -1164,6 +1174,62 @@ mcp:
 	normalize_test_yaml(yaml)
 		.await
 		.expect_err("MCP target name containing '_' should be rejected");
+}
+
+#[tokio::test]
+async fn test_local_mcp_stdio_target_rejects_policies() {
+	let yaml = r#"
+mcp:
+  targets:
+  - name: everything
+    stdio:
+      cmd: echo
+    policies:
+      backendTLS: {}
+"#;
+	normalize_test_yaml(yaml)
+		.await
+		.expect_err("policies on a stdio MCP target should be rejected");
+}
+
+#[tokio::test]
+async fn test_local_mcp_target_rejects_mcp_policies() {
+	let guardrails_yaml = r#"
+mcp:
+  targets:
+  - name: everything
+    mcp:
+      host: localhost:8080
+    policies:
+      mcpGuardrails:
+        processors: []
+"#;
+	let err = normalize_test_yaml(guardrails_yaml)
+		.await
+		.expect_err("mcpGuardrails on an MCP target should be rejected");
+	assert!(
+		err.to_string().contains("mcpGuardrails"),
+		"error should mention mcpGuardrails, got: {err}"
+	);
+
+	let authorization_yaml = r#"
+mcp:
+  targets:
+  - name: everything
+    mcp:
+      host: localhost:8080
+    policies:
+      mcpAuthorization:
+        rules:
+        - 'mcp.tool.name == "echo"'
+"#;
+	let err = normalize_test_yaml(authorization_yaml)
+		.await
+		.expect_err("mcpAuthorization on an MCP target should be rejected");
+	assert!(
+		err.to_string().contains("mcpAuthorization"),
+		"error should mention mcpAuthorization, got: {err}"
+	);
 }
 
 #[tokio::test]

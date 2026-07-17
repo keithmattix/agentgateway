@@ -1588,16 +1588,16 @@ impl LocalAIBackend {
 impl LocalBackend {
 	async fn make_mcp_backend(
 		b: Backend,
-		policies: Option<MCPLocalBackendPolicies>,
+		policies: Option<SimpleLocalBackendPolicies>,
 		tls: bool,
 		resources: &crate::resource_manager::ResourceFetcher,
 	) -> Result<BackendWithPolicies, anyhow::Error> {
 		let mut inline_policies = match policies {
 			Some(p) => {
 				LocalBackendPolicies {
-					simple: p.simple,
-					mcp_authorization: p.mcp_authorization,
-					mcp_guardrails: p.mcp_guardrails,
+					simple: p,
+					mcp_authorization: None,
+					mcp_guardrails: None,
 					a2a: None,
 					inference_routing: None,
 					ai: None,
@@ -1626,7 +1626,7 @@ impl LocalBackend {
 	async fn process_mcp_backend(
 		name: ResourceName,
 		backend: McpBackendHost,
-		policies: Option<MCPLocalBackendPolicies>,
+		policies: Option<SimpleLocalBackendPolicies>,
 		resources: &crate::resource_manager::ResourceFetcher,
 	) -> anyhow::Result<(
 		SimpleBackendReference,
@@ -1705,11 +1705,19 @@ impl LocalBackend {
 							args,
 							env,
 							clear_env,
-						} => McpTargetSpec::Stdio {
-							cmd,
-							args,
-							env,
-							clear_env,
+						} => {
+							if t.policies.is_some() {
+								anyhow::bail!(
+									"stdio MCP target '{}': policies are not supported (stdio has no backend connection)",
+									t.name,
+								);
+							}
+							McpTargetSpec::Stdio {
+								cmd,
+								args,
+								env,
+								clear_env,
+							}
 						},
 						LocalMcpTargetSpec::OpenAPI { backend, schema } => {
 							let (bref, _, be) = Self::process_mcp_backend(
@@ -1820,9 +1828,11 @@ pub struct LocalMcpTarget {
 	pub name: McpTargetName,
 	#[serde(flatten)]
 	pub spec: LocalMcpTargetSpec,
-	/// Policies applied to this MCP target.
+	/// Transport policies for connecting to this target's backend. Not supported
+	/// on stdio targets. MCP policies (mcpAuthorization, mcpGuardrails) apply to
+	/// the full target set and belong on the route or `mcp.policies`.
 	#[serde(default, skip_serializing_if = "Option::is_none")]
-	pub policies: Option<MCPLocalBackendPolicies>,
+	pub policies: Option<SimpleLocalBackendPolicies>,
 }
 
 #[derive(Debug, Clone)]
@@ -2408,19 +2418,6 @@ pub struct SimpleLocalBackendPolicies {
 	/// Tunnel settings used when connecting to this backend.
 	#[serde(default)]
 	pub backend_tunnel: Option<backend::Tunnel>,
-}
-
-#[apply(schema_de!)]
-#[derive(Default)]
-pub struct MCPLocalBackendPolicies {
-	#[serde(flatten)]
-	simple: SimpleLocalBackendPolicies,
-	/// Authorization rules for MCP requests.
-	#[serde(default)]
-	pub mcp_authorization: Option<McpAuthorization>,
-	/// External MCP policy processors.
-	#[serde(default)]
-	pub mcp_guardrails: Option<LocalMcpGuardrails>,
 }
 
 #[apply(schema_de!)]

@@ -273,6 +273,7 @@ impl BackendPolicies {
 			a2a: other.a2a.or(self.a2a),
 			llm_provider: other.llm_provider.or(self.llm_provider),
 			llm: other.llm.or(self.llm),
+			// Authorization composes to avoid erasing a broader deny
 			authorization: match (
 				self.authorization.into_arc(),
 				other.authorization.into_arc(),
@@ -284,8 +285,10 @@ impl BackendPolicies {
 				(None, Some(right)) => BackendPolicy::from_arc(right),
 				(None, None) => BackendPolicy::default(),
 			},
-			// TODO: is this right??
-			mcp_authorization: other.mcp_authorization.or(self.mcp_authorization),
+			mcp_authorization: match (self.mcp_authorization, other.mcp_authorization) {
+				(Some(base), Some(more)) => Some(base.merge(more)),
+				(base, more) => more.or(base),
+			},
 			mcp_authentication: other.mcp_authentication.or(self.mcp_authentication),
 			mcp_guardrails: other.mcp_guardrails.or(self.mcp_guardrails),
 			inference_routing: other.inference_routing.or(self.inference_routing),
@@ -1200,7 +1203,7 @@ impl Store {
 					}
 				},
 				BackendTrafficPolicy::McpAuthorization(p) => {
-					// Authorization policies merge, unlike others
+					// Authorization composes to avoid erasing a broader deny
 					mcp_authz.push(p.clone().into_inner());
 				},
 				BackendTrafficPolicy::McpAuthentication(p) => {
