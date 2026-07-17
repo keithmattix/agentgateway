@@ -2260,6 +2260,15 @@ type ExtProc struct {
 	// Supported types: `Service` and `Backend`.
 	// +optional
 	BackendRef *gwv1.BackendObjectReference `json:"backendRef,omitempty"`
+
+	// Behavior when the external processor is unavailable or returns an error.
+	// "FailOpen" allows the request to continue, as long as the request body has not
+	// been sent (or started streaming) to the ext_proc. Once the request body has
+	// started streaming to the ext_proc, the request will fail closed on error.
+	// "FailClosed" (default) rejects the request on any failure.
+	// +optional
+	FailureMode FailureMode `json:"failureMode,omitempty"`
+
 	// How request and response phases are sent to ext_proc.
 	// +optional
 	ProcessingOptions *ProcessingOptions `json:"processingOptions,omitempty"`
