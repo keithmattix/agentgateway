@@ -11,13 +11,13 @@ use http::request::Parts;
 use itertools::Itertools;
 use rmcp::ErrorData;
 use rmcp::model::{
-	CacheScope, ClientNotification, ClientRequest, DiscoverResult, ExtensionCapabilities,
-	Implementation, JsonRpcNotification, JsonRpcRequest, ListPromptsResult,
+	CacheScope, ClientNotification, ClientRequest, ConstString, DiscoverResult,
+	ExtensionCapabilities, Implementation, JsonRpcNotification, JsonRpcRequest, ListPromptsResult,
 	ListResourceTemplatesResult, ListResourcesResult, ListToolsResult, PaginatedRequestParams,
 	ProtocolVersion, RequestId, ResultType, ServerCapabilities, ServerInfo, ServerJsonRpcMessage,
-	ServerNotification, ServerResult, SubscriptionFilter,
+	ServerNotification, ServerRequest, ServerResult, SubscriptionFilter,
 };
-use tracing::{debug, warn};
+use tracing::{debug, info, warn};
 
 use crate::http::Response;
 use crate::http::sessionpersistence::MCPSession;
@@ -1427,9 +1427,7 @@ fn respond_with_guardrails(
 	}
 }
 
-fn ctx_downstream_modern(ctx: &IncomingRequestContext) -> bool {
-	// Read the extension in place. `as_request()` clones method, URI, headers, and
-	// extensions to inspect one typed extension on response/SSE paths.
+pub(crate) fn ctx_downstream_modern(ctx: &IncomingRequestContext) -> bool {
 	ctx
 		.extensions()
 		.get::<RequestProtocol>()
@@ -1477,28 +1475,81 @@ fn into_sse_stream(
 	downstream_modern: bool,
 ) -> impl Stream<Item = ServerSseMessage> + Send + 'static {
 	use futures_util::StreamExt;
-	let mut captured_terminal = false;
-	stream.map(move |rpc| {
-		let r = match rpc {
-			Ok(rpc) => {
-				let rpc = with_gateway_cache_policy(rpc);
-				let rpc = normalize_outbound_for_protocol(rpc, downstream_modern);
-				if !captured_terminal && let Some(log) = mcp_log.as_ref() {
-					captured_terminal = capture_terminal_mcp_payload(log, &request_id, &rpc);
-				}
-				rpc
-			},
-			Err(e) => ServerJsonRpcMessage::error(
-				ErrorData::internal_error(e.to_string(), None),
-				Some(request_id.clone()),
-			),
-		};
-		// TODO: is it ok to have no event_id here?
-		ServerSseMessage {
-			event_id: None,
-			message: Arc::new(r),
-		}
-	})
+	stream
+		.scan((false, false), move |st, rpc| {
+			let (errored, terminal_seen) = st;
+			std::future::ready((!*errored).then(|| {
+				let msg: Option<ServerJsonRpcMessage> = match rpc {
+					Ok(ServerJsonRpcMessage::Request(req)) if downstream_modern => {
+						reject_direct_request(req, &request_id, mcp_log.as_ref(), *terminal_seen, errored)
+					},
+					Ok(rpc) => {
+						let rpc =
+							normalize_outbound_for_protocol(with_gateway_cache_policy(rpc), downstream_modern);
+						if !*terminal_seen {
+							*terminal_seen = capture_terminal_mcp_payload(mcp_log.as_ref(), &request_id, &rpc);
+						}
+						Some(rpc)
+					},
+					Err(e) => {
+						*errored = true;
+						if *terminal_seen {
+							None
+						} else {
+							let msg = ServerJsonRpcMessage::error(
+								ErrorData::internal_error(e.to_string(), None),
+								Some(request_id.clone()),
+							);
+							*terminal_seen = capture_terminal_mcp_payload(mcp_log.as_ref(), &request_id, &msg);
+							Some(msg)
+						}
+					},
+				};
+				// TODO: is it ok to have no event_id here?
+				msg.map(|message| ServerSseMessage {
+					event_id: None,
+					message: Arc::new(message),
+				})
+			}))
+		})
+		.flat_map(futures_util::stream::iter)
+}
+
+// Modern servers must return input_required instead of direct requests.
+fn reject_direct_request(
+	req: JsonRpcRequest<ServerRequest>,
+	request_id: &RequestId,
+	mcp_log: Option<&AsyncLog<MCPInfo>>,
+	terminal_seen: bool,
+	errored: &mut bool,
+) -> Option<ServerJsonRpcMessage> {
+	info!(
+		"upstream sent a direct server-to-client request on a modern stream: {}",
+		server_request_method(&req.request)
+	);
+	*errored = true;
+	if terminal_seen {
+		return None;
+	}
+	let msg = ServerJsonRpcMessage::error(
+		ErrorData::internal_error(
+			"gateway cannot route direct server-to-client requests; return an input_required result instead",
+			None,
+		),
+		Some(request_id.clone()),
+	);
+	capture_terminal_mcp_payload(mcp_log, request_id, &msg);
+	Some(msg)
+}
+
+fn server_request_method(request: &ServerRequest) -> &str {
+	match request {
+		ServerRequest::PingRequest(r) => r.method.as_str(),
+		ServerRequest::CreateMessageRequest(r) => r.method.as_str(),
+		ServerRequest::ListRootsRequest(r) => r.method.as_str(),
+		ServerRequest::ElicitRequest(r) => r.method.as_str(),
+		ServerRequest::CustomRequest(r) => r.method.as_str(),
+	}
 }
 
 fn normalize_outbound_for_protocol(
@@ -1682,19 +1733,23 @@ async fn apply_guardrails_response_intercept(
 }
 
 fn capture_terminal_mcp_payload(
-	log: &AsyncLog<MCPInfo>,
+	log: Option<&AsyncLog<MCPInfo>>,
 	request_id: &RequestId,
 	message: &ServerJsonRpcMessage,
 ) -> bool {
 	match message {
 		ServerJsonRpcMessage::Response(response) if response.id == *request_id => {
-			if let ServerResult::CallToolResult(result) = &response.result {
+			if let ServerResult::CallToolResult(result) = &response.result
+				&& let Some(log) = log
+			{
 				log.non_atomic_mutate(|mcp| mcp.capture_call_result(result));
 			}
 			true
 		},
 		ServerJsonRpcMessage::Error(error) if error.id.as_ref() == Some(request_id) => {
-			log.non_atomic_mutate(|mcp| mcp.capture_call_error(&error.error));
+			if let Some(log) = log {
+				log.non_atomic_mutate(|mcp| mcp.capture_call_error(&error.error));
+			}
 			true
 		},
 		_ => false,
@@ -1710,7 +1765,7 @@ fn accepted_response() -> Response {
 
 #[cfg(test)]
 mod tests {
-	use futures_util::stream;
+	use futures_util::{StreamExt, stream};
 	use rmcp::model::{CallToolResult, ListResourcesResult, ListToolsResult};
 	use serde_json::json;
 
@@ -1793,7 +1848,7 @@ mod tests {
 	}
 
 	#[tokio::test]
-	async fn messages_to_response_ignores_transport_errors_before_result() {
+	async fn messages_to_response_captures_transport_error_and_ends_stream() {
 		let log = AsyncLog::default();
 		let mut info = MCPInfo::default();
 		info.set_tool("mcp".to_string(), "echo".to_string());
@@ -1808,16 +1863,27 @@ mod tests {
 				RequestId::Number(7),
 			)),
 		]);
-		let response =
-			messages_to_response(RequestId::Number(7), stream, Some(log.clone()), false).unwrap();
-		let _ = crate::http::read_resp_body(response).await.unwrap();
+		let messages = into_sse_stream(RequestId::Number(7), stream, Some(log.clone()), false)
+			.collect::<Vec<_>>()
+			.await;
+		assert_eq!(messages.len(), 1, "the transport error must end the stream");
+		assert!(matches!(
+			messages[0].message.as_ref(),
+			ServerJsonRpcMessage::Error(error) if error.id == Some(RequestId::Number(7))
+		));
 
 		let info = log.take().unwrap();
+		assert!(info.tool.as_ref().unwrap().result.is_none());
 		assert_eq!(
-			info.tool.as_ref().unwrap().result.as_ref().unwrap()["structuredContent"]["status"],
-			"ok"
+			info.tool.as_ref().unwrap().error.as_ref().unwrap()["code"],
+			-32603
 		);
-		assert!(info.tool.as_ref().unwrap().error.is_none());
+		assert!(
+			info.tool.as_ref().unwrap().error.as_ref().unwrap()["message"]
+				.as_str()
+				.unwrap()
+				.contains("boom")
+		);
 	}
 
 	#[tokio::test]
