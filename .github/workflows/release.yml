@@ -488,6 +488,12 @@ jobs:
         cache: false
     - name: Build agctl
       run: make agctl-release
+    - name: Generate checksums
+      working-directory: controller/_output/pkg/agctl
+      run: |
+        for bin in agctl-*; do
+          sha256sum "${bin}" > "${bin}.sha256"
+        done
     - name: Upload Artifact
       uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
@@ -528,17 +534,16 @@ jobs:
         mv release-binary-windows/agentgateway.exe outputs/agentgateway-windows-amd64.exe
         sha256sum outputs/agentgateway-windows-amd64.exe > outputs/agentgateway-windows-amd64.exe.sha256
         shopt -s nullglob
-        agctl_bins=(release-binary-agctl/agctl-*)
+        agctl_files=(release-binary-agctl/agctl-*)
         shopt -u nullglob
-        if [ ${#agctl_bins[@]} -eq 0 ]; then
+        if [ ${#agctl_files[@]} -eq 0 ]; then
           echo "No agctl binaries found in release-binary-agctl/" >&2
           exit 1
         fi
-        for agctl in "${agctl_bins[@]}"; do
-          name="$(basename "$agctl")"
-          mv "$agctl" "outputs/${name}"
-          sha256sum "outputs/${name}" > "outputs/${name}.sha256"
-        done
+        mv "${agctl_files[@]}" outputs/
+        # Checksums are generated alongside the binaries in the build-agctl
+        # job; verify them instead of recomputing.
+        (cd outputs && sha256sum -c agctl-*.sha256)
     - name: Create GitHub Release
       uses: softprops/action-gh-release@153bb8e04406b158c6c84fc1615b65b24149a1fe # v2.6.1
       with:
