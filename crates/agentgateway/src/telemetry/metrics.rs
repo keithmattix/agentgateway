@@ -182,6 +182,7 @@ pub enum OutboundCallSubtype {
 
 	// Policy
 	ExtAuthz,
+	Substrate,
 	ExtProc,
 	Guardrail,
 	RateLimit,
