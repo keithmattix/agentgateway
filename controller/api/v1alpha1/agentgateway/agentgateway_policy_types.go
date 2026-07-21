@@ -1707,6 +1707,14 @@ type AwsAuth struct {
 	//
 	// +optional
 	ServiceName *ShortString `json:"serviceName,omitempty"`
+
+	// AWS SigV4 signing region, for example `us-east-1`. Set this when the
+	// target AWS service is in a different region than the gateway. If unset,
+	// typed AWS backends may provide this automatically; otherwise the ambient
+	// AWS region is used.
+	//
+	// +optional
+	Region *ShortString `json:"region,omitempty"`
 }
 
 // AWS STS AssumeRole settings for backend authentication.
