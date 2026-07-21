@@ -39,11 +39,11 @@ func TestResolveExternalHostnameXBackend(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	service, ok := ref.Kind.(*api.BackendReference_Service_)
+	resolved, ok := ref.Kind.(*api.BackendReference_Backend)
 	if !ok {
-		t.Fatalf("backend kind = %T, want service", ref.Kind)
+		t.Fatalf("backend kind = %T, want backend", ref.Kind)
 	}
-	if service.Service.Hostname != "api.example.com" || service.Service.Namespace != "default" || ref.Port != 8443 {
+	if resolved.Backend != "default/external-api" {
 		t.Fatalf("unexpected backend reference: %+v", ref)
 	}
 }

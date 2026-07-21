@@ -67,6 +67,7 @@ type AgwCollections struct {
 	ListenerSets            krt.Collection[*gwv1.ListenerSet]
 	ListenerSetsByNamespace krt.Index[string, *gwv1.ListenerSet]
 	XBackends               krt.Collection[*gwxv1a1.XBackend]
+	XBackendsByNamespace    krt.Index[string, *gwxv1a1.XBackend]
 
 	// Extended resources
 	InferencePools            krt.Collection[*inf.InferencePool]
@@ -234,6 +235,7 @@ func (c *AgwCollections) SetupIndexes() {
 	c.HTTPRoutesByNamespace = krt.NewNamespaceIndex(c.HTTPRoutes)
 	c.GRPCRoutesByNamespace = krt.NewNamespaceIndex(c.GRPCRoutes)
 	c.ListenerSetsByNamespace = krt.NewNamespaceIndex(c.ListenerSets)
+	c.XBackendsByNamespace = krt.NewNamespaceIndex(c.XBackends)
 	c.BackendsByNamespace = krt.NewNamespaceIndex(c.Backends)
 	c.InferencePoolsByNamespace = krt.NewNamespaceIndex(c.InferencePools)
 }
