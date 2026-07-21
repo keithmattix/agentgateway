@@ -67,6 +67,7 @@ type AgwCollections struct {
 	ListenerSets            krt.Collection[*gwv1.ListenerSet]
 	ListenerSetsByNamespace krt.Index[string, *gwv1.ListenerSet]
 	XBackends               krt.Collection[*gwxv1a1.XBackend]
+	XBackendsByNamespace    krt.Index[string, *gwxv1a1.XBackend]
 
 	// Extended resources
 	InferencePools            krt.Collection[*inf.InferencePool]
@@ -113,8 +114,11 @@ func NewAgwCollections(
 		client, wellknown.GatewayClassGVR, filter), krtOptions.ToOptions("informer/GatewayClasses")...)
 	listenerSets := krt.WrapClient(kclient.NewDelayedInformer[*gwv1.ListenerSet](
 		client, wellknown.ListenerSetGVR, kubetypes.StandardInformer, filter), krtOptions.ToOptions("informer/ListenerSets")...)
-	xBackends := krt.WrapClient(kclient.NewDelayedInformer[*gwxv1a1.XBackend](
-		client, wellknown.XBackendGVR, kubetypes.StandardInformer, filter), krtOptions.ToOptions("informer/XBackends")...)
+	var xBackends krt.Collection[*gwxv1a1.XBackend]
+	if settings.EnableXBackend {
+		xBackends = krt.WrapClient(kclient.NewDelayedInformer[*gwxv1a1.XBackend](
+			client, wellknown.XBackendGVR, kubetypes.StandardInformer, filter), krtOptions.ToOptions("informer/XBackends")...)
+	}
 
 	byParentRefIndex := krtpkg.UnnamedIndex(listenerSets, func(in *gwv1.ListenerSet) []collections.TargetRefIndexKey {
 		pRef := in.Spec.ParentRef
@@ -240,6 +244,9 @@ func (c *AgwCollections) SetupIndexes() {
 	c.HTTPRoutesByNamespace = krt.NewNamespaceIndex(c.HTTPRoutes)
 	c.GRPCRoutesByNamespace = krt.NewNamespaceIndex(c.GRPCRoutes)
 	c.ListenerSetsByNamespace = krt.NewNamespaceIndex(c.ListenerSets)
+	if c.XBackends != nil {
+		c.XBackendsByNamespace = krt.NewNamespaceIndex(c.XBackends)
+	}
 	c.BackendsByNamespace = krt.NewNamespaceIndex(c.Backends)
 	c.ModelsByNamespace = krt.NewNamespaceIndex(c.Models)
 	c.InferencePoolsByNamespace = krt.NewNamespaceIndex(c.InferencePools)

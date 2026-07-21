@@ -86,6 +86,7 @@ rules:
   - watch
 
 # Status reports
+{{- if .Values.xBackend.enabled }}
 - apiGroups:
   - gateway.networking.x-k8s.io
   resources:
@@ -94,6 +95,14 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - gateway.networking.x-k8s.io
+  resources:
+  - xbackends/status
+  verbs:
+  - patch
+  - update
+{{- end }}
 - apiGroups:
   - gateway.networking.k8s.io
   resources:
