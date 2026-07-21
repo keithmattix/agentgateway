@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	gwv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwxv1a1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 
 	"github.com/agentgateway/agentgateway/api"
 	"github.com/agentgateway/agentgateway/controller/api/v1alpha1/agentgateway"
@@ -84,6 +85,7 @@ func DefaultReferenceTypes(agw *AgwCollections) ReferenceTypes {
 			wellknown.ServiceGVK.GroupKind(),
 			wellknown.SecretGVK.GroupKind(),
 			wellknown.AgentgatewayBackendGVK.GroupKind(),
+			wellknown.XBackendGVK.GroupKind(),
 		),
 		// AgentgatewayPolicy targets
 		PolicyTargets: func(krtctx krt.HandlerContext, namespace string, name gwv1.ObjectName, gk schema.GroupKind, sectionName *gwv1.SectionName, port *gwv1.PortNumber) ([]*api.PolicyTarget, bool) {
@@ -220,6 +222,8 @@ func DefaultReferenceTypes(agw *AgwCollections) ReferenceTypes {
 					},
 					Port: uint32(*port), //nolint:gosec // G115: validated 1-65535
 				}, nil
+			case wellknown.XBackendGVK.GroupKind():
+				return resolveXBackend(krtctx, agw, ns, name, port)
 			case wellknown.AgentgatewayBackendGVK.GroupKind():
 				key := ns + "/" + string(name)
 				if !ResourceExists(krtctx, agw.Backends, key) {
@@ -323,6 +327,8 @@ func DefaultRouteBackend(krtctx krt.HandlerContext, agw *AgwCollections, default
 				Message: fmt.Sprintf("Backend not found: %s", key),
 			}
 		}
+	case wellknown.XBackendGVK.GroupKind():
+		return resolveXBackend(krtctx, agw, ns, name, port)
 	default:
 		return ref, &BackendReferenceError{
 			Reason:  BackendReferenceErrorReasonInvalidKind,
@@ -330,6 +336,51 @@ func DefaultRouteBackend(krtctx krt.HandlerContext, agw *AgwCollections, default
 		}
 	}
 	return ref, nil
+}
+
+func resolveXBackend(
+	krtctx krt.HandlerContext,
+	agw *AgwCollections,
+	namespace string,
+	name gwv1.ObjectName,
+	port *gwv1.PortNumber,
+) (*api.BackendReference, error) {
+	key := namespace + "/" + string(name)
+	backend := ptr.Flatten(krt.FetchOne(krtctx, agw.XBackends, krt.FilterKey(key)))
+	if backend == nil {
+		return &api.BackendReference{}, &BackendReferenceError{
+			Reason:  BackendReferenceErrorReasonBackendNotFound,
+			Message: fmt.Sprintf("XBackend not found: %s", key),
+		}
+	}
+	if backend.Spec.Type != gwxv1a1.BackendTypeExternalHostname || backend.Spec.ExternalHostname == nil {
+		return &api.BackendReference{}, &BackendReferenceError{
+			Reason:  BackendReferenceErrorReasonUnsupportedValue,
+			Message: fmt.Sprintf("XBackend %s must be an ExternalHostname backend", key),
+		}
+	}
+	if backend.Spec.Protocol != nil || backend.Spec.TLS != nil {
+		return &api.BackendReference{}, &BackendReferenceError{
+			Reason:  BackendReferenceErrorReasonUnsupportedValue,
+			Message: fmt.Sprintf("XBackend %s protocol and TLS configuration are not yet supported", key),
+		}
+	}
+	backendPort := gwv1.PortNumber(backend.Spec.Port.Port)
+	if port != nil && *port != backendPort {
+		return &api.BackendReference{}, &BackendReferenceError{
+			Reason:  BackendReferenceErrorReasonUnsupportedValue,
+			Message: fmt.Sprintf("backendRef port %d does not match XBackend %s port %d", *port, key, backendPort),
+		}
+	}
+	return &api.BackendReference{
+		Kind: &api.BackendReference_Service_{
+			Service: &api.BackendReference_Service{
+				Hostname:  string(backend.Spec.ExternalHostname.Hostname),
+				Namespace: namespace,
+			},
+		},
+		Port: uint32(backendPort), //nolint:gosec // G115: validated 1-65535 by the Gateway API CRD
+	}, nil
 }
 
 type RouteAttachment struct {
