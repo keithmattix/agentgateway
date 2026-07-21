@@ -87,6 +87,14 @@ rules:
 
 # Status reports
 - apiGroups:
+  - gateway.networking.x-k8s.io
+  resources:
+  - xbackends
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - gateway.networking.k8s.io
   resources:
   - backendtlspolicies/status
