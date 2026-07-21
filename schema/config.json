@@ -1885,6 +1885,18 @@
             }
           ],
           "default": null
+        },
+        "delay": {
+          "description": "Inject artificial latency before forwarding requests.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DelayPolicy"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "additionalProperties": false
@@ -6900,6 +6912,19 @@
       "additionalProperties": false,
       "required": [
         "codes"
+      ]
+    },
+    "DelayPolicy": {
+      "type": "object",
+      "properties": {
+        "duration": {
+          "description": "Artificial latency injected before the request is forwarded to the backend. Either a duration\nstring such as `2s`, or a CEL expression evaluated against the request that returns a duration\n(e.g. `duration(\"500ms\")`) or a number interpreted as milliseconds (e.g.\n`random() < 0.1 ? 500 : 0` for probabilistic delay, or `int(random() * 500)` for jitter). A\nnon-positive result injects no delay.",
+          "$ref": "#/$defs/Expression"
+        }
+      },
+      "additionalProperties": false,
+      "required": [
+        "duration"
       ]
     },
     "LocalRouteBackend": {

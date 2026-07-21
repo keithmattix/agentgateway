@@ -13441,6 +13441,26 @@ spec:
                         minItems: 1
                         type: array
                     type: object
+                  delay:
+                    description: |-
+                      Injects artificial latency before forwarding requests, for
+                      fault-injection testing.
+                    properties:
+                      duration:
+                        description: |-
+                          Latency to inject before forwarding the request to the backend. Either a duration string such
+                          as `2s`, or a CEL expression evaluated against the request that returns a duration (e.g.
+                          `duration("500ms")`) or a number interpreted as milliseconds (e.g. `random() < 0.1 ? 500 : 0`
+                          for probabilistic delay, or `int(random() * 500)` for jitter). A non-positive result injects
+                          no delay.
+
+                          The injected delay counts against the request timeout.
+                        maxLength: 16384
+                        minLength: 1
+                        type: string
+                    required:
+                    - duration
+                    type: object
                   directResponse:
                     description: |-
                       Sends a direct response to the
@@ -16056,7 +16076,7 @@ spec:
                 - message: phase PreRouting only supports extAuth, authorization,
                     transformation, extProc, jwtAuthentication, basicAuthentication,
                     apiKeyAuthentication and cors
-                  rule: 'has(self.phase) && self.phase == ''PreRouting'' ? [has(self.buffer),has(self.csrf),has(self.directResponse),has(self.headerModifiers),has(self.hostRewrite),has(self.rateLimit),has(self.retry),has(self.timeouts)].filter(x,x==true).size()
+                  rule: 'has(self.phase) && self.phase == ''PreRouting'' ? [has(self.buffer),has(self.csrf),has(self.delay),has(self.directResponse),has(self.headerModifiers),has(self.hostRewrite),has(self.rateLimit),has(self.retry),has(self.timeouts)].filter(x,x==true).size()
                     == 0 : true'
             type: object
             x-kubernetes-validations:

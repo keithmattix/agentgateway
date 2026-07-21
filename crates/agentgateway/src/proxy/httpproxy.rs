@@ -145,6 +145,14 @@ async fn apply_request_policies(
 	req: &mut Request,
 	rp: &mut ResponsePolicies,
 ) -> Result<(), ProxyResponse> {
+	// TODO we only need allow policies to be timeout-aware because we odn't have
+	// a unified timeout guard that applies during policy evalutation
+	if let Some(timeout) = rp.timeout.as_ref().and_then(|t| t.request_timeout) {
+		req.extensions_mut().insert(http::filters::RequestDeadline(
+			l.start.as_instant() + timeout,
+		));
+	}
+
 	// CORS must run before authentication, authorization and rate limiting so that:
 	// 1. Preflight OPTIONS requests short-circuit without requiring credentials
 	// 2. CORS response headers are queued even if the request is later rejected,
@@ -252,6 +260,12 @@ async fn apply_request_policies(
 	pol
 		.request_redirect
 		.apply_without_response("request redirect", c, l, req, rp.headers())
+		.await?;
+
+	// delay should happen after auth but before direct response
+	pol
+		.delay
+		.apply_without_response("delay", c, l, req, rp.headers())
 		.await?;
 	pol
 		.direct_response

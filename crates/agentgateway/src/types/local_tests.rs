@@ -1565,6 +1565,51 @@ binds:
 }
 
 #[tokio::test]
+async fn test_delay_policy() {
+	let input = r#"
+binds:
+- port: 3000
+  listeners:
+  - routes:
+    - policies:
+        delay:
+          duration: 2s
+      backends:
+      - host: 127.0.0.1:8000
+    - policies:
+        delay:
+          duration: 'request.headers["x-chaos"] == "1" ? 500 : 0'
+      backends:
+      - host: 127.0.0.1:8000
+"#;
+
+	let normalized = normalize_test_yaml(input).await.unwrap();
+	let routes = &normalized.listener_routes[0].1;
+
+	let delay_of = |i: usize| {
+		routes[i]
+			.inline_policies
+			.iter()
+			.find_map(|p| match p {
+				TrafficPolicy::Delay(p) => Some(p),
+				_ => None,
+			})
+			.expect("expected delay policy")
+	};
+
+	// A bare duration literal is wrapped into a CEL `duration(...)` call.
+	assert_eq!(
+		delay_of(0).duration.original_expression,
+		r#"duration("2s")"#
+	);
+	// A CEL expression is preserved as-is.
+	assert_eq!(
+		delay_of(1).duration.original_expression,
+		r#"request.headers["x-chaos"] == "1" ? 500 : 0"#
+	);
+}
+
+#[tokio::test]
 async fn test_inference_routing_rejects_failure_mode() {
 	let input = r#"
 binds:

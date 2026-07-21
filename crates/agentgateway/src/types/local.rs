@@ -2751,6 +2751,9 @@ pub struct FilterOrPolicy {
 	/// Retry matching failed upstream requests.
 	#[serde(default)]
 	retry: Option<retry::Policy>,
+	/// Inject artificial latency before forwarding requests.
+	#[serde(default)]
+	delay: Option<crate::http::delay::Policy>,
 }
 
 #[apply(schema_de!)]
@@ -5121,6 +5124,7 @@ pub(crate) async fn split_policies_for_target(
 		buffer,
 		timeout,
 		retry,
+		delay,
 	} = pol;
 	if let Some(p) = request_header_modifier {
 		if backend_target {
@@ -5303,6 +5307,9 @@ pub(crate) async fn split_policies_for_target(
 	}
 	if let Some(p) = retry {
 		route_policies.push(TrafficPolicy::Retry(p));
+	}
+	if let Some(p) = delay {
+		route_policies.push(TrafficPolicy::Delay(p));
 	}
 	if let Some(oidc) = compiled_oidc {
 		route_policies.push(oidc);

@@ -336,6 +336,12 @@ message Retry {
   string condition = 5;
 }
 
+message Delay {
+  // CEL expression evaluating to the artificial latency, in milliseconds, injected before the
+  // request is forwarded to the backend. A non-positive result injects no delay.
+  string duration = 1;
+}
+
 message BackendAuthPolicy {
   oneof kind {
     Passthrough passthrough = 1;
@@ -1167,6 +1173,7 @@ message TrafficPolicySpec {
     APIKey api_key_auth = 20;
     HostRewrite host_rewrite = 21;
     Buffer buffer = 22;
+    Delay delay = 23;
   }
 }
 
