@@ -189,6 +189,23 @@ export function ConfigDiffSaveActions(props: {
     setDiff(configDiffText(props.config, modified));
   }
 
+  const diffButton = (
+    <button
+      className="button"
+      type="button"
+      disabled={
+        props.saving ||
+        (!props.config && !props.resourceDiff) ||
+        props.diffDisabled ||
+        props.saveDisabled
+      }
+      onClick={viewDiff}
+    >
+      <FileText size={16} />
+      View diff
+    </button>
+  );
+
   return (
     <>
       <div className="button-row">
@@ -197,20 +214,11 @@ export function ConfigDiffSaveActions(props: {
             Cancel
           </button>
         ) : null}
-        <button
-          className="button"
-          type="button"
-          disabled={
-            props.saving ||
-            (!props.config && !props.resourceDiff) ||
-            props.diffDisabled ||
-            props.saveDisabled
-          }
-          onClick={viewDiff}
-        >
-          <FileText size={16} />
-          View diff
-        </button>
+        {props.diffDisabled ? (
+          <Tooltip content="No diff">{diffButton}</Tooltip>
+        ) : (
+          diffButton
+        )}
         <ConfigSaveButton
           disabled={props.saving || props.saveDisabled}
           allowHybridWrite={Boolean(props.resourceDiff)}
