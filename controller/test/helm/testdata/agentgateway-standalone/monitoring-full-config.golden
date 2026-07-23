@@ -198,30 +198,21 @@ spec:
         - name: admin
           containerPort: 15000
           protocol: TCP
+        - name: metrics
+          containerPort: 15020
+          protocol: TCP
         env:
         - name: RUST_BACKTRACE
           value: "1"
-        - name: LOG_FORMAT
-          value: json
-        - name: API_TOKEN
-          valueFrom:
-            secretKeyRef:
-              key: token
-              name: agw-secret
         volumeMounts:
         - name: config
           mountPath: /config
         - name: tmp
           mountPath: /tmp
-        - mountPath: /var/lib/agentgateway/plugins
-          name: plugin-cache
         resources:
-          limits:
-            cpu: "1"
-            memory: 1Gi
           requests:
-            cpu: 250m
-            memory: 256Mi
+            cpu: 100m
+            memory: 128Mi
       volumes:
       - name: config
         persistentVolumeClaim:
@@ -231,19 +222,30 @@ spec:
           name: agentgateway-standalone-config-bootstrap
       - name: tmp
         emptyDir: {}
-      - emptyDir: {}
-        name: plugin-cache
-      nodeSelector:
-        kubernetes.io/os: linux
-      affinity:
-        podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-          - labelSelector:
-              matchLabels:
-                app.kubernetes.io/component: standalone
-            topologyKey: kubernetes.io/hostname
-      tolerations:
-        - effect: NoSchedule
-          key: dedicated
-          operator: Equal
-          value: agentgateway
+---
+# Source: agentgateway-standalone/templates/monitoring.yaml
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: agentgateway-standalone
+  namespace: default
+  labels:
+    helm.sh/chart: agentgateway-standalone-0.0.1
+    app.kubernetes.io/name: agentgateway-standalone
+    app.kubernetes.io/instance: test-release
+    app.kubernetes.io/component: standalone
+    app.kubernetes.io/version: "0.0.0-dev"
+    app.kubernetes.io/managed-by: Helm
+    plane: monitoring
+  annotations:
+    example.com/note: monitoring
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: agentgateway-standalone
+      app.kubernetes.io/instance: test-release
+      app.kubernetes.io/component: standalone
+  podMetricsEndpoints:
+  - port: metrics
+    path: /metrics
+    interval: 30s
