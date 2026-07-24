@@ -894,7 +894,7 @@ fn openai_completions_error_translates_to_messages_client() {
 	req.request_model = "gpt-4o".into();
 
 	let error = Bytes::from_static(
-		br#"{"error":{"message":"bad request","type":"invalid_request_error","param":null,"code":null}}"#,
+		br#"{"error":{"message":"bad request","type":"invalid_request_error","param":null,"code":400}}"#,
 	);
 	let translated = provider
 		.process_error(&req, ::http::StatusCode::BAD_REQUEST, &error)

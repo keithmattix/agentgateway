@@ -53,7 +53,7 @@ pub fn translate_google_error(bytes: &Bytes) -> Result<Bytes, crate::AIError> {
 			r#type: Some(google_error_type(&res.error).to_string()),
 			message: res.error.message.clone(),
 			param: None,
-			code: res.error.status.clone(),
+			code: res.error.status.clone().map(serde_json::Value::String),
 			event_id: None,
 		},
 	};

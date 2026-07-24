@@ -918,7 +918,7 @@ pub mod typed {
 		#[serde(skip_serializing_if = "Option::is_none")]
 		pub param: Option<String>,
 		#[serde(skip_serializing_if = "Option::is_none")]
-		pub code: Option<String>,
+		pub code: Option<serde_json::Value>,
 		#[serde(skip_serializing_if = "Option::is_none")]
 		pub event_id: Option<String>,
 	}
