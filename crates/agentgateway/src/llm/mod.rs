@@ -9,9 +9,9 @@ use agent_core::strng;
 pub use agent_llm::tokenizer::{num_tokens_from_messages, preload_tokenizers};
 pub use agent_llm::{
 	AIError, CacheTokenConvention, ChatFormat, InputFormat, LLMInfo, LLMRequest, LLMRequestParams,
-	LLMResponse, PromptCachingConfig, Provider, ProviderState, RequestType, ResponseType, RouteType,
-	SimpleChatCompletionMessage, anthropic, conversion, copilot, custom, gemini,
-	logged_response_parsing, openai, types,
+	LLMResponse, LogContentFields, PromptCachingConfig, Provider, ProviderState, RequestType,
+	ResponseType, RouteType, SimpleChatCompletionMessage, anthropic, conversion, copilot, custom,
+	gemini, logged_response_parsing, openai, types,
 };
 use axum_extra::headers::authorization::Bearer;
 use headers::{ContentEncoding, HeaderMapExt};
@@ -37,6 +37,7 @@ pub mod cost;
 pub mod policy;
 
 use policy::streaming_guardrails::GuardedSseBody;
+pub use types::{OutputMessage, OutputMessagePart, ToolCall};
 
 use crate::cel::{Executor, LLMContext, RequestSnapshot};
 use crate::proxy::dtrace;
@@ -287,7 +288,7 @@ struct ChatStreamContext {
 	buffer_limit: usize,
 	logger: agent_llm::StreamingUsageGuard,
 	model: String,
-	include_completion_in_log: bool,
+	log_content: LogContentFields,
 	tool_name_map: Option<conversion::bedrock::BedrockToolNameMap>,
 }
 
@@ -535,13 +536,16 @@ impl ChatTranslation {
 	fn stream(&self, resp: Response, ctx: ChatStreamContext) -> Response {
 		match self.output {
 			ChatFormat::OpenAICompletions => match self.input {
-				InputFormat::Completions => conversion::completions::passthrough_stream(
-					ctx.logger,
-					ctx.include_completion_in_log,
-					resp,
-				),
+				InputFormat::Completions => {
+					conversion::completions::passthrough_stream(ctx.logger, ctx.log_content, resp)
+				},
 				InputFormat::Messages => resp.map(|b| {
-					conversion::completions::from_messages::translate_stream(b, ctx.buffer_limit, ctx.logger)
+					conversion::completions::from_messages::translate_stream(
+						b,
+						ctx.buffer_limit,
+						ctx.logger,
+						ctx.log_content,
+					)
 				}),
 				InputFormat::Responses => resp.map(|b| {
 					conversion::openai_compat::to_responses::translate_stream(b, ctx.buffer_limit, ctx.logger)
@@ -555,7 +559,7 @@ impl ChatTranslation {
 						b,
 						ctx.buffer_limit,
 						ctx.logger,
-						ctx.include_completion_in_log,
+						ctx.log_content,
 					)
 				}),
 				_ => resp,
@@ -563,12 +567,7 @@ impl ChatTranslation {
 
 			ChatFormat::AnthropicMessages => match self.input {
 				InputFormat::Messages => resp.map(|b| {
-					conversion::messages::passthrough_stream(
-						b,
-						ctx.buffer_limit,
-						ctx.logger,
-						ctx.include_completion_in_log,
-					)
+					conversion::messages::passthrough_stream(b, ctx.buffer_limit, ctx.logger, ctx.log_content)
 				}),
 				InputFormat::Completions => resp.map(|b| {
 					conversion::messages::from_completions::translate_stream(b, ctx.buffer_limit, ctx.logger)
@@ -601,7 +600,7 @@ impl ChatTranslation {
 							ctx.logger,
 							&ctx.model,
 							&msg,
-							ctx.include_completion_in_log,
+							ctx.log_content,
 							tool_name_map,
 						)
 					})
@@ -1853,7 +1852,7 @@ impl AIProvider {
 		rate_limit: LLMResponsePolicies,
 		req_snapshot: Option<Arc<RequestSnapshot>>,
 		log: AsyncLog<llm::LLMInfo>,
-		include_completion_in_log: bool,
+		log_content: LogContentFields,
 		model_catalog: Option<&Arc<cost::ModelCatalog>>,
 		resp: Response,
 	) -> Result<Response, AIError> {
@@ -1867,7 +1866,7 @@ impl AIProvider {
 				rate_limit,
 				req_snapshot,
 				log,
-				include_completion_in_log,
+				log_content,
 				model_catalog.cloned(),
 				resp,
 			);
@@ -1894,7 +1893,7 @@ impl AIProvider {
 						rate_limit,
 						req_snapshot,
 						log,
-						include_completion_in_log,
+						log_content,
 						model_catalog,
 						buffered,
 					)
@@ -1911,7 +1910,7 @@ impl AIProvider {
 		rate_limit: LLMResponsePolicies,
 		req_snapshot: Option<Arc<RequestSnapshot>>,
 		log: AsyncLog<llm::LLMInfo>,
-		include_completion_in_log: bool,
+		log_content: LogContentFields,
 		model_catalog: Option<&cost::ModelCatalog>,
 		buffered: BufferedResponse,
 	) -> Result<Response, AIError> {
@@ -1945,7 +1944,7 @@ impl AIProvider {
 				return Ok(dr);
 			}
 
-			let llm_resp = resp.to_llm_response(include_completion_in_log);
+			let llm_resp = resp.to_llm_response(log_content);
 			let body = resp.serialize().map_err(AIError::ResponseParsing)?;
 			(llm_resp, Bytes::copy_from_slice(&body))
 		};
@@ -2152,21 +2151,21 @@ impl AIProvider {
 					headers,
 					&req.request_model,
 				)?;
-				let llm_resp = translated.to_llm_response(false);
+				let llm_resp = translated.to_llm_response(LogContentFields::default());
 				let body = translated.serialize().map_err(AIError::ResponseParsing)?;
 				Ok((llm_resp, Bytes::from(body)))
 			},
 			AIProvider::Vertex(p) if !p.is_anthropic_model(Some(&req.request_model)) => {
 				let translated =
 					conversion::vertex::from_embeddings::translate_response(&bytes, &req.request_model)?;
-				let llm_resp = translated.to_llm_response(false);
+				let llm_resp = translated.to_llm_response(LogContentFields::default());
 				let body = translated.serialize().map_err(AIError::ResponseParsing)?;
 				Ok((llm_resp, Bytes::from(body)))
 			},
 			_ => {
 				let resp: types::embeddings::Response =
 					serde_json::from_slice(&bytes).map_err(logged_response_parsing(&bytes))?;
-				Ok((resp.to_llm_response(false), bytes))
+				Ok((resp.to_llm_response(LogContentFields::default()), bytes))
 			},
 		}
 	}
@@ -2175,20 +2174,20 @@ impl AIProvider {
 		match self {
 			AIProvider::Bedrock(_) => {
 				let translated = conversion::bedrock::from_rerank::translate_response(&bytes)?;
-				let llm_resp = translated.to_llm_response(false);
+				let llm_resp = translated.to_llm_response(LogContentFields::default());
 				let body = translated.serialize().map_err(AIError::ResponseParsing)?;
 				Ok((llm_resp, Bytes::from(body)))
 			},
 			AIProvider::Vertex(_) => {
 				let translated = conversion::vertex::from_rerank::translate_response(&bytes)?;
-				let llm_resp = translated.to_llm_response(false);
+				let llm_resp = translated.to_llm_response(LogContentFields::default());
 				let body = translated.serialize().map_err(AIError::ResponseParsing)?;
 				Ok((llm_resp, Bytes::from(body)))
 			},
 			_ => {
 				let resp =
 					types::rerank::parse_response_lenient(&bytes).map_err(logged_response_parsing(&bytes))?;
-				Ok((resp.to_llm_response(false), bytes))
+				Ok((resp.to_llm_response(LogContentFields::default()), bytes))
 			},
 		}
 	}
@@ -2232,7 +2231,7 @@ impl AIProvider {
 		response_policies: LLMResponsePolicies,
 		req_snapshot: Option<Arc<RequestSnapshot>>,
 		log: AsyncLog<llm::LLMInfo>,
-		include_completion_in_log: bool,
+		log_content: LogContentFields,
 		model_catalog: Option<Arc<cost::ModelCatalog>>,
 		resp: Response,
 	) -> Result<Response, AIError> {
@@ -2324,7 +2323,7 @@ impl AIProvider {
 					buffer_limit: buffer,
 					logger,
 					model: model.to_string(),
-					include_completion_in_log,
+					log_content,
 					tool_name_map: bedrock_tool_name_map,
 				},
 			)
