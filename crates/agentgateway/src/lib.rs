@@ -45,7 +45,6 @@ pub mod telemetry;
 pub mod test_helpers;
 pub mod transport;
 pub mod types;
-#[cfg(feature = "ui")]
 mod ui;
 pub mod util;
 
