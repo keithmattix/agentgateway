@@ -2424,7 +2424,7 @@
               ]
             },
             {
-              "description": "Deny the request when this CEL expression is true.",
+              "description": "Deny the request when this CEL expression is true. This mode is not\nrecommended because expression failures fail to deny; prefer `Allow` or\n`Require`. If used, design expressions defensively against evaluation errors.",
               "type": "object",
               "properties": {
                 "deny": {
