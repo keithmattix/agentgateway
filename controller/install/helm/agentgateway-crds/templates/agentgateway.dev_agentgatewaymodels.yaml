@@ -1542,6 +1542,7 @@ spec:
                               If all endpoints are evicted, the load balancer falls back to returning evicted endpoints
                               rather than failing entirely.
                               If unset, defaults to `3s`.
+                            maxLength: 32
                             type: string
                             x-kubernetes-validations:
                             - message: invalid duration value
@@ -1859,6 +1860,7 @@ spec:
                                         requestTimeout:
                                           description: Deadline for receiving a response
                                             from the backend.
+                                          maxLength: 32
                                           type: string
                                           x-kubernetes-validations:
                                           - message: invalid duration value
@@ -1885,6 +1887,7 @@ spec:
                                           description: |-
                                             Deadline for establishing a connection to
                                             the destination.
+                                          maxLength: 32
                                           type: string
                                           x-kubernetes-validations:
                                           - message: invalid duration value
@@ -1901,6 +1904,7 @@ spec:
                                               description: |-
                                                 Time between keepalive probes.
                                                 If unset, this defaults to 180s.
+                                              maxLength: 32
                                               type: string
                                               x-kubernetes-validations:
                                               - message: invalid duration value
@@ -1920,6 +1924,7 @@ spec:
                                               description: |-
                                                 Time a connection needs to be idle before keepalive probes start being sent.
                                                 If unset, this defaults to 180s.
+                                              maxLength: 32
                                               type: string
                                               x-kubernetes-validations:
                                               - message: invalid duration value
@@ -2255,6 +2260,7 @@ spec:
                                         requestTimeout:
                                           description: Deadline for receiving a response
                                             from the backend.
+                                          maxLength: 32
                                           type: string
                                           x-kubernetes-validations:
                                           - message: invalid duration value
@@ -2281,6 +2287,7 @@ spec:
                                           description: |-
                                             Deadline for establishing a connection to
                                             the destination.
+                                          maxLength: 32
                                           type: string
                                           x-kubernetes-validations:
                                           - message: invalid duration value
@@ -2297,6 +2304,7 @@ spec:
                                               description: |-
                                                 Time between keepalive probes.
                                                 If unset, this defaults to 180s.
+                                              maxLength: 32
                                               type: string
                                               x-kubernetes-validations:
                                               - message: invalid duration value
@@ -2316,6 +2324,7 @@ spec:
                                               description: |-
                                                 Time a connection needs to be idle before keepalive probes start being sent.
                                                 If unset, this defaults to 180s.
+                                              maxLength: 32
                                               type: string
                                               x-kubernetes-validations:
                                               - message: invalid duration value
@@ -2670,6 +2679,7 @@ spec:
                                         requestTimeout:
                                           description: Deadline for receiving a response
                                             from the backend.
+                                          maxLength: 32
                                           type: string
                                           x-kubernetes-validations:
                                           - message: invalid duration value
@@ -2696,6 +2706,7 @@ spec:
                                           description: |-
                                             Deadline for establishing a connection to
                                             the destination.
+                                          maxLength: 32
                                           type: string
                                           x-kubernetes-validations:
                                           - message: invalid duration value
@@ -2712,6 +2723,7 @@ spec:
                                               description: |-
                                                 Time between keepalive probes.
                                                 If unset, this defaults to 180s.
+                                              maxLength: 32
                                               type: string
                                               x-kubernetes-validations:
                                               - message: invalid duration value
@@ -2731,6 +2743,7 @@ spec:
                                               description: |-
                                                 Time a connection needs to be idle before keepalive probes start being sent.
                                                 If unset, this defaults to 180s.
+                                              maxLength: 32
                                               type: string
                                               x-kubernetes-validations:
                                               - message: invalid duration value
@@ -3401,6 +3414,7 @@ spec:
                                         requestTimeout:
                                           description: Deadline for receiving a response
                                             from the backend.
+                                          maxLength: 32
                                           type: string
                                           x-kubernetes-validations:
                                           - message: invalid duration value
@@ -3427,6 +3441,7 @@ spec:
                                           description: |-
                                             Deadline for establishing a connection to
                                             the destination.
+                                          maxLength: 32
                                           type: string
                                           x-kubernetes-validations:
                                           - message: invalid duration value
@@ -3443,6 +3458,7 @@ spec:
                                               description: |-
                                                 Time between keepalive probes.
                                                 If unset, this defaults to 180s.
+                                              maxLength: 32
                                               type: string
                                               x-kubernetes-validations:
                                               - message: invalid duration value
@@ -3462,6 +3478,7 @@ spec:
                                               description: |-
                                                 Time a connection needs to be idle before keepalive probes start being sent.
                                                 If unset, this defaults to 180s.
+                                              maxLength: 32
                                               type: string
                                               x-kubernetes-validations:
                                               - message: invalid duration value
@@ -3797,6 +3814,7 @@ spec:
                                         requestTimeout:
                                           description: Deadline for receiving a response
                                             from the backend.
+                                          maxLength: 32
                                           type: string
                                           x-kubernetes-validations:
                                           - message: invalid duration value
@@ -3823,6 +3841,7 @@ spec:
                                           description: |-
                                             Deadline for establishing a connection to
                                             the destination.
+                                          maxLength: 32
                                           type: string
                                           x-kubernetes-validations:
                                           - message: invalid duration value
@@ -3839,6 +3858,7 @@ spec:
                                               description: |-
                                                 Time between keepalive probes.
                                                 If unset, this defaults to 180s.
+                                              maxLength: 32
                                               type: string
                                               x-kubernetes-validations:
                                               - message: invalid duration value
@@ -3858,6 +3878,7 @@ spec:
                                               description: |-
                                                 Time a connection needs to be idle before keepalive probes start being sent.
                                                 If unset, this defaults to 180s.
+                                              maxLength: 32
                                               type: string
                                               x-kubernetes-validations:
                                               - message: invalid duration value
