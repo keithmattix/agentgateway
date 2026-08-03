@@ -25,6 +25,11 @@ pub mod envoy {
 				tonic::include_proto!("envoy.service.ext_proc.v3");
 			}
 		}
+		pub mod network_ext_proc {
+			pub mod v3 {
+				tonic::include_proto!("envoy.service.network_ext_proc.v3");
+			}
+		}
 
 		pub mod ratelimit {
 			pub mod v3 {
