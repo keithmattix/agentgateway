@@ -2576,7 +2576,7 @@ const (
 	// BodySendModeNone does not send the body to the external processor.
 	BodySendModeNone BodySendMode = "None"
 	// BodySendModeBuffered buffers the full body before sending it to the
-	// external processor. It returns an error if the body exceeds 8KB.
+	// external processor. Inherits the gateway's general buffer limit.
 	BodySendModeBuffered BodySendMode = "Buffered"
 	// BodySendModeBufferedPartial buffers up to 8KB. If the body exceeds that
 	// limit, it sends the buffered prefix instead of returning an error.
