@@ -2576,10 +2576,12 @@ const (
 	// BodySendModeNone does not send the body to the external processor.
 	BodySendModeNone BodySendMode = "None"
 	// BodySendModeBuffered buffers the full body before sending it to the
-	// external processor. Inherits the gateway's general buffer limit.
+	// external processor. Returns an error if the body exceeds the
+	// configured body buffer limit.
 	BodySendModeBuffered BodySendMode = "Buffered"
-	// BodySendModeBufferedPartial buffers up to 8KB. If the body exceeds that
-	// limit, it sends the buffered prefix instead of returning an error.
+	// BodySendModeBufferedPartial buffers up to the configured body buffer limit.
+	// If the body exceeds that limit, it sends the buffered prefix instead of
+	// returning an error.
 	BodySendModeBufferedPartial BodySendMode = "BufferedPartial"
 	// BodySendModeFullDuplexStreamed streams the body to the external processor.
 	BodySendModeFullDuplexStreamed BodySendMode = "FullDuplexStreamed"
@@ -2610,17 +2612,13 @@ const (
 // External processor request and response phase settings.
 type ProcessingOptions struct {
 	// How request bodies are sent to the external processor.
-	// `Buffered` buffers the full body and returns an error if it exceeds 8KB.
-	// `BufferedPartial` buffers up to 8KB and sends the buffered prefix if the
-	// body exceeds that limit. Defaults to `FullDuplexStreamed`.
+	// Defaults to `FullDuplexStreamed`.
 	// +optional
 	// +kubebuilder:default=FullDuplexStreamed
 	RequestBodyMode *BodySendMode `json:"requestBodyMode,omitempty"`
 
 	// How response bodies are sent to the external processor.
-	// `Buffered` buffers the full body and returns an error if it exceeds 8KB.
-	// `BufferedPartial` buffers up to 8KB and sends the buffered prefix if the
-	// body exceeds that limit. Defaults to `FullDuplexStreamed`.
+	// Defaults to `FullDuplexStreamed`.
 	// +optional
 	// +kubebuilder:default=FullDuplexStreamed
 	ResponseBodyMode *BodySendMode `json:"responseBodyMode,omitempty"`
