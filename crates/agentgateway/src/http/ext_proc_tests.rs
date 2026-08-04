@@ -3558,7 +3558,9 @@ mod connect_authority_mutation {
 		// failing DNS resolution and masking the bug.
 		let decoy = body_mock(b"DECOY-MARKER").await;
 		let connect_target = decoy.address().to_string();
-		io.write_all(format!("CONNECT {connect_target} HTTP/1.1\r\nHost: {connect_target}\r\n\r\n").as_bytes())
+		io.write_all(
+			format!("CONNECT {connect_target} HTTP/1.1\r\nHost: {connect_target}\r\n\r\n").as_bytes(),
+		)
 		.await
 		.unwrap();
 
@@ -3582,10 +3584,13 @@ mod connect_authority_mutation {
 			.await
 			.unwrap();
 		let mut tunneled = Vec::new();
-		tokio::time::timeout(std::time::Duration::from_secs(5), io.read_to_end(&mut tunneled))
-			.await
-			.expect("timed out waiting for tunneled response")
-			.unwrap();
+		tokio::time::timeout(
+			std::time::Duration::from_secs(5),
+			io.read_to_end(&mut tunneled),
+		)
+		.await
+		.expect("timed out waiting for tunneled response")
+		.unwrap();
 		let tunneled_text = String::from_utf8_lossy(&tunneled).to_string();
 		assert!(
 			tunneled_text.contains("WORKER-MARKER"),
@@ -3597,7 +3602,7 @@ mod connect_authority_mutation {
 	/// Separate from the authority no-op bug: does a `backendTLS` policy attached
 	/// to a `dynamic: {}` route backend actually get originated for a CONNECT
 	/// tunnel?
-	#[cfg(feature = "tls-aws-lc")]
+	#[cfg(feature = "crypto-aws-lc")]
 	#[tokio::test]
 	async fn connect_dynamic_backend_honors_inline_backend_tls() {
 		use crate::http::backendtls::{BackendTLS, ResolvedBackendTLS};
@@ -3674,7 +3679,9 @@ mod connect_authority_mutation {
 		let mut io = t.serve(BIND_KEY);
 		let decoy = body_mock(b"DECOY-MARKER").await;
 		let connect_target = decoy.address().to_string();
-		io.write_all(format!("CONNECT {connect_target} HTTP/1.1\r\nHost: {connect_target}\r\n\r\n").as_bytes())
+		io.write_all(
+			format!("CONNECT {connect_target} HTTP/1.1\r\nHost: {connect_target}\r\n\r\n").as_bytes(),
+		)
 		.await
 		.unwrap();
 
