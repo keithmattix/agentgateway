@@ -3476,8 +3476,6 @@ mod header_mutations {
 	}
 }
 
-// Reproduction for a substrate atenet-router bug report: ext_proc rewriting
-// `:authority` on a CONNECT request against a `dynamic: {}` backend.
 mod connect_authority_mutation {
 	use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
@@ -3598,9 +3596,7 @@ mod connect_authority_mutation {
 
 	/// Separate from the authority no-op bug: does a `backendTLS` policy attached
 	/// to a `dynamic: {}` route backend actually get originated for a CONNECT
-	/// tunnel? substrate's atenet-router config attaches `backendTLS` exactly
-	/// this way (inline on the route's dynamic backend reference) because the
-	/// worker it tunnels to only accepts TLS.
+	/// tunnel?
 	#[cfg(feature = "tls-aws-lc")]
 	#[tokio::test]
 	async fn connect_dynamic_backend_honors_inline_backend_tls() {
@@ -3626,9 +3622,10 @@ mod connect_authority_mutation {
 			.write()
 			.insert_backend(dynamic_backend.name(), dynamic_backend.into());
 
+		// No `hostname` override
 		let backend_tls: BackendTLS = ResolvedBackendTLS {
 			root: Some(certs.root_cert.pem().into_bytes()),
-			hostname: Some("localhost".to_string()),
+			insecure_host: true,
 			alpn: Some(vec!["http/1.1".to_string()]),
 			..Default::default()
 		}
@@ -3723,6 +3720,171 @@ mod connect_authority_mutation {
 				 the worker's TLS listener undecrypted (partial: {tunneled_text})"
 			),
 		}
+	}
+
+	/// Design question from the substrate atenet-router bug report: switching
+	/// `frontendPolicies.connect.mode` from `route` to `tunnel` would run
+	/// ext_proc on every request inside the tunnel (not just the CONNECT),
+	/// which would fix the target-port propagation gap Route mode has. But it
+	/// needs the *original* CONNECT authority (which carries both the actor
+	/// identity and the target port) available to ext_proc for each re-entered
+	/// request -- the re-entered request's own Host header is whatever the
+	/// client happens to send inside the tunnel, unrelated to the actor.
+	///
+	/// This reproduces the full topology: an outer bind terminates the CONNECT
+	/// tunnel and re-enters an inner wildcard bind, whose route's ext_proc
+	/// resolves `source.connectHeaders["host"]` (the original CONNECT
+	/// authority) instead of `request.host`, then rewrites `:authority` to the
+	/// worker exactly like the existing (working) Route-mode mutation does.
+	#[tokio::test]
+	async fn tunnel_mode_reentry_carries_connect_authority_to_ext_proc() {
+		use crate::types::agent::{BindMode, TunnelProtocol};
+
+		let worker = body_mock(b"WORKER-MARKER").await;
+		let worker_addr = worker.address().to_string();
+		let seen_authority: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
+
+		let ext_proc = {
+			let seen_authority = seen_authority.clone();
+			ExtProcMock::new(move || TunnelRewriteAuthorityExtProc {
+				target: worker_addr.clone(),
+				seen_authority: seen_authority.clone(),
+			})
+			.spawn()
+			.await
+		};
+
+		let dynamic_backend = Backend::Dynamic(ResourceName::new("dynamic".into(), "".into()), ());
+		let t = setup_proxy_test("{}").unwrap();
+		t.inputs()
+			.stores
+			.binds
+			.write()
+			.insert_backend(dynamic_backend.name(), dynamic_backend.into());
+
+		// Outer bind: terminates the CONNECT tunnel (Tunnel mode).
+		let mut outer = simple_bind();
+		outer.key = strng::literal!("outer");
+		outer.address = "127.0.0.1:15013".parse().unwrap();
+		outer.tunnel_protocol = TunnelProtocol::Connect;
+
+		// Inner: wildcard internal bind, re-entered regardless of the CONNECT's
+		// target port (our router serves an actor's arbitrary exposed port, so
+		// there's no fixed port to bind on ahead of time).
+		let mut inner = simple_bind();
+		inner.key = strng::literal!("bind/wildcard");
+		inner.mode = BindMode::Internal;
+
+		let t = t
+			.with_backend(ext_proc.address)
+			.with_bind(outer)
+			.with_bind(inner)
+			.with_route(basic_named_route("/dynamic".into()));
+		let t = t
+			.attach_route_policy_builder(json!({
+				"extProc": {
+					"host": ext_proc.address,
+					"failureMode": "failClosed",
+					"requestAttributes": {
+						"filter_state['dev.substrate.authority']": "source.connectHeaders[\"host\"]",
+					},
+				}
+			}))
+			.await;
+
+		let mut io = t.serve_tunnel(strng::literal!("outer"));
+		let connect_target = "test1.demo.actors.resources.substrate.ate.dev:9090";
+		io.write_all(
+			format!("CONNECT {connect_target} HTTP/1.1\r\nHost: {connect_target}\r\n\r\n").as_bytes(),
+		)
+		.await
+		.unwrap();
+
+		let mut response = Vec::new();
+		loop {
+			let mut chunk = [0; 1024];
+			let n = io.read(&mut chunk).await.unwrap();
+			assert!(n > 0, "CONNECT response unexpectedly closed");
+			response.extend_from_slice(&chunk[..n]);
+			if response.windows(4).any(|w| w == b"\r\n\r\n") {
+				break;
+			}
+		}
+		let response_text = String::from_utf8_lossy(&response).to_string();
+		assert!(
+			response_text.starts_with("HTTP/1.1 200 OK\r\n"),
+			"unexpected CONNECT response: {response_text}",
+		);
+
+		// The re-entered request's own Host is deliberately unrelated to the
+		// actor -- proving backend resolution doesn't (and can't) depend on it.
+		io.write_all(b"GET /foo HTTP/1.1\r\nHost: irrelevant.example\r\nConnection: close\r\n\r\n")
+			.await
+			.unwrap();
+		let mut tunneled = Vec::new();
+		tokio::time::timeout(
+			std::time::Duration::from_secs(5),
+			io.read_to_end(&mut tunneled),
+		)
+		.await
+		.expect("timed out waiting for tunneled response")
+		.unwrap();
+		let tunneled_text = String::from_utf8_lossy(&tunneled).to_string();
+		assert!(
+			tunneled_text.contains("WORKER-MARKER"),
+			"expected the re-entered request to reach the ext_proc-rewritten worker, \
+			 got: {tunneled_text}",
+		);
+
+		assert_eq!(
+			seen_authority.lock().unwrap().as_deref(),
+			Some(connect_target),
+			"ext_proc should have resolved the ORIGINAL CONNECT authority via \
+			 source.connectHeaders, not the re-entered request's own (unrelated) Host",
+		);
+	}
+}
+
+#[derive(Clone)]
+struct TunnelRewriteAuthorityExtProc {
+	target: String,
+	seen_authority: Arc<Mutex<Option<String>>>,
+}
+
+#[async_trait::async_trait]
+impl Handler for TunnelRewriteAuthorityExtProc {
+	async fn on_request(&mut self, request: &proto::ProcessingRequest) {
+		if let Some(ns) = request.attributes.get("envoy.filters.http.ext_proc")
+			&& let Some(v) = ns.fields.get("filter_state['dev.substrate.authority']")
+			&& let Some(prost_wkt_types::value::Kind::StringValue(s)) = &v.kind
+		{
+			*self.seen_authority.lock().unwrap() = Some(s.clone());
+		}
+	}
+
+	async fn handle_request_headers(
+		&mut self,
+		_headers: &HttpHeaders,
+		sender: &Sender<Result<ProcessingResponse, Status>>,
+	) -> Result<(), Status> {
+		let _ = sender
+			.send(request_header_response(Some(CommonResponse {
+				header_mutation: Some(HeaderMutation {
+					set_headers: vec![HeaderValueOption {
+						header: Some(HeaderValue {
+							key: ":authority".to_string(),
+							value: self.target.clone(),
+							raw_value: self.target.clone().into_bytes(),
+						}),
+						append: None,
+						append_action: HeaderAppendAction::OverwriteIfExistsOrAdd.into(),
+					}],
+					remove_headers: vec![],
+				}),
+				..Default::default()
+			})))
+			.await;
+		Ok(())
 	}
 }
 
