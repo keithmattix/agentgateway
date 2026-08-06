@@ -501,7 +501,7 @@ impl Gateway {
 				let (ext, metrics, inner) = raw_stream.into_parts();
 				let mut rewind = Socket::new_rewind(inner);
 				let mut buf = [0u8; AUTO_PROTOCOL_PEEK_LEN];
-				match tokio::time::timeout(to, peek_upto(&mut rewind, &mut buf)).await {
+				match tokio::time::timeout(to, peek_auto_protocol(&mut rewind, &mut buf)).await {
 					Err(_) => {
 						debug!(bind=%bind_name, "auto protocol detection timed out");
 					},
@@ -1588,21 +1588,41 @@ fn looks_like_http(d: &[u8]) -> bool {
 	METHODS.iter().any(|m| d.starts_with(m)) || d.starts_with(b"PRI *")
 }
 
-/// Reads up to `buf.len()` bytes for `BindProtocol::auto` detection, returning
-/// early with whatever was read if the peer closes before filling the buffer --
-/// a short-but-complete raw TCP handshake shouldn't have to wait out the full
-/// peek window before it can be classified.
-async fn peek_upto<R: tokio::io::AsyncRead + Unpin>(
+/// Returns whether `d` can still become a recognizable plaintext HTTP request
+/// line after reading more bytes.
+fn could_be_http_prefix(d: &[u8]) -> bool {
+	const METHODS: &[&[u8]] = &[
+		b"GET ",
+		b"HEAD ",
+		b"POST ",
+		b"PUT ",
+		b"DELETE ",
+		b"CONNECT ",
+		b"OPTIONS ",
+		b"TRACE ",
+		b"PATCH ",
+	];
+	METHODS.iter().any(|m| m.starts_with(d)) || b"PRI *".starts_with(d)
+}
+
+/// Reads just enough bytes for `BindProtocol::auto` detection. TLS is decided
+/// by its first byte; non-TLS traffic is read only while it could still be an
+/// HTTP request-line prefix, so opaque TCP does not wait for the peek window.
+async fn peek_auto_protocol<R: tokio::io::AsyncRead + Unpin>(
 	r: &mut R,
 	buf: &mut [u8],
 ) -> std::io::Result<usize> {
 	let mut total = 0;
 	while total < buf.len() {
-		let n = tokio::io::AsyncReadExt::read(r, &mut buf[total..]).await?;
+		let n = tokio::io::AsyncReadExt::read(r, &mut buf[total..total + 1]).await?;
 		if n == 0 {
 			break;
 		}
 		total += n;
+		let peeked = &buf[..total];
+		if peeked[0] == 0x16 || looks_like_http(peeked) || !could_be_http_prefix(peeked) {
+			break;
+		}
 	}
 	Ok(total)
 }

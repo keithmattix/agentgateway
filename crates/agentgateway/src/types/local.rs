@@ -1198,7 +1198,7 @@ struct LocalListener {
 	name: LocalListenerName,
 	/// Can be a wildcard
 	hostname: Option<Strng>,
-	/// Protocol this listener accepts: HTTP, HTTPS, TCP, TLS, HBONE, or Auto.
+	/// Protocol this listener accepts: HTTP, HTTPS, TCP, TLS, HBONE, or AUTO.
 	#[serde(default)]
 	protocol: LocalListenerProtocol,
 	/// TLS configuration, used with the HTTPS and TLS protocols.
@@ -4796,7 +4796,7 @@ async fn convert_listener(
 		LocalListenerProtocol::HBONE => ListenerProtocol::HBONE,
 		LocalListenerProtocol::Auto => {
 			if routes.is_none() && tcp_routes.is_none() {
-				bail!("protocol Auto requires 'routes', 'tcpRoutes', or both")
+				bail!("protocol AUTO requires 'routes', 'tcpRoutes', or both")
 			}
 			// Auto-detection happens per connection (BindProtocol::auto), before
 			// either route set is consulted, so this listener must still be

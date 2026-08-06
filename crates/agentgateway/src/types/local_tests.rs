@@ -376,7 +376,7 @@ binds:
 	)
 	.await
 	.expect_err("an Auto listener with neither routes nor tcpRoutes should be rejected");
-	assert!(err.to_string().contains("Auto"), "{err}");
+	assert!(err.to_string().contains("protocol AUTO"), "{err}");
 }
 
 #[tokio::test]
