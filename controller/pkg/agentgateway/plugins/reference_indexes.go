@@ -55,6 +55,20 @@ type BackendReferenceError struct {
 	Message string
 }
 
+// gatewayPolicyTarget maps the agentgateway-only <listener>/llm subsection to
+// the generated LLM route. All other section names retain Gateway API's normal
+// listener semantics.
+func gatewayPolicyTarget(namespace, name string, sectionName *gwv1.SectionName, port *gwv1.PortNumber) *api.PolicyTarget {
+	if sectionName != nil {
+		if listener, ok := utils.LLMSectionName(string(*sectionName)); ok {
+			return &api.PolicyTarget{
+				Kind: utils.RouteTarget[string](utils.LLMRouterRouteNamespace, utils.LLMRouterRouteName(utils.InternalGatewayName(namespace, name, listener)), "", nil),
+			}
+		}
+	}
+	return &api.PolicyTarget{Kind: utils.GatewayTarget(namespace, name, sectionName, port)}
+}
+
 func ExtractName[T controllers.ComparableObject](t T) types.NamespacedName {
 	return types.NamespacedName{
 		Namespace: t.GetNamespace(),
@@ -93,9 +107,7 @@ func DefaultReferenceTypes(agw *AgwCollections) ReferenceTypes {
 			key := namespace + "/" + string(name)
 			switch gk {
 			case wellknown.GatewayGVK.GroupKind():
-				return []*api.PolicyTarget{{
-					Kind: utils.GatewayTarget(namespace, string(name), sectionName, port),
-				}}, ResourceExists(krtctx, agw.Gateways, key)
+				return []*api.PolicyTarget{gatewayPolicyTarget(namespace, string(name), sectionName, port)}, ResourceExists(krtctx, agw.Gateways, key)
 			case wellknown.HTTPRouteGVK.GroupKind():
 				return []*api.PolicyTarget{{
 					Kind: utils.RouteTarget(namespace, string(name), wellknown.HTTPRouteGVK.Kind, sectionName),
@@ -132,9 +144,7 @@ func DefaultReferenceTypes(agw *AgwCollections) ReferenceTypes {
 			switch targetGK {
 			case wellknown.GatewayGVK.GroupKind():
 				for _, gw := range krt.Fetch(krtctx, agw.Gateways, krt.FilterLabel(selector.MatchLabels), krt.FilterIndex(agw.GatewaysByNamespace, policyNamespace)) {
-					policyTargets := []*api.PolicyTarget{{
-						Kind: utils.GatewayTarget(gw.Namespace, gw.Name, sectionName, selector.Port),
-					}}
+					policyTargets := []*api.PolicyTarget{gatewayPolicyTarget(gw.Namespace, gw.Name, sectionName, selector.Port)}
 					targets = append(targets, ResolvedPolicySelectorTarget{Name: gwv1.ObjectName(gw.Name), Namespace: gw.Namespace, PolicyTargets: policyTargets})
 				}
 			case wellknown.HTTPRouteGVK.GroupKind():

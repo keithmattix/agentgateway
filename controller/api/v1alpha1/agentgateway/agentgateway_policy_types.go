@@ -110,7 +110,10 @@ type AgentgatewayPolicySpec struct {
 	// Settings for how to process traffic.
 	//
 	// A traffic policy can target a `Gateway` (optionally, with a
-	// `sectionName` indicating the listener), `ListenerSet`, or `Route`
+	// `sectionName` indicating the listener), `ListenerSet`, or `Route`.
+	// A Gateway sectionName of `<listener>/llm` targets only the generated LLM
+	// router route for that listener, leaving other traffic on the listener
+	// unaffected.
 	// (optionally, with a `sectionName` indicating the route rule).
 	//
 	// When multiple policies are selected for a given request, they are merged on a field-level basis, but not a deep

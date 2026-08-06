@@ -746,6 +746,10 @@ impl Store {
 		strng::format!("llm:request:{listener}")
 	}
 
+	fn model_router_route_name(listener: &ListenerKey) -> Strng {
+		strng::format!("llm:request:{listener}")
+	}
+
 	fn model_router_matches() -> Vec<RouteMatch> {
 		let mut matches = [
 			"/v1/models",
@@ -827,7 +831,7 @@ impl Store {
 				service_key: None,
 				service_port: 0,
 				name: RouteName {
-					name: strng::new("llm:request"),
+					name: Self::model_router_route_name(listener),
 					namespace: strng::new("internal"),
 					rule_name: None,
 					kind: None,
@@ -2652,7 +2656,7 @@ mod tests {
 			.get_listener_routes(&listener_a)
 			.expect("listener A route set exists")
 			.get_by_name(&RouteName {
-				name: strng::new("llm:request"),
+				name: Store::model_router_route_name(&listener_a),
 				namespace: strng::new("internal"),
 				rule_name: None,
 				kind: None,

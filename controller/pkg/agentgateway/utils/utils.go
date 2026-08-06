@@ -17,6 +17,10 @@ import (
 // If the Backend is ns/foo, the sub-backend will be ns/foo/backend
 const SingularLLMProviderSubBackendName = "backend"
 
+// LLMRouterRouteNamespace is the namespace used by the proxy's generated LLM route.
+// It is deliberately not a Kubernetes namespace.
+const LLMRouterRouteNamespace = "internal"
+
 // InternalGatewayName returns the name of the internal Gateway corresponding to the
 // specified gwv1-api gwv1 and listener. If the listener is not specified, returns internal name without listener.
 // Format: gwNs/gwName.listener
@@ -25,6 +29,22 @@ func InternalGatewayName(gwNamespace, gwName, lName string) string {
 		return fmt.Sprintf("%s/%s", gwNamespace, gwName)
 	}
 	return fmt.Sprintf("%s/%s.%s", gwNamespace, gwName, lName)
+}
+
+// LLMRouterRouteName returns the policy-visible name of the generated LLM route
+// for a listener. It must remain in sync with the proxy's synthesized route name.
+func LLMRouterRouteName(listenerKey string) string {
+	return "llm:request:" + listenerKey
+}
+
+// LLMSectionName returns the listener portion of an LLM sub-section reference.
+// An LLM sub-section is written as "<listener>/llm" in a Gateway policy target.
+func LLMSectionName(sectionName string) (string, bool) {
+	listener, ok := strings.CutSuffix(sectionName, "/llm")
+	if !ok || listener == "" || strings.Contains(listener, "/") {
+		return "", false
+	}
+	return listener, true
 }
 
 // InternalRouteRuleKey returns the name of the internal Route Rule corresponding to the
