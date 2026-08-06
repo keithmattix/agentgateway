@@ -1156,7 +1156,7 @@
           ]
         },
         "protocol": {
-          "description": "Protocol this listener accepts: HTTP, HTTPS, TCP, TLS, or HBONE.",
+          "description": "Protocol this listener accepts: HTTP, HTTPS, TCP, TLS, HBONE, or Auto.",
           "$ref": "#/$defs/LocalListenerProtocol"
         },
         "tls": {
@@ -1205,13 +1205,22 @@
       "additionalProperties": false
     },
     "LocalListenerProtocol": {
-      "type": "string",
-      "enum": [
-        "HTTP",
-        "HTTPS",
-        "TLS",
-        "TCP",
-        "HBONE"
+      "oneOf": [
+        {
+          "type": "string",
+          "enum": [
+            "HTTP",
+            "HTTPS",
+            "TLS",
+            "TCP",
+            "HBONE"
+          ]
+        },
+        {
+          "description": "Detect TLS, HTTP, or raw TCP per connection (see `BindProtocol::auto`)\ninstead of committing to one protocol ahead of time. Requires `routes`,\n`tcpRoutes`, or both -- whichever set applies is picked at runtime.",
+          "type": "string",
+          "const": "AUTO"
+        }
       ]
     },
     "LocalTLSServerConfig": {
