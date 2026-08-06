@@ -1223,9 +1223,15 @@ enum LocalListenerProtocol {
 	TLS,
 	TCP,
 	HBONE,
-	/// Detect TLS, HTTP, or raw TCP per connection (see `BindProtocol::auto`)
-	/// instead of committing to one protocol ahead of time. Requires `routes`,
-	/// `tcpRoutes`, or both -- whichever set applies is picked at runtime.
+	// Detect TLS, HTTP, or raw TCP per connection (see `BindProtocol::auto`)
+	// instead of committing to one protocol ahead of time. Requires `routes`,
+	// `tcpRoutes`, or both -- whichever set applies is picked at runtime.
+	//
+	// Not a `///` doc comment: schemars gives a documented variant its own
+	// described oneOf branch instead of folding it into the flat enum list,
+	// which would turn this into a breaking JSON-schema shape change for
+	// anything that expects `LocalListenerProtocol` to stay a plain
+	// `{type: string, enum: [...]}`.
 	Auto,
 }
 

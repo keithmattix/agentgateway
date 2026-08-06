@@ -1205,22 +1205,14 @@
       "additionalProperties": false
     },
     "LocalListenerProtocol": {
-      "oneOf": [
-        {
-          "type": "string",
-          "enum": [
-            "HTTP",
-            "HTTPS",
-            "TLS",
-            "TCP",
-            "HBONE"
-          ]
-        },
-        {
-          "description": "Detect TLS, HTTP, or raw TCP per connection (see `BindProtocol::auto`)\ninstead of committing to one protocol ahead of time. Requires `routes`,\n`tcpRoutes`, or both -- whichever set applies is picked at runtime.",
-          "type": "string",
-          "const": "AUTO"
-        }
+      "type": "string",
+      "enum": [
+        "HTTP",
+        "HTTPS",
+        "TLS",
+        "TCP",
+        "HBONE",
+        "AUTO"
       ]
     },
     "LocalTLSServerConfig": {
