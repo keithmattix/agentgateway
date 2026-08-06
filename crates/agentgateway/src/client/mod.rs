@@ -45,7 +45,7 @@ pub struct TCPCall {
 	pub target: Target,
 	pub transport: Transport,
 	pub network_ext_proc: Option<Arc<crate::http::network_ext_proc::NetworkExtProc>>,
-	pub network_ext_proc_metadata: crate::http::network_ext_proc::proto::Metadata,
+	pub network_ext_proc_context: crate::http::network_ext_proc::RequestContext,
 	pub policy_client: crate::proxy::httpproxy::PolicyClient,
 }
 
@@ -544,7 +544,7 @@ impl Client {
 			target,
 			transport,
 			network_ext_proc,
-			network_ext_proc_metadata,
+			network_ext_proc_context,
 			policy_client,
 		} = call;
 
@@ -580,7 +580,7 @@ impl Client {
 				upstream,
 				&config,
 				policy_client,
-				network_ext_proc_metadata,
+				network_ext_proc_context,
 			)
 			.await
 			.map_err(|e| {

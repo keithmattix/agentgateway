@@ -14,9 +14,13 @@ use crate::proxy::httpproxy::PolicyClient;
 use crate::types::agent::SimpleBackendReferenceWithPolicies;
 use crate::*;
 
+const NETWORK_EXTPROC_ATTRIBUTES_NAMESPACE: &str = "envoy.filters.network.ext_proc";
+
 pub mod proto {
 	pub use protos::envoy::service::network_ext_proc::v3::*;
 }
+
+type Metadata = protos::envoy::config::core::v3::Metadata;
 
 #[apply(schema!)]
 #[derive(Default, Copy, PartialEq, Eq)]
@@ -44,17 +48,43 @@ pub struct NetworkExtProc {
 	/// by the user-defined Envoy metadata namespace.
 	#[serde(default, skip_serializing_if = "Option::is_none")]
 	pub metadata_context: Option<MetadataContext>,
+	/// CEL-generated connection attributes sent in ProcessingRequest.attributes.
+	///
+	/// This is wire-compatible with Envoy's network ext_proc connection_attributes
+	/// output. We intentionally evaluate user-provided CEL expressions directly
+	/// instead of trying to model Envoy filter state.
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub connection_attributes: Option<HashMap<String, Arc<cel::Expression>>>,
 }
 
 impl NetworkExtProc {
-	pub fn evaluate_metadata(&self, exec: &cel::Executor<'_>) -> proto::Metadata {
+	pub fn evaluate_request_context(&self, exec: &cel::Executor<'_>) -> RequestContext {
 		let filter_metadata = crate::http::metadata_context::build_processing_metadata_context(
 			exec,
 			self.metadata_context.as_ref(),
 		)
 		.unwrap_or_default();
-		proto::Metadata { filter_metadata }
+		let attributes = self
+			.connection_attributes
+			.as_ref()
+			.and_then(|attrs| crate::http::metadata_context::eval_to_struct(exec, attrs).ok())
+			.filter(|attrs| !attrs.fields.is_empty())
+			.map(|attrs| HashMap::from([(NETWORK_EXTPROC_ATTRIBUTES_NAMESPACE.to_string(), attrs)]))
+			.unwrap_or_default();
+		RequestContext {
+			metadata: Metadata {
+				filter_metadata,
+				typed_filter_metadata: HashMap::new(),
+			},
+			attributes,
+		}
 	}
+}
+
+#[derive(Default, Clone)]
+pub struct RequestContext {
+	pub metadata: Metadata,
+	pub attributes: HashMap<String, prost_wkt_types::Struct>,
 }
 
 #[derive(thiserror::Error, Debug)]
@@ -75,14 +105,14 @@ struct Processor {
 	rx: Arc<Mutex<mpsc::Receiver<Result<proto::ProcessingResponse, Error>>>>,
 	serial: Arc<Mutex<()>>,
 	timeout: Duration,
-	metadata: proto::Metadata,
+	context: RequestContext,
 }
 
 impl Processor {
 	async fn connect(
 		config: &NetworkExtProc,
 		client: PolicyClient,
-		metadata: proto::Metadata,
+		context: RequestContext,
 	) -> Result<Self, Error> {
 		let channel: GrpcReferenceChannel = config.target.grpc_channel(client);
 		let mut client =
@@ -119,7 +149,7 @@ impl Processor {
 			rx: Arc::new(Mutex::new(response_rx)),
 			serial: Arc::new(Mutex::new(())),
 			timeout: Duration::from_millis(config.message_timeout_ms.max(200)),
-			metadata,
+			context,
 		})
 	}
 
@@ -139,7 +169,8 @@ impl Processor {
 				data: data.into(),
 				end_of_stream,
 			}),
-			metadata: Some(self.metadata.clone()),
+			metadata: Some(self.context.metadata.clone()),
+			attributes: self.context.attributes.clone(),
 		};
 		self
 			.tx
@@ -176,13 +207,13 @@ pub async fn proxy<A, B>(
 	upstream: B,
 	config: &NetworkExtProc,
 	client: PolicyClient,
-	metadata: proto::Metadata,
+	context: RequestContext,
 ) -> Result<(), Error>
 where
 	A: AsyncRead + AsyncWrite + Unpin + Send + 'static,
 	B: AsyncRead + AsyncWrite + Unpin + Send + 'static,
 {
-	let processor = Processor::connect(config, client, metadata).await?;
+	let processor = Processor::connect(config, client, context).await?;
 	let (dr, dw) = tokio::io::split(downstream);
 	let (ur, uw) = tokio::io::split(upstream);
 	let a = copy(dr, uw, processor.clone(), true, config.process_read);

@@ -7,6 +7,7 @@ fn main() -> Result<(), anyhow::Error> {
 		"proto/ext_authz.proto",
 		"proto/ext_mcp.proto",
 		"proto/ext_proc.proto",
+		"proto/envoy_config_core.proto",
 		"proto/network_ext_proc.proto",
 		"proto/rls.proto",
 		"proto/workload.proto",

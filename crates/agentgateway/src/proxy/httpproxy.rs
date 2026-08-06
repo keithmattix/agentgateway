@@ -939,7 +939,10 @@ impl HTTPProxy {
 				.as_deref()
 				.map(|config| {
 					let exec = cel::Executor::new_request(&req);
-					(Arc::new(config.clone()), config.evaluate_metadata(&exec))
+					(
+						Arc::new(config.clone()),
+						config.evaluate_request_context(&exec),
+					)
 				});
 			let connect_upgrade = connect_upgrade
 				.ok_or_else(|| ProxyError::ProcessingString("CONNECT missing upgrade".to_string()))
@@ -1116,7 +1119,7 @@ impl HTTPProxy {
 		backend_policies: Arc<BackendPolicies>,
 		network_ext_proc: Option<(
 			Arc<crate::http::network_ext_proc::NetworkExtProc>,
-			crate::http::network_ext_proc::proto::Metadata,
+			crate::http::network_ext_proc::RequestContext,
 		)>,
 		response_policies: &mut ResponsePolicies,
 		req: &mut Request,
@@ -3829,7 +3832,7 @@ struct ConnectTunnel {
 	upstream: Arc<Mutex<Option<Socket>>>,
 	network_ext_proc: Option<(
 		Arc<crate::http::network_ext_proc::NetworkExtProc>,
-		crate::http::network_ext_proc::proto::Metadata,
+		crate::http::network_ext_proc::RequestContext,
 	)>,
 	policy_client: PolicyClient,
 }

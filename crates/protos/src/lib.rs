@@ -1,6 +1,14 @@
 #[allow(warnings)]
 #[allow(clippy::derive_partial_eq_without_eq)]
 pub mod envoy {
+	pub mod config {
+		pub mod core {
+			pub mod v3 {
+				tonic::include_proto!("envoy.config.core.v3");
+			}
+		}
+	}
+
 	pub mod service {
 		pub mod auth {
 			pub mod v3 {

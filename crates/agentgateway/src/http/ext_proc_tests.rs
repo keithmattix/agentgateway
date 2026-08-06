@@ -4109,6 +4109,7 @@ mod connect_authority_mutation {
 		#[derive(Clone)]
 		struct MetadataCapture {
 			seen_authority: Arc<Mutex<Option<String>>>,
+			seen_attribute_authority: Arc<Mutex<Option<String>>>,
 			seen_read_data: Arc<Mutex<Option<Vec<u8>>>>,
 		}
 
@@ -4130,6 +4131,12 @@ mod connect_authority_mutation {
 				{
 					*self.seen_authority.lock().unwrap() = Some(authority.clone());
 				}
+				if let Some(ns) = request.attributes.get("envoy.filters.network.ext_proc")
+					&& let Some(v) = ns.fields.get("filter_state['dev.substrate.authority']")
+					&& let Some(prost_wkt_types::value::Kind::StringValue(authority)) = &v.kind
+				{
+					*self.seen_attribute_authority.lock().unwrap() = Some(authority.clone());
+				}
 				Ok(crate::http::network_ext_proc::proto::ProcessingResponse {
 					read_data: request.read_data,
 					write_data: request.write_data,
@@ -4141,12 +4148,15 @@ mod connect_authority_mutation {
 		}
 
 		let seen_authority = Arc::new(Mutex::new(None));
+		let seen_attribute_authority = Arc::new(Mutex::new(None));
 		let seen_read_data = Arc::new(Mutex::new(None));
 		let network_ext_proc = NetworkExtProcMock::new({
 			let seen_authority = seen_authority.clone();
+			let seen_attribute_authority = seen_attribute_authority.clone();
 			let seen_read_data = seen_read_data.clone();
 			move || MetadataCapture {
 				seen_authority: seen_authority.clone(),
+				seen_attribute_authority: seen_attribute_authority.clone(),
 				seen_read_data: seen_read_data.clone(),
 			}
 		})
@@ -4190,6 +4200,10 @@ mod connect_authority_mutation {
 							"authority".to_string(),
 							Arc::new(Expression::new_strict("source.connectHeaders[\"host\"]").unwrap()),
 						)]),
+					)])),
+					connection_attributes: Some(HashMap::from([(
+						"filter_state['dev.substrate.authority']".to_string(),
+						Arc::new(Expression::new_strict("source.connectHeaders[\"host\"]").unwrap()),
 					)])),
 				},
 			)));
@@ -4243,6 +4257,11 @@ mod connect_authority_mutation {
 			seen_authority.lock().unwrap().as_deref(),
 			Some(connect_target),
 			"network ext_proc metadata should include the original CONNECT authority",
+		);
+		assert_eq!(
+			seen_attribute_authority.lock().unwrap().as_deref(),
+			Some(connect_target),
+			"network ext_proc connection attributes should include the original CONNECT authority",
 		);
 	}
 }

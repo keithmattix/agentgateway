@@ -215,14 +215,14 @@ impl TCPProxy {
 		connection.set_transport_metrics(self.inputs.metrics.clone(), tcp_labels);
 
 		let network_ext_proc = backend_call.backend_policies.network_ext_proc.clone();
-		let network_ext_proc_metadata = network_ext_proc
+		let network_ext_proc_context = network_ext_proc
 			.as_ref()
 			.map(|config| {
 				let source = connection.ext::<SourceContext>();
 				let exec = source
 					.map(crate::cel::Executor::new_source)
 					.unwrap_or_else(crate::cel::Executor::new_empty);
-				config.evaluate_metadata(&exec)
+				config.evaluate_request_context(&exec)
 			})
 			.unwrap_or_default();
 
@@ -233,7 +233,7 @@ impl TCPProxy {
 				target: backend_call.target,
 				transport,
 				network_ext_proc,
-				network_ext_proc_metadata,
+				network_ext_proc_context,
 				policy_client: crate::proxy::httpproxy::PolicyClient::new(inputs.clone()),
 			})
 			.await?;

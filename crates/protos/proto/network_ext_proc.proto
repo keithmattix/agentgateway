@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package envoy.service.network_ext_proc.v3;
 
+import "envoy_config_core.proto";
 import "google/protobuf/struct.proto";
 
 // The L4 external processing protocol used by Envoy's network ext_proc filter.
@@ -17,13 +18,8 @@ message Data {
 message ProcessingRequest {
   Data read_data = 1;
   Data write_data = 2;
-  Metadata metadata = 3;
-}
-
-// Wire-compatible with envoy.config.core.v3.Metadata. Kept local so this
-// compact proto bundle does not need Envoy's full core base.proto dependency.
-message Metadata {
-  map<string, google.protobuf.Struct> filter_metadata = 1;
+  envoy.config.core.v3.Metadata metadata = 3;
+  map<string, google.protobuf.Struct> attributes = 4;
 }
 
 message ProcessingResponse {
