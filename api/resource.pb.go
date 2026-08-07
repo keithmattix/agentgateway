@@ -4011,6 +4011,9 @@ type Backend struct {
 	//	*Backend_Guardrail
 	Kind           isBackend_Kind       `protobuf_oneof:"kind"`
 	InlinePolicies []*BackendPolicySpec `protobuf:"bytes,7,rep,name=inline_policies,json=inlinePolicies,proto3" json:"inline_policies,omitempty"`
+	// Internal model-router backend key generated for an explicitly opted-in
+	// model-serving HTTPRoute rule.
+	ModelRouterKey string `protobuf:"bytes,10,opt,name=model_router_key,json=modelRouterKey,proto3" json:"model_router_key,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -4125,6 +4128,13 @@ func (x *Backend) GetInlinePolicies() []*BackendPolicySpec {
 		return x.InlinePolicies
 	}
 	return nil
+}
+
+func (x *Backend) GetModelRouterKey() string {
+	if x != nil {
+		return x.ModelRouterKey
+	}
+	return ""
 }
 
 type isBackend_Kind interface {
@@ -9175,6 +9185,9 @@ type ModelRoute struct {
 	Created uint64 `protobuf:"varint,7,opt,name=created,proto3" json:"created,omitempty"`
 	// Authorization rules that clients must satisfy to use a concrete model.
 	Authorization *TrafficPolicySpec_RBAC `protobuf:"bytes,8,opt,name=authorization,proto3" json:"authorization,omitempty"`
+	// Internal LLM router backend populated by this model. Empty uses the
+	// legacy listener-scoped implicit model route.
+	RouterKey     string `protobuf:"bytes,9,opt,name=router_key,json=routerKey,proto3" json:"router_key,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -9274,6 +9287,13 @@ func (x *ModelRoute) GetAuthorization() *TrafficPolicySpec_RBAC {
 		return x.Authorization
 	}
 	return nil
+}
+
+func (x *ModelRoute) GetRouterKey() string {
+	if x != nil {
+		return x.RouterKey
+	}
+	return ""
 }
 
 type isModelRoute_Kind interface {
@@ -17441,7 +17461,7 @@ const file_resource_proto_rawDesc = "" +
 	"\vInheritance\x12\v\n" +
 	"\aDEFAULT\x10\x00\x12\f\n" +
 	"\bOVERRIDE\x10\x01B\x06\n" +
-	"\x04kind\"\xc2\x04\n" +
+	"\x04kind\"\xec\x04\n" +
 	"\aBackend\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12;\n" +
 	"\x04name\x18\x02 \x01(\v2'.agentgateway.dev.resource.ResourceNameR\x04name\x12B\n" +
@@ -17451,7 +17471,9 @@ const file_resource_proto_rawDesc = "" +
 	"\adynamic\x18\x06 \x01(\v2..agentgateway.dev.resource.DynamicForwardProxyH\x00R\adynamic\x129\n" +
 	"\x03aws\x18\b \x01(\v2%.agentgateway.dev.resource.AwsBackendH\x00R\x03aws\x12K\n" +
 	"\tguardrail\x18\t \x01(\v2+.agentgateway.dev.resource.GuardrailBackendH\x00R\tguardrail\x12U\n" +
-	"\x0finline_policies\x18\a \x03(\v2,.agentgateway.dev.resource.BackendPolicySpecR\x0einlinePoliciesB\x06\n" +
+	"\x0finline_policies\x18\a \x03(\v2,.agentgateway.dev.resource.BackendPolicySpecR\x0einlinePolicies\x12(\n" +
+	"\x10model_router_key\x18\n" +
+	" \x01(\tR\x0emodelRouterKeyB\x06\n" +
 	"\x04kind\"\xb2\x06\n" +
 	"\x10GuardrailBackend\x12O\n" +
 	"\abedrock\x18\x01 \x01(\v23.agentgateway.dev.resource.GuardrailBackend.BedrockH\x00R\abedrock\x12l\n" +
@@ -18748,7 +18770,7 @@ const file_resource_proto_rawDesc = "" +
 	"\x0finline_policies\x18\x04 \x03(\v2,.agentgateway.dev.resource.BackendPolicySpecR\x0einlinePoliciesB\x16\n" +
 	"\x14_token_endpoint_path\x1aX\n" +
 	"\fSubjectToken\x12H\n" +
-	"\x06source\x18\x01 \x01(\v20.agentgateway.dev.resource.AuthorizationLocationR\x06source\"\xd3\f\n" +
+	"\x06source\x18\x01 \x01(\v20.agentgateway.dev.resource.AuthorizationLocationR\x06source\"\xf2\f\n" +
 	"\n" +
 	"ModelRoute\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12!\n" +
@@ -18758,7 +18780,9 @@ const file_resource_proto_rawDesc = "" +
 	"\x0econcrete_model\x18\x05 \x01(\v23.agentgateway.dev.resource.ModelRoute.ConcreteModelH\x00R\rconcreteModel\x12L\n" +
 	"\tai_policy\x18\x06 \x01(\v2/.agentgateway.dev.resource.BackendPolicySpec.AiR\baiPolicy\x12\x18\n" +
 	"\acreated\x18\a \x01(\x04R\acreated\x12W\n" +
-	"\rauthorization\x18\b \x01(\v21.agentgateway.dev.resource.TrafficPolicySpec.RBACR\rauthorization\x1a\x1d\n" +
+	"\rauthorization\x18\b \x01(\v21.agentgateway.dev.resource.TrafficPolicySpec.RBACR\rauthorization\x12\x1d\n" +
+	"\n" +
+	"router_key\x18\t \x01(\tR\trouterKey\x1a\x1d\n" +
 	"\x05Match\x12\x14\n" +
 	"\x05model\x18\x01 \x01(\tR\x05model\x1a\xdc\x05\n" +
 	"\fVirtualModel\x12Y\n" +

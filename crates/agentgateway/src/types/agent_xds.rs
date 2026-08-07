@@ -1710,6 +1710,7 @@ impl ModelRoute {
 			ModelRoute {
 				key: strng::new(&s.key),
 				name,
+				router_key: strng::new(&s.router_key),
 				kind,
 			},
 			strng::new(&s.listener_key),
@@ -5007,6 +5008,7 @@ mod tests {
 		let proto_route = proto::agent::ModelRoute {
 			key: "default/gpt-5-mini".to_string(),
 			listener_key: "default/gw.http".to_string(),
+			router_key: String::new(),
 			created: 1_704_067_200,
 			r#match: Some(proto::agent::model_route::Match {
 				model: "gpt-5-mini".to_string(),
@@ -5067,6 +5069,7 @@ mod tests {
 		let proto_route = proto::agent::ModelRoute {
 			key: "default/gpt-5-mini".to_string(),
 			listener_key: "default/gw.http".to_string(),
+			router_key: String::new(),
 			created: 0,
 			r#match: None,
 			kind: Some(Kind::ConcreteModel(ConcreteModel::default())),
@@ -5090,6 +5093,7 @@ mod tests {
 		let proto_route = proto::agent::ModelRoute {
 			key: "default/fast".to_string(),
 			listener_key: "default/gw.http".to_string(),
+			router_key: String::new(),
 			created: 1_704_153_600,
 			r#match: Some(proto::agent::model_route::Match {
 				model: "fast".to_string(),
@@ -5139,6 +5143,7 @@ mod tests {
 		let proto_route = proto::agent::ModelRoute {
 			key: "default/smart".to_string(),
 			listener_key: "default/gw.http".to_string(),
+			router_key: String::new(),
 			created: 0,
 			r#match: Some(proto::agent::model_route::Match {
 				model: "smart".to_string(),
@@ -5185,6 +5190,7 @@ mod tests {
 		let proto_route = proto::agent::ModelRoute {
 			key: "default/smart".to_string(),
 			listener_key: "default/gw.http".to_string(),
+			router_key: String::new(),
 			created: 0,
 			r#match: Some(proto::agent::model_route::Match {
 				model: "smart".to_string(),
@@ -5226,6 +5232,7 @@ mod tests {
 		let proto_route = proto::agent::ModelRoute {
 			key: "default/resilient".to_string(),
 			listener_key: "default/gw.http".to_string(),
+			router_key: String::new(),
 			created: 0,
 			r#match: Some(proto::agent::model_route::Match {
 				model: "resilient".to_string(),
@@ -5270,6 +5277,7 @@ mod tests {
 		let qualifier = Some("v1".to_string());
 		let proto_backend = proto::agent::Backend {
 			key: "test-ns/aws-backend".to_string(),
+			model_router_key: String::new(),
 			name: Some(proto::agent::ResourceName {
 				name: "aws-backend".to_string(),
 				namespace: "test-ns".to_string(),
@@ -5307,6 +5315,7 @@ mod tests {
 
 		let proto_backend = proto::agent::Backend {
 			key: "test-ns/vertex-backend".to_string(),
+			model_router_key: String::new(),
 			name: Some(proto::agent::ResourceName {
 				name: "vertex-backend".to_string(),
 				namespace: "test-ns".to_string(),
@@ -5353,6 +5362,7 @@ mod tests {
 
 		let proto_backend = proto::agent::Backend {
 			key: "test-ns/vertex-backend".to_string(),
+			model_router_key: String::new(),
 			name: Some(proto::agent::ResourceName {
 				name: "vertex-backend".to_string(),
 				namespace: "test-ns".to_string(),
@@ -5400,6 +5410,7 @@ mod tests {
 
 		let proto_backend = proto::agent::Backend {
 			key: "test-ns/custom-backend".to_string(),
+			model_router_key: String::new(),
 			name: Some(proto::agent::ResourceName {
 				name: "custom-backend".to_string(),
 				namespace: "test-ns".to_string(),
@@ -5482,6 +5493,7 @@ mod tests {
 
 		let proto_backend = proto::agent::Backend {
 			key: "test-ns/ollama-backend".to_string(),
+			model_router_key: String::new(),
 			name: Some(proto::agent::ResourceName {
 				name: "ollama-backend".to_string(),
 				namespace: "test-ns".to_string(),

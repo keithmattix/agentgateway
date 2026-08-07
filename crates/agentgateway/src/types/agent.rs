@@ -740,6 +740,7 @@ pub type RouteRuleName = Strng;
 pub struct ModelRoute {
 	pub key: RouteKey,
 	pub name: Strng,
+	pub router_key: BackendKey,
 	pub kind: ModelRouteKind,
 }
 

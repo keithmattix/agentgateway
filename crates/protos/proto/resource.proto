@@ -190,6 +190,9 @@ message Backend {
     GuardrailBackend guardrail = 9;
   }
   repeated BackendPolicySpec inline_policies = 7;
+  // Internal model-router backend key generated for an explicitly opted-in
+  // model-serving HTTPRoute rule.
+  string model_router_key = 10;
 }
 
 // GuardrailBackend is a typed backend for AI guardrail provider integrations.
@@ -2189,4 +2192,8 @@ message ModelRoute {
 
   // Authorization rules that clients must satisfy to use a concrete model.
   TrafficPolicySpec.RBAC authorization = 8;
+
+  // Internal LLM router backend populated by this model. Empty uses the
+  // legacy listener-scoped implicit model route.
+  string router_key = 9;
 }
