@@ -1,5 +1,6 @@
 use ::http::HeaderMap;
-use prost_wkt_types::{ListValue, Struct, Value as ProstValue, value::Kind as ProstKind};
+use prost_wkt_types::value::Kind as ProstKind;
+use prost_wkt_types::{ListValue, Struct, Value as ProstValue};
 use serde_json::Value as JsonValue;
 use tracing::warn;
 

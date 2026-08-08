@@ -4,10 +4,10 @@ use async_trait::async_trait;
 use tokio::sync::mpsc;
 use tonic::{Request, Response, Status, Streaming};
 
-use crate::http::network_ext_proc::proto::{
-	self,
-	network_external_processor_server::{NetworkExternalProcessor, NetworkExternalProcessorServer},
+use crate::http::network_ext_proc::proto::network_external_processor_server::{
+	NetworkExternalProcessor, NetworkExternalProcessorServer,
 };
+use crate::http::network_ext_proc::proto::{self};
 use crate::test_helpers::common::MockInstance;
 
 #[async_trait]

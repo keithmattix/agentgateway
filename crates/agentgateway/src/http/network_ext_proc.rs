@@ -7,12 +7,11 @@ use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::sync::{Mutex, mpsc};
 use tokio_stream::wrappers::ReceiverStream;
 
-use crate::cel;
 use crate::http::ext_proc::GrpcReferenceChannel;
 use crate::http::metadata_context::MetadataContext;
 use crate::proxy::httpproxy::PolicyClient;
 use crate::types::agent::SimpleBackendReferenceWithPolicies;
-use crate::*;
+use crate::{cel, *};
 
 const NETWORK_EXTPROC_ATTRIBUTES_NAMESPACE: &str = "envoy.filters.network.ext_proc";
 
