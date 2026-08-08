@@ -37,6 +37,7 @@ fn hbone_address_parsing() {
 #[tokio::test]
 async fn auto_protocol_peek_dispatches_non_http_tcp_without_waiting_for_more_bytes() {
 	use std::time::Duration;
+
 	use tokio::io::AsyncWriteExt;
 
 	let (mut client, mut server) = tokio::io::duplex(8);
