@@ -1156,7 +1156,7 @@
           ]
         },
         "protocol": {
-          "description": "Protocol this listener accepts: HTTP, HTTPS, TCP, TLS, HBONE, or Auto.",
+          "description": "Protocol this listener accepts: HTTP, HTTPS, TCP, TLS, HBONE, or AUTO.",
           "$ref": "#/$defs/LocalListenerProtocol"
         },
         "tls": {
