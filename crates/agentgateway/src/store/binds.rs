@@ -1919,18 +1919,22 @@ impl Store {
 					.insert(name, ResourceKind::ModelRoute(strng::new(&w.key)));
 				self.insert_xds_model_route(w, diagnostics)
 			},
-			Some(XdsKind::Backend(w)) => {
-				if !w.model_router_key.is_empty() {
+			// ModelRouter backends are declarations. The store materializes their
+			// LLM router from the declaration and the ModelRoutes that select it,
+			// so they must not go through generic Backend decoding.
+			Some(XdsKind::Backend(w)) => match w.kind.as_ref() {
+				Some(crate::types::proto::agent::backend::Kind::ModelRouter(_)) => {
 					self
 						.resources
 						.insert(name, ResourceKind::ModelRouter(strng::new(&w.key)));
 					self.insert_xds_model_router(w)
-				} else {
+				},
+				_ => {
 					self
 						.resources
 						.insert(name, ResourceKind::Backend(strng::new(&w.key)));
 					self.insert_xds_backend(w, diagnostics)
-				}
+				},
 			},
 			Some(XdsKind::Policy(w)) => {
 				self
@@ -2003,12 +2007,24 @@ impl Store {
 		Ok(())
 	}
 	fn insert_xds_model_router(&mut self, raw: XdsBackend) -> anyhow::Result<()> {
-		if raw.key.is_empty() || raw.model_router_key.is_empty() {
+		let Some(crate::types::proto::agent::backend::Kind::ModelRouter(model_router)) =
+			raw.kind.as_ref()
+		else {
 			return Err(anyhow::anyhow!(
-				"model router requires key and model_router_key"
+				"model router backend requires model_router kind"
+			));
+		};
+		if raw.key.is_empty() || model_router.router_key.is_empty() {
+			return Err(anyhow::anyhow!(
+				"model router backend requires key and model_router.router_key"
 			));
 		}
-		self.insert_model_router(strng::new(&raw.key), strng::new(&raw.model_router_key));
+		if !raw.inline_policies.is_empty() {
+			return Err(anyhow::anyhow!(
+				"model router backend cannot have inline policies"
+			));
+		}
+		self.insert_model_router(strng::new(&raw.key), strng::new(&model_router.router_key));
 		Ok(())
 	}
 	fn insert_xds_backend(
@@ -2704,9 +2720,12 @@ mod tests {
 				kind: Some(XdsKind::Backend(XdsBackend {
 					key: "default/tenant1.00.http".to_string(),
 					name: None,
-					kind: None,
+					kind: Some(crate::types::proto::agent::backend::Kind::ModelRouter(
+						crate::types::proto::agent::ModelRouterBackend {
+							router_key: scoped_backend_key.to_string(),
+						},
+					)),
 					inline_policies: vec![],
-					model_router_key: scoped_backend_key.to_string(),
 				})),
 			},
 		})]

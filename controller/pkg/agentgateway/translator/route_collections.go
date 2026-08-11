@@ -515,9 +515,11 @@ func AgwRouteCollection(
 		return []agwir.AgwResource{{
 			Gateway: obj.Gateway,
 			Resource: &api.Resource{Kind: &api.Resource_Backend{Backend: &api.Backend{
-				Key:            route.Key,
-				Name:           &api.ResourceName{Name: route.Name.GetName(), Namespace: route.Name.GetNamespace()},
-				ModelRouterKey: routerKey,
+				Key:  route.Key,
+				Name: &api.ResourceName{Name: route.Name.GetName(), Namespace: route.Name.GetNamespace()},
+				Kind: &api.Backend_ModelRouter{ModelRouter: &api.ModelRouterBackend{
+					RouterKey: routerKey,
+				}},
 			}}},
 		}}
 	}, krtopts.ToOptions("translator/ModelRouters")...)

@@ -188,11 +188,14 @@ message Backend {
     AwsBackend aws = 8;
     // Not yet implemented. Reserved for a future release.
     GuardrailBackend guardrail = 9;
+    ModelRouterBackend model_router = 10;
   }
   repeated BackendPolicySpec inline_policies = 7;
-  // Internal model-router backend key generated for an explicitly opted-in
-  // model-serving HTTPRoute rule.
-  string model_router_key = 10;
+}
+
+// Internal LLM model router materialized for an explicitly opted-in HTTPRoute rule.
+message ModelRouterBackend {
+  string router_key = 1;
 }
 
 // GuardrailBackend is a typed backend for AI guardrail provider integrations.

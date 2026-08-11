@@ -2008,6 +2008,12 @@ pub(crate) fn backend_with_policies_from_proto(
 			diagnostics.add_warning("guardrail backends are not yet implemented and will be ignored");
 			Backend::Invalid
 		},
+		Some(backend::Kind::ModelRouter(_)) => {
+			return Err(ProtoError::Generic(
+				"model router backend must be dispatched through Store::insert_xds_model_router"
+					.to_string(),
+			));
+		},
 		None => {
 			return Err(ProtoError::Generic("unknown backend".to_string()));
 		},
@@ -5277,7 +5283,6 @@ mod tests {
 		let qualifier = Some("v1".to_string());
 		let proto_backend = proto::agent::Backend {
 			key: "test-ns/aws-backend".to_string(),
-			model_router_key: String::new(),
 			name: Some(proto::agent::ResourceName {
 				name: "aws-backend".to_string(),
 				namespace: "test-ns".to_string(),
@@ -5315,7 +5320,6 @@ mod tests {
 
 		let proto_backend = proto::agent::Backend {
 			key: "test-ns/vertex-backend".to_string(),
-			model_router_key: String::new(),
 			name: Some(proto::agent::ResourceName {
 				name: "vertex-backend".to_string(),
 				namespace: "test-ns".to_string(),
@@ -5362,7 +5366,6 @@ mod tests {
 
 		let proto_backend = proto::agent::Backend {
 			key: "test-ns/vertex-backend".to_string(),
-			model_router_key: String::new(),
 			name: Some(proto::agent::ResourceName {
 				name: "vertex-backend".to_string(),
 				namespace: "test-ns".to_string(),
@@ -5410,7 +5413,6 @@ mod tests {
 
 		let proto_backend = proto::agent::Backend {
 			key: "test-ns/custom-backend".to_string(),
-			model_router_key: String::new(),
 			name: Some(proto::agent::ResourceName {
 				name: "custom-backend".to_string(),
 				namespace: "test-ns".to_string(),
@@ -5493,7 +5495,6 @@ mod tests {
 
 		let proto_backend = proto::agent::Backend {
 			key: "test-ns/ollama-backend".to_string(),
-			model_router_key: String::new(),
 			name: Some(proto::agent::ResourceName {
 				name: "ollama-backend".to_string(),
 				namespace: "test-ns".to_string(),
