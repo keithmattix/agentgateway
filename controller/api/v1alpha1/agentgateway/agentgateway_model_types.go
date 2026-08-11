@@ -61,7 +61,10 @@ type AgentgatewayModelSpec struct {
 	//
 	// A Gateway or ListenerSet parent attaches the model directly to its
 	// listeners. An HTTPRoute parent attaches the model to the referenced rule;
-	// the rule must select AgentgatewayModel backends.
+	// sectionName selects a named rule, or the HTTPRoute must contain exactly
+	// one rule when sectionName is omitted. The selected rule must use exactly
+	// one AgentgatewayModel backend with name "*". If the rule has path matches,
+	// they must use PathPrefix matching.
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=16
 	// +required

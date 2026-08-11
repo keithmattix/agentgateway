@@ -2004,7 +2004,9 @@ impl Store {
 	}
 	fn insert_xds_model_router(&mut self, raw: XdsBackend) -> anyhow::Result<()> {
 		if raw.key.is_empty() || raw.model_router_key.is_empty() {
-			return Err(anyhow::anyhow!("model router requires key and router_key"));
+			return Err(anyhow::anyhow!(
+				"model router requires key and model_router_key"
+			));
 		}
 		self.insert_model_router(strng::new(&raw.key), strng::new(&raw.model_router_key));
 		Ok(())
