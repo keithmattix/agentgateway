@@ -93,7 +93,8 @@ output:
   resource:
     backend:
       key: default/tenant1.00.http
-      modelRouterKey: /llm:router:httproute:default:tenant1:models
+      modelRouter:
+        routerKey: /llm:router:httproute:default:tenant1:models
       name:
         name: tenant1
         namespace: default
