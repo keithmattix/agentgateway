@@ -1,6 +1,7 @@
 use agentgateway::test_helpers::ateapimock;
 use agentgateway::types::agent::{Backend, BindMode, TunnelProtocol};
 use protos::ateapi::{Actor, ResumeActorResponse};
+use tokio::sync::Notify;
 
 use crate::common::prelude::*;
 
@@ -20,6 +21,43 @@ impl ateapimock::Handler for IngressHandler {
 		assert_eq!(actor.atespace, "demo");
 		assert_eq!(actor.name, "my-actor");
 		self.calls.fetch_add(1, Ordering::Relaxed);
+		Ok(ResumeActorResponse {
+			actor: Some(Actor {
+				worker_assignment: Some(protos::ateapi::WorkerAssignment {
+					worker_pod_ip: self.pod_ip.clone(),
+				}),
+				..Default::default()
+			}),
+		})
+	}
+}
+
+#[derive(Clone)]
+struct ParkingHandler {
+	pod_ip: String,
+	calls: Arc<AtomicUsize>,
+	failures_before_success: usize,
+	entered: Option<Arc<Notify>>,
+}
+
+#[async_trait::async_trait]
+impl ateapimock::Handler for ParkingHandler {
+	async fn resume_actor(
+		&mut self,
+		_request: &protos::ateapi::ResumeActorRequest,
+	) -> Result<ResumeActorResponse, tonic::Status> {
+		let call = self.calls.fetch_add(1, Ordering::Relaxed);
+		if call == 0 {
+			self
+				.entered
+				.as_ref()
+				.inspect(|entered| entered.notify_one());
+		}
+		if call < self.failures_before_success {
+			return Err(tonic::Status::failed_precondition(
+				"no free workers available",
+			));
+		}
 		Ok(ResumeActorResponse {
 			actor: Some(Actor {
 				worker_assignment: Some(protos::ateapi::WorkerAssignment {
@@ -69,6 +107,115 @@ async fn actor_ingress_resolves_the_dynamic_backend() {
 	.await;
 	assert_eq!(response.status(), StatusCode::OK);
 	assert_eq!(calls.load(Ordering::Relaxed), 1);
+	let actor_requests = actor.received_requests().await.unwrap();
+	assert_eq!(
+		actor_requests[0].headers.get("x-ate-target-port").unwrap(),
+		"80"
+	);
+}
+
+#[tokio::test]
+async fn actor_ingress_parks_while_worker_capacity_recovers() {
+	let actor = simple_mock().await;
+	let calls = Arc::new(AtomicUsize::new(0));
+	let api = ateapimock::AteApiMock::new({
+		let calls = calls.clone();
+		let pod_ip = actor.address().ip().to_string();
+		move || ParkingHandler {
+			pod_ip: pod_ip.clone(),
+			calls: calls.clone(),
+			failures_before_success: 2,
+			entered: None,
+		}
+	})
+	.spawn()
+	.await;
+
+	let dynamic = Backend::Dynamic(ResourceName::new("dynamic".into(), "".into()), None);
+	let mut gateway = setup_proxy_test("{}")
+		.unwrap()
+		.with_raw_backend(dynamic.into())
+		.with_bind(simple_bind())
+		.with_route(basic_named_route(strng::literal!("/dynamic")));
+	gateway
+		.attach_route_policy(json!({
+			"substrateIngress": {
+				"host": api.address.to_string(),
+				"targetPort": actor.address().port(),
+				"requestParking": {
+					"budget": "1s",
+					"max": 1,
+					"retryInterval": "1ms",
+					"retryFactor": 1.0,
+				}
+			}
+		}))
+		.await;
+
+	let response = send_request(
+		gateway.serve_http(BIND_KEY),
+		Method::GET,
+		"http://my-actor.demo.actors.resources.substrate.ate.dev/",
+	)
+	.await;
+	assert_eq!(response.status(), StatusCode::OK);
+	assert_eq!(calls.load(Ordering::Relaxed), 3);
+}
+
+#[tokio::test]
+async fn actor_ingress_sheds_when_request_parking_is_full() {
+	let actor = simple_mock().await;
+	let calls = Arc::new(AtomicUsize::new(0));
+	let entered = Arc::new(Notify::new());
+	let api = ateapimock::AteApiMock::new({
+		let calls = calls.clone();
+		let entered = entered.clone();
+		let pod_ip = actor.address().ip().to_string();
+		move || ParkingHandler {
+			pod_ip: pod_ip.clone(),
+			calls: calls.clone(),
+			failures_before_success: 2,
+			entered: Some(entered.clone()),
+		}
+	})
+	.spawn()
+	.await;
+
+	let dynamic = Backend::Dynamic(ResourceName::new("dynamic".into(), "".into()), None);
+	let mut gateway = setup_proxy_test("{}")
+		.unwrap()
+		.with_raw_backend(dynamic.into())
+		.with_bind(simple_bind())
+		.with_route(basic_named_route(strng::literal!("/dynamic")));
+	gateway
+		.attach_route_policy(json!({
+			"substrateIngress": {
+				"host": api.address.to_string(),
+				"targetPort": actor.address().port(),
+				"requestParking": {
+					"budget": "1s",
+					"max": 1,
+					"retryInterval": "100ms",
+					"retryFactor": 1.0,
+				}
+			}
+		}))
+		.await;
+
+	let first = tokio::spawn(send_request(
+		gateway.serve_http(BIND_KEY),
+		Method::GET,
+		"http://my-actor.demo.actors.resources.substrate.ate.dev/",
+	));
+	entered.notified().await;
+	let second = send_request(
+		gateway.serve_http(BIND_KEY),
+		Method::GET,
+		"http://another-actor.demo.actors.resources.substrate.ate.dev/",
+	)
+	.await;
+	assert_eq!(second.status(), StatusCode::SERVICE_UNAVAILABLE);
+	assert_eq!(first.await.unwrap().status(), StatusCode::OK);
 }
 
 #[tokio::test]
@@ -148,6 +295,11 @@ async fn actor_ingress_uses_the_original_connect_authority() {
 		String::from_utf8_lossy(&tunneled),
 	);
 	assert_eq!(calls.load(Ordering::Relaxed), 1);
+	let actor_requests = actor.received_requests().await.unwrap();
+	assert_eq!(
+		actor_requests[0].headers.get("x-ate-target-port").unwrap(),
+		"9090"
+	);
 }
 
 #[tokio::test]

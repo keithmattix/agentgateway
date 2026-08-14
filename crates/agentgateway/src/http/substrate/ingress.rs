@@ -1,11 +1,12 @@
 use std::net::{IpAddr, SocketAddr};
 use std::num::NonZeroU16;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
 use ::http::StatusCode;
 use quick_cache::sync::Cache;
+use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 use tonic::Code;
 
 use super::{ActorRef, CACHE_CAPACITY, TRACE_POLICY_KIND, valid_resource_name};
@@ -20,6 +21,11 @@ use crate::*;
 
 const ACTOR_DNS_SUFFIX: &str = ".actors.resources.substrate.ate.dev";
 const RESUME_TIMEOUT: Duration = Duration::from_secs(15);
+const DEFAULT_PARKING_BUDGET: Duration = Duration::from_secs(5);
+const DEFAULT_PARKING_MAX: usize = 1024;
+const DEFAULT_PARKING_RETRY_INTERVAL: Duration = Duration::from_millis(100);
+const DEFAULT_PARKING_RETRY_FACTOR: f64 = 1.1;
+const TARGET_PORT_HEADER: &str = "x-ate-target-port";
 pub(crate) const STALE_ASSIGNMENT_HEADER: &str = "x-ate-assignment-stale";
 
 #[derive(Debug, Clone, thiserror::Error)]
@@ -28,11 +34,17 @@ enum ResumeError {
 	Status(Code, String),
 	#[error("{0}")]
 	InvalidResponse(String),
+	#[error("request parking capacity exhausted")]
+	ParkingFull,
 }
 
 impl ResumeError {
 	fn into_proxy_error(self, actor: &ActorRef) -> ProxyError {
 		let (status, body) = match self {
+			Self::ParkingFull => (
+				StatusCode::SERVICE_UNAVAILABLE,
+				format!("actor {:?} request parking capacity exhausted", actor.name),
+			),
 			Self::Status(Code::NotFound, _) => (
 				StatusCode::NOT_FOUND,
 				format!("actor {:?} not found", actor.name),
@@ -144,13 +156,87 @@ fn default_cache() -> Arc<AssignmentCache> {
 	})
 }
 
+fn default_parking_budget() -> Duration {
+	DEFAULT_PARKING_BUDGET
+}
+
+fn default_parking_max() -> usize {
+	DEFAULT_PARKING_MAX
+}
+
+fn default_parking_retry_interval() -> Duration {
+	DEFAULT_PARKING_RETRY_INTERVAL
+}
+
+fn default_parking_retry_factor() -> f64 {
+	DEFAULT_PARKING_RETRY_FACTOR
+}
+
+/// Bounds requests held while an actor is waiting for capacity to resume.
+#[apply(schema!)]
+pub struct RequestParking {
+	/// Maximum time to wait for the actor to become routable.
+	#[serde(default = "default_parking_budget", with = "serde_dur")]
+	#[cfg_attr(feature = "schema", schemars(with = "String"))]
+	pub budget: Duration,
+	/// Maximum concurrent requests that may wait for actor resumption. Set to 0 to disable parking.
+	#[serde(default = "default_parking_max")]
+	pub max: usize,
+	/// Initial delay between ResumeActor retries while parked.
+	#[serde(default = "default_parking_retry_interval", with = "serde_dur")]
+	#[cfg_attr(feature = "schema", schemars(with = "String"))]
+	pub retry_interval: Duration,
+	/// Multiplier applied to the delay after each parked retry.
+	#[serde(default = "default_parking_retry_factor")]
+	pub retry_factor: f64,
+}
+
+impl RequestParking {
+	fn default_config() -> Self {
+		Self {
+			budget: default_parking_budget(),
+			max: default_parking_max(),
+			retry_interval: default_parking_retry_interval(),
+			retry_factor: default_parking_retry_factor(),
+		}
+	}
+
+	fn enabled(&self) -> bool {
+		self.max > 0
+	}
+
+	fn budget(&self) -> Duration {
+		if !self.enabled() {
+			RESUME_TIMEOUT
+		} else if !self.budget.is_zero() {
+			self.budget
+		} else {
+			DEFAULT_PARKING_BUDGET
+		}
+	}
+
+	fn retry_interval(&self) -> Duration {
+		if self.retry_interval.is_zero() {
+			DEFAULT_PARKING_RETRY_INTERVAL
+		} else {
+			self.retry_interval
+		}
+	}
+}
+
+impl Default for RequestParking {
+	fn default() -> Self {
+		Self::default_config()
+	}
+}
+
 /// Resolves Substrate actor hostnames through the ate-api for dynamic route backends.
 #[apply(schema!)]
 pub struct SubstrateIngress {
 	/// Backend that receives ResumeActor calls and policies used when connecting to it.
 	#[serde(flatten)]
 	pub target: SimpleBackendReferenceWithPolicies,
-	/// Port on the resumed actor pod. Defaults to 80.
+	/// Port on the resumed worker pod's atunnel ingress. Defaults to 80.
 	#[serde(default = "default_target_port")]
 	#[cfg_attr(feature = "schema", schemars(with = "std::num::NonZeroU16"))]
 	pub target_port: NonZeroU16,
@@ -158,9 +244,15 @@ pub struct SubstrateIngress {
 	#[serde(default = "default_cache_ttl", with = "serde_dur")]
 	#[cfg_attr(feature = "schema", schemars(with = "String"))]
 	pub cache_ttl: Duration,
+	/// Bounded request parking while a suspended actor is waiting for worker capacity.
+	#[serde(default)]
+	pub request_parking: RequestParking,
 	#[serde(skip, default = "default_cache")]
 	#[cfg_attr(feature = "schema", schemars(skip))]
 	cache: Arc<AssignmentCache>,
+	#[serde(skip, default)]
+	#[cfg_attr(feature = "schema", schemars(skip))]
+	parking_slots: Arc<OnceLock<Arc<Semaphore>>>,
 }
 
 impl SubstrateIngress {
@@ -169,7 +261,10 @@ impl SubstrateIngress {
 		client: &PolicyClient,
 		actor: &ActorRef,
 	) -> Result<SocketAddr, ResumeError> {
-		tokio::time::timeout(RESUME_TIMEOUT, async {
+		let _parking_permit = self.acquire_parking_slot()?;
+		let budget = self.request_parking.budget();
+		let deadline = tokio::time::Instant::now() + budget;
+		let result = async {
 			let channel = self.target.grpc_channel(client.clone());
 			let mut control = protos::ateapi::control_client::ControlClient::new(channel);
 			let message = protos::ateapi::ResumeActorRequest {
@@ -179,14 +274,21 @@ impl SubstrateIngress {
 				}),
 				boot: false,
 			};
-			let mut delay = Duration::from_millis(200);
-			for attempt in 0..7 {
+			let mut delay = self.request_parking.retry_interval();
+			loop {
+				let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
+				if remaining.is_zero() {
+					return Err(ResumeError::Status(
+						Code::DeadlineExceeded,
+						format!("ResumeActor timed out after {budget:?}"),
+					));
+				}
 				let response = {
 					let _scope = dtrace::start_scope(TRACE_POLICY_KIND);
-					control.resume_actor(message.clone()).await
+					tokio::time::timeout(remaining, control.resume_actor(message.clone())).await
 				};
 				match response {
-					Ok(response) => {
+					Ok(Ok(response)) => {
 						let actor = response.into_inner().actor.ok_or_else(|| {
 							ResumeError::InvalidResponse(
 								"ResumeActor response did not include an actor".to_owned(),
@@ -208,27 +310,47 @@ impl SubstrateIngress {
 							})?;
 						return Ok(SocketAddr::new(ip, self.target_port.get()));
 					},
-					Err(status) if status.code() == Code::Aborted && attempt < 6 => {
-						tokio::time::sleep(delay).await;
-						delay = delay.mul_f64(1.5);
+					Ok(Err(status)) if self.retryable_while_parked(status.code()) => {
+						let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
+						tokio::time::sleep(delay.min(remaining)).await;
+						delay = delay.mul_f64(self.request_parking.retry_factor.max(1.0));
 					},
-					Err(status) => {
+					Ok(Err(status)) => {
 						return Err(ResumeError::Status(
 							status.code(),
 							status.message().to_owned(),
 						));
 					},
+					Err(_) => {
+						return Err(ResumeError::Status(
+							Code::DeadlineExceeded,
+							format!("ResumeActor timed out after {budget:?}"),
+						));
+					},
 				}
 			}
-			unreachable!()
-		})
-		.await
-		.unwrap_or_else(|_| {
-			Err(ResumeError::Status(
-				Code::DeadlineExceeded,
-				"ResumeActor timed out after 15s".to_owned(),
-			))
-		})
+		};
+		result.await
+	}
+
+	fn acquire_parking_slot(&self) -> Result<Option<OwnedSemaphorePermit>, ResumeError> {
+		if !self.request_parking.enabled() {
+			return Ok(None);
+		}
+		let slots = self
+			.parking_slots
+			.get_or_init(|| Arc::new(Semaphore::new(self.request_parking.max)));
+		slots
+			.clone()
+			.try_acquire_owned()
+			.map(Some)
+			.map_err(|_| ResumeError::ParkingFull)
+	}
+
+	fn retryable_while_parked(&self, code: Code) -> bool {
+		matches!(code, Code::Aborted)
+			|| (self.request_parking.enabled()
+				&& matches!(code, Code::FailedPrecondition | Code::Unavailable))
 	}
 
 	async fn resolve(&self, client: &PolicyClient, actor: ActorRef) -> ResolutionResult {
@@ -337,6 +459,11 @@ impl SubstrateRequestState {
 						error = message,
 						"substrate ResumeActor returned an invalid response"
 					),
+					ResumeError::ParkingFull => warn!(
+						actor = self.actor.name,
+						atespace = self.actor.atespace,
+						"substrate request parking capacity exhausted"
+					),
 				}
 				Err(error.into_proxy_error(&self.actor).into())
 			},
@@ -388,6 +515,7 @@ impl RequestPolicyTrait for SubstrateIngress {
 				)
 			})?;
 		let host = authority.host();
+		let actor_port = authority.port_u16().unwrap_or(80);
 		let host = host.strip_suffix('.').unwrap_or(host);
 		let parsed = host
 			.strip_suffix(ACTOR_DNS_SUFFIX)
@@ -411,6 +539,15 @@ impl RequestPolicyTrait for SubstrateIngress {
 		};
 		log.ate_actor_id = Some(actor.name.clone());
 		log.ate_atespace = Some(actor.atespace.clone());
+		// atunnel has a fixed worker-side listener, so the actor's requested
+		// port travels as a per-request header. It strips this before forwarding
+		// to the actor. For direct ingress the authority normally has no port and
+		// the default is 80; for CONNECT re-entry this preserves the original
+		// CONNECT authority's arbitrary port.
+		req.headers_mut().insert(
+			::http::header::HeaderName::from_static(TARGET_PORT_HEADER),
+			::http::HeaderValue::from(actor_port),
+		);
 		req.extensions_mut().insert(SubstrateRequestState {
 			actor,
 			ingress: self.clone(),
