@@ -1,5 +1,5 @@
 use agentgateway::test_helpers::ateapimock;
-use agentgateway::types::agent::{Backend, BindMode};
+use agentgateway::types::agent::{Backend, BindMode, TunnelProtocol};
 use protos::ateapi::{Actor, ResumeActorResponse};
 
 use crate::common::prelude::*;
@@ -22,7 +22,9 @@ impl ateapimock::Handler for IngressHandler {
 		self.calls.fetch_add(1, Ordering::Relaxed);
 		Ok(ResumeActorResponse {
 			actor: Some(Actor {
-				ateom_pod_ip: self.pod_ip.clone(),
+				worker_assignment: Some(protos::ateapi::WorkerAssignment {
+					worker_pod_ip: self.pod_ip.clone(),
+				}),
 				..Default::default()
 			}),
 		})
@@ -66,6 +68,85 @@ async fn actor_ingress_resolves_the_dynamic_backend() {
 	)
 	.await;
 	assert_eq!(response.status(), StatusCode::OK);
+	assert_eq!(calls.load(Ordering::Relaxed), 1);
+}
+
+#[tokio::test]
+async fn actor_ingress_uses_the_original_connect_authority() {
+	let actor = simple_mock().await;
+	let calls = Arc::new(AtomicUsize::new(0));
+	let api = ateapimock::AteApiMock::new({
+		let calls = calls.clone();
+		let pod_ip = actor.address().ip().to_string();
+		move || IngressHandler {
+			pod_ip: pod_ip.clone(),
+			calls: calls.clone(),
+		}
+	})
+	.spawn()
+	.await;
+
+	let dynamic = Backend::Dynamic(ResourceName::new("dynamic".into(), "".into()), None);
+	let mut outer = simple_bind();
+	outer.key = strng::literal!("outer");
+	outer.address = "127.0.0.1:15012".parse().unwrap();
+	outer.tunnel_protocol = TunnelProtocol::Connect;
+	let mut inner = simple_bind();
+	inner.key = strng::literal!("bind/wildcard");
+	inner.mode = BindMode::Internal;
+	let mut gateway = setup_proxy_test("{}")
+		.unwrap()
+		.with_raw_backend(dynamic.into())
+		.with_bind(outer)
+		.with_bind(inner)
+		.with_route(basic_named_route(strng::literal!("/dynamic")));
+	gateway
+		.attach_route_policy(json!({
+			"substrateIngress": {
+				"host": api.address.to_string(),
+				"targetPort": actor.address().port(),
+			}
+		}))
+		.await;
+
+	let mut io = gateway.serve_tunnel(strng::literal!("outer"));
+	let connect_target = "my-actor.demo.actors.resources.substrate.ate.dev:9090";
+	io.write_all(
+		format!("CONNECT {connect_target} HTTP/1.1\r\nHost: {connect_target}\r\n\r\n").as_bytes(),
+	)
+	.await
+	.unwrap();
+	let mut response = Vec::new();
+	loop {
+		let mut chunk = [0; 1024];
+		let n = io.read(&mut chunk).await.unwrap();
+		assert!(n > 0, "CONNECT response unexpectedly closed");
+		response.extend_from_slice(&chunk[..n]);
+		if response.windows(4).any(|window| window == b"\r\n\r\n") {
+			break;
+		}
+	}
+	assert!(
+		String::from_utf8_lossy(&response).starts_with("HTTP/1.1 200 OK\r\n"),
+		"unexpected CONNECT response: {}",
+		String::from_utf8_lossy(&response),
+	);
+
+	// The re-entered request's Host is unrelated to the actor. Native ingress
+	// must use the original CONNECT authority retained in SourceContext.
+	io.write_all(b"GET / HTTP/1.1\r\nHost: irrelevant.example\r\nConnection: close\r\n\r\n")
+		.await
+		.unwrap();
+	let mut tunneled = Vec::new();
+	tokio::time::timeout(Duration::from_secs(5), io.read_to_end(&mut tunneled))
+		.await
+		.expect("timed out waiting for tunneled response")
+		.unwrap();
+	assert!(
+		String::from_utf8_lossy(&tunneled).starts_with("HTTP/1.1 200 OK\r\n"),
+		"unexpected tunneled response: {}",
+		String::from_utf8_lossy(&tunneled),
+	);
 	assert_eq!(calls.load(Ordering::Relaxed), 1);
 }
 

@@ -192,12 +192,20 @@ impl SubstrateIngress {
 								"ResumeActor response did not include an actor".to_owned(),
 							)
 						})?;
-						let ip = actor.ateom_pod_ip.parse::<IpAddr>().map_err(|error| {
-							ResumeError::InvalidResponse(format!(
-								"invalid ateom_pod_ip {:?}: {error}",
-								actor.ateom_pod_ip
-							))
+						let assignment = actor.worker_assignment.ok_or_else(|| {
+							ResumeError::InvalidResponse(
+								"ResumeActor response did not include a worker assignment".to_owned(),
+							)
 						})?;
+						let ip = assignment
+							.worker_pod_ip
+							.parse::<IpAddr>()
+							.map_err(|error| {
+								ResumeError::InvalidResponse(format!(
+									"invalid worker_assignment.worker_pod_ip {:?}: {error}",
+									assignment.worker_pod_ip
+								))
+							})?;
 						return Ok(SocketAddr::new(ip, self.target_port.get()));
 					},
 					Err(status) if status.code() == Code::Aborted && attempt < 6 => {
@@ -360,7 +368,26 @@ impl RequestPolicyTrait for SubstrateIngress {
 		log: &mut RequestLog,
 		req: &mut Request,
 	) -> Result<PolicyResponse, crate::proxy::ProxyResponse> {
-		let host = crate::http::get_host(req).unwrap_or_default();
+		let connect_authority = req
+			.extensions()
+			.get::<crate::cel::SourceContext>()
+			.and_then(|source| {
+				let mut values = source.connect_headers.get_all(::http::header::HOST).iter();
+				let authority = values.next()?.to_str().ok()?;
+				(values.next().is_none()).then_some(authority)
+			});
+		let authority = connect_authority
+			.map(ToOwned::to_owned)
+			.unwrap_or_else(|| crate::http::get_host(req).unwrap_or_default().to_owned());
+		let authority = authority
+			.parse::<::http::uri::Authority>()
+			.map_err(|error| {
+				ProxyError::SubstrateIngressFailed(
+					StatusCode::NOT_FOUND,
+					format!("invalid actor authority {authority:?}: {error}"),
+				)
+			})?;
+		let host = authority.host();
 		let host = host.strip_suffix('.').unwrap_or(host);
 		let parsed = host
 			.strip_suffix(ACTOR_DNS_SUFFIX)
@@ -439,7 +466,9 @@ mod tests {
 			self.calls.fetch_add(1, Ordering::Relaxed);
 			Ok(GrpcResponse::new(ResumeActorResponse {
 				actor: Some(Actor {
-					ateom_pod_ip: self.pod_ip.clone(),
+					worker_assignment: Some(protos::ateapi::WorkerAssignment {
+						worker_pod_ip: self.pod_ip.clone(),
+					}),
 					..Default::default()
 				}),
 			}))
