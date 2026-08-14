@@ -11,21 +11,17 @@ service Control {
 
 message Actor {
   ResourceMetadata metadata = 1;
-  string ateom_pod_ip = 7;
-//  ActorEgressPolicy egress_policy = 13;
+  WorkerAssignment worker_assignment = 5;
+}
+
+// The minimal running-actor assignment required by AgentGateway ingress.
+message WorkerAssignment {
+  string worker_pod_ip = 5;
 }
 
 message ResourceMetadata {
   int64 version = 4;
 }
-
-//message ActorEgressPolicy {
-//  repeated ActorEgressHost hosts = 1;
-//}
-//
-//message ActorEgressHost {
-//  string hostname = 1;
-//}
 
 message ObjectRef {
   string atespace = 1;
