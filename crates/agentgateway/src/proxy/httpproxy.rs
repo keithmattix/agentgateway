@@ -1168,6 +1168,27 @@ impl HTTPProxy {
 		response_policies: &mut ResponsePolicies,
 		req: &mut Request,
 	) -> Result<Response, ProxyResponse> {
+		// A Substrate CONNECT first resolves its actor to the worker's atunnel
+		// CONNECT listener. The raw downstream stream is then CONNECTed through
+		// atunnel to the actor port, rather than directly to the worker address.
+		handle_substrate_backend_selection(req, &selected_backend.backend.backend).await?;
+		let substrate_connect_authority = if let Some(state) = req
+			.extensions()
+			.get::<http::substrate::SubstrateRequestState>()
+			.cloned()
+		{
+			Some((
+				state.connect_authority(),
+				state.resolve_connect_target().await?,
+			))
+		} else {
+			None
+		};
+		if let Some((_, target)) = &substrate_connect_authority {
+			req
+				.extensions_mut()
+				.insert(DynamicBackendOverride(target.clone()));
+		}
 		let backend_call = build_connect_backend_call(
 			self.inputs.as_ref(),
 			&selected_backend.backend.backend,
@@ -1213,6 +1234,29 @@ impl HTTPProxy {
 			.upstream
 			.connect_raw(backend_call.target, transport)
 			.await?;
+		let upstream = if let Some((authority, _)) = substrate_connect_authority {
+			match crate::client::connect_tunnel::handshake(
+				upstream,
+				&authority,
+				self.inputs.cfg.hbone.clone(),
+			)
+			.await
+			{
+				Ok(upstream) => upstream,
+				Err(error) if crate::client::connect_tunnel::is_stale_assignment_error(&error) => {
+					return Ok(
+						::http::Response::builder()
+							.status(StatusCode::MISDIRECTED_REQUEST)
+							.header(http::substrate::STALE_ASSIGNMENT_HEADER, "true")
+							.body(http::Body::empty())
+							.map_err(ProxyError::Http)?,
+					);
+				},
+				Err(error) => return Err(ProxyError::Processing(error).into()),
+			}
+		} else {
+			upstream
+		};
 		let mut resp = ::http::Response::builder()
 			.status(StatusCode::OK)
 			.body(http::Body::empty())
@@ -2910,7 +2954,7 @@ async fn make_backend_call(
 
 /// Resolves a Substrate actor assignment into the generic override used by dynamic backends.
 async fn handle_substrate_backend_selection(
-	req: &mut MustSnapshot<'_>,
+	req: &mut Request,
 	backend: &Backend,
 ) -> Result<(), ProxyResponse> {
 	if let Some(state) = req
@@ -2988,10 +3032,16 @@ fn build_connect_backend_call(
 		},
 		Backend::Opaque(_, target) => Ok(BackendCall::from_shared(target.clone(), policies)),
 		Backend::Dynamic(_, expr) => {
+			// Substrate resolves a dynamic backend from ResumeActor and records the
+			// concrete worker endpoint on the request. This has the same precedence
+			// for CONNECT as it does for ordinary HTTP requests.
 			let executor = crate::cel::Executor::new_request(req);
-			let target = match dynamic_backend_target_override(&executor, expr)? {
-				Some(target) => target,
-				None => connect_authority_target(req)?,
+			let target = match req.extensions().get::<DynamicBackendOverride>() {
+				Some(target) => target.0.clone(),
+				None => match dynamic_backend_target_override(&executor, expr)? {
+					Some(target) => target,
+					None => connect_authority_target(req)?,
+				},
 			};
 			Ok(BackendCall::from_shared(target, policies))
 		},

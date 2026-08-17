@@ -3,7 +3,7 @@ mod ingress;
 
 pub use egress::SubstrateEgress;
 pub use ingress::SubstrateIngress;
-pub(crate) use ingress::{SubstrateRequestState, is_stale_assignment};
+pub(crate) use ingress::{STALE_ASSIGNMENT_HEADER, SubstrateRequestState, is_stale_assignment};
 
 const CACHE_CAPACITY: usize = 10_000;
 const TRACE_POLICY_KIND: &str = "substrate";

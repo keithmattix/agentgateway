@@ -303,6 +303,70 @@ async fn actor_ingress_uses_the_original_connect_authority() {
 }
 
 #[tokio::test]
+async fn actor_ingress_rejects_atunnel_without_alpn() {
+	let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+	let atunnel_address = listener.local_addr().unwrap();
+	let atunnel = tokio::spawn(async move {
+		let (mut stream, _) = listener.accept().await.unwrap();
+		let mut buf = [0; 1];
+		assert_eq!(stream.read(&mut buf).await.unwrap(), 0);
+	});
+
+	let calls = Arc::new(AtomicUsize::new(0));
+	let api = ateapimock::AteApiMock::new({
+		let calls = calls.clone();
+		let pod_ip = atunnel_address.ip().to_string();
+		move || IngressHandler {
+			pod_ip: pod_ip.clone(),
+			calls: calls.clone(),
+		}
+	})
+	.spawn()
+	.await;
+
+	let dynamic = Backend::Dynamic(ResourceName::new("dynamic".into(), "".into()), None);
+	let bind = simple_bind();
+	let mut gateway = setup_proxy_test("{}")
+		.unwrap()
+		.with_raw_backend(dynamic.into())
+		.with_bind(bind)
+		.with_route(basic_named_route(strng::literal!("/dynamic")))
+		.with_connect_enabled();
+	gateway
+		.attach_route_policy(json!({
+			"substrateIngress": {
+				"host": api.address.to_string(),
+				"targetPort": atunnel_address.port(),
+				"connectTargetPort": atunnel_address.port(),
+			}
+		}))
+		.await;
+
+	let mut io = gateway.serve_tunnel(BIND_KEY);
+	let authority = "my-actor.demo.actors.resources.substrate.ate.dev:9090";
+	io.write_all(format!("CONNECT {authority} HTTP/1.1\r\nHost: {authority}\r\n\r\n").as_bytes())
+		.await
+		.unwrap();
+	let mut response = Vec::new();
+	loop {
+		let mut chunk = [0; 1024];
+		let n = io.read(&mut chunk).await.unwrap();
+		assert!(n > 0, "CONNECT response unexpectedly closed");
+		response.extend_from_slice(&chunk[..n]);
+		if response.windows(4).any(|window| window == b"\r\n\r\n") {
+			break;
+		}
+	}
+	assert!(
+		String::from_utf8_lossy(&response).contains("HTTP/1.1 503 Service Unavailable"),
+		"unexpected CONNECT response: {}",
+		String::from_utf8_lossy(&response),
+	);
+	assert_eq!(calls.load(Ordering::Relaxed), 1);
+	atunnel.await.unwrap();
+}
+
+#[tokio::test]
 async fn substrate_egress_authorizes_a_reentered_connect_request() {
 	let upstream = simple_mock().await;
 	let calls = Arc::new(AtomicUsize::new(0));

@@ -1,5 +1,5 @@
 mod azure;
-mod connect_tunnel;
+pub(crate) mod connect_tunnel;
 mod dns;
 mod hbone_tunnel;
 mod tls;
@@ -319,7 +319,7 @@ impl Connector {
 				// This is recursive but bounded: we cannot even tunnel to a tunnel
 				let con = Box::pin(self.connect(tcfg.target, proxy_dst, *tcfg.transport, false)).await?;
 
-				let con = connect_tunnel::handshake(con, &dest, tcfg.token)
+				let con = connect_tunnel::handshake_h1(con, &dest, tcfg.token)
 					.await
 					.map_err(crate::http::Error::new)?;
 				debug!(%dest, "connected to tunnel proxy (CONNECT)");
