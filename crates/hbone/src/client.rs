@@ -6,13 +6,31 @@ use anyhow::anyhow;
 use bytes::{Buf, Bytes};
 use h2::SendStream;
 use h2::client::{Connection, SendRequest};
-use http::Request;
+use http::{HeaderMap, Request, StatusCode};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::sync::oneshot;
 use tokio::sync::watch::Receiver;
 use tracing::{Instrument, debug, error, trace, warn};
 
 use crate::Key;
+
+/// A non-successful response to an HTTP/2 CONNECT request.
+///
+/// Callers that establish protocol-specific tunnels may need the response
+/// headers to distinguish a retryable rejection from a generic failure.
+#[derive(Debug)]
+pub struct UnexpectedConnectResponse {
+	pub status: StatusCode,
+	pub headers: HeaderMap,
+}
+
+impl std::fmt::Display for UnexpectedConnectResponse {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "unexpected status: {}", self.status)
+	}
+}
+
+impl std::error::Error for UnexpectedConnectResponse {}
 
 #[derive(Debug, Clone)]
 // H2ConnectClient is a wrapper abstracting h2
@@ -93,7 +111,13 @@ impl<K: Key> H2ConnectClient<K> {
 		let (response, stream) = self.sender.send_request(req, false)?;
 		let response = response.await?;
 		if response.status() != 200 {
-			return Err(anyhow!("unexpected status: {}", response.status()));
+			return Err(
+				UnexpectedConnectResponse {
+					status: response.status(),
+					headers: response.headers().clone(),
+				}
+				.into(),
+			);
 		}
 		Ok((stream, response.into_body()))
 	}

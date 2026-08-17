@@ -16,6 +16,7 @@ use crate::proxy::httpproxy::PolicyClient;
 use crate::proxy::{ProxyError, dtrace};
 use crate::store::RequestPolicyTrait;
 use crate::telemetry::log::RequestLog;
+use crate::telemetry::metrics::{OutboundCallKind, OutboundCallSubtype};
 use crate::types::agent::{SimpleBackendReferenceWithPolicies, Target};
 use crate::*;
 
@@ -25,6 +26,8 @@ const DEFAULT_PARKING_BUDGET: Duration = Duration::from_secs(5);
 const DEFAULT_PARKING_MAX: usize = 1024;
 const DEFAULT_PARKING_RETRY_INTERVAL: Duration = Duration::from_millis(100);
 const DEFAULT_PARKING_RETRY_FACTOR: f64 = 1.1;
+const DEFAULT_ACTOR_PORT: u16 = 80;
+const DEFAULT_CONNECT_TARGET_PORT: NonZeroU16 = NonZeroU16::new(444).unwrap();
 const TARGET_PORT_HEADER: &str = "x-ate-target-port";
 pub(crate) const STALE_ASSIGNMENT_HEADER: &str = "x-ate-assignment-stale";
 
@@ -136,13 +139,14 @@ impl AssignmentCache {
 #[derive(Clone)]
 pub(crate) struct SubstrateRequestState {
 	actor: ActorRef,
+	actor_port: u16,
 	ingress: SubstrateIngress,
 	client: PolicyClient,
 	current: Arc<Mutex<Option<CachedAssignment>>>,
 }
 
 fn default_target_port() -> NonZeroU16 {
-	NonZeroU16::new(80).unwrap()
+	NonZeroU16::new(443).unwrap()
 }
 
 fn default_cache_ttl() -> Duration {
@@ -170,6 +174,10 @@ fn default_parking_retry_interval() -> Duration {
 
 fn default_parking_retry_factor() -> f64 {
 	DEFAULT_PARKING_RETRY_FACTOR
+}
+
+fn default_connect_target_port() -> NonZeroU16 {
+	DEFAULT_CONNECT_TARGET_PORT
 }
 
 /// Bounds requests held while an actor is waiting for capacity to resume.
@@ -236,10 +244,15 @@ pub struct SubstrateIngress {
 	/// Backend that receives ResumeActor calls and policies used when connecting to it.
 	#[serde(flatten)]
 	pub target: SimpleBackendReferenceWithPolicies,
-	/// Port on the resumed worker pod's atunnel ingress. Defaults to 80.
+	/// Port on the resumed worker pod's ordinary atunnel ingress. Defaults to 443.
+	/// This is independent from `connect_target_port`, which is used for raw CONNECT tunnels.
 	#[serde(default = "default_target_port")]
 	#[cfg_attr(feature = "schema", schemars(with = "std::num::NonZeroU16"))]
 	pub target_port: NonZeroU16,
+	/// Port on the resumed worker pod's atunnel CONNECT listener. Defaults to 444.
+	#[serde(default = "default_connect_target_port")]
+	#[cfg_attr(feature = "schema", schemars(with = "std::num::NonZeroU16"))]
+	pub connect_target_port: NonZeroU16,
 	/// How long successful actor assignments are reused. Defaults to 5s; 0s disables reuse.
 	#[serde(default = "default_cache_ttl", with = "serde_dur")]
 	#[cfg_attr(feature = "schema", schemars(with = "String"))]
@@ -261,11 +274,12 @@ impl SubstrateIngress {
 		client: &PolicyClient,
 		actor: &ActorRef,
 	) -> Result<SocketAddr, ResumeError> {
-		let _parking_permit = self.acquire_parking_slot()?;
 		let budget = self.request_parking.budget();
 		let deadline = tokio::time::Instant::now() + budget;
 		let result = async {
-			let channel = self.target.grpc_channel(client.clone());
+			let channel = self.target.grpc_channel(
+				client.with_outbound(OutboundCallKind::Policy, OutboundCallSubtype::Substrate),
+			);
 			let mut control = protos::ateapi::control_client::ControlClient::new(channel);
 			let message = protos::ateapi::ResumeActorRequest {
 				actor: Some(protos::ateapi::ObjectRef {
@@ -354,6 +368,23 @@ impl SubstrateIngress {
 	}
 
 	async fn resolve(&self, client: &PolicyClient, actor: ActorRef) -> ResolutionResult {
+		// Cached assignments need no parking slot. Every cache miss, including a
+		// follower waiting for another request's in-flight resolution, does: this
+		// is the bounded set of parked requests.
+		if let Some(cached) = self.cache.entries.get(&actor) {
+			match cached {
+				Ok(cached) if cached.expires_at > Instant::now() => {
+					return Ok((cached, ResolutionSource::Cache));
+				},
+				Ok(expired) => self.cache.remove_generation(&actor, expired.generation),
+				Err(_) => {
+					self.cache.entries.remove_if(&actor, |entry| entry.is_err());
+				},
+			}
+		}
+		let _parking_permit = self
+			.acquire_parking_slot()
+			.map_err(|error| (error, ResolutionSource::Request))?;
 		loop {
 			match self.cache.entries.get_value_or_guard_async(&actor).await {
 				Ok(Ok(cached)) if cached.expires_at > Instant::now() => {
@@ -395,6 +426,28 @@ impl SubstrateIngress {
 }
 
 impl SubstrateRequestState {
+	/// The authority sent to atunnel when proxying a raw CONNECT tunnel. atunnel
+	/// authenticates the router connection and uses this stable actor DNS name
+	/// plus port to select the currently active actor process.
+	pub(crate) fn connect_authority(&self) -> String {
+		format!(
+			"{}.{}{}:{}",
+			self.actor.name, self.actor.atespace, ACTOR_DNS_SUFFIX, self.actor_port
+		)
+	}
+
+	/// Resolves the actor assignment at the worker's raw CONNECT listener.
+	pub(crate) async fn resolve_connect_target(&self) -> Result<Target, crate::proxy::ProxyResponse> {
+		let target = self.resolve_target().await?;
+		match target {
+			Target::Address(address) => Ok(Target::Address(SocketAddr::new(
+				address.ip(),
+				self.ingress.connect_target_port.get(),
+			))),
+			_ => unreachable!("Substrate assignments are always socket addresses"),
+		}
+	}
+
 	pub(crate) async fn resolve_target(&self) -> Result<Target, crate::proxy::ProxyResponse> {
 		if let Some(current) = self.current.lock().unwrap().as_ref() {
 			pol_event!(
@@ -503,8 +556,17 @@ impl RequestPolicyTrait for SubstrateIngress {
 				let authority = values.next()?.to_str().ok()?;
 				(values.next().is_none()).then_some(authority)
 			});
+		// CONNECT re-entry retains the outer authority in SourceContext. A direct
+		// CONNECT routed by AgentGateway has no such re-entry, so its request URI
+		// is the authoritative source (and preserves its non-default port).
 		let authority = connect_authority
 			.map(ToOwned::to_owned)
+			.or_else(|| {
+				req
+					.uri()
+					.authority()
+					.map(|authority| authority.as_str().to_owned())
+			})
 			.unwrap_or_else(|| crate::http::get_host(req).unwrap_or_default().to_owned());
 		let authority = authority
 			.parse::<::http::uri::Authority>()
@@ -515,7 +577,7 @@ impl RequestPolicyTrait for SubstrateIngress {
 				)
 			})?;
 		let host = authority.host();
-		let actor_port = authority.port_u16().unwrap_or(80);
+		let actor_port = authority.port_u16().unwrap_or(DEFAULT_ACTOR_PORT);
 		let host = host.strip_suffix('.').unwrap_or(host);
 		let parsed = host
 			.strip_suffix(ACTOR_DNS_SUFFIX)
@@ -539,17 +601,18 @@ impl RequestPolicyTrait for SubstrateIngress {
 		};
 		log.ate_actor_id = Some(actor.name.clone());
 		log.ate_atespace = Some(actor.atespace.clone());
-		// atunnel has a fixed worker-side listener, so the actor's requested
-		// port travels as a per-request header. It strips this before forwarding
-		// to the actor. For direct ingress the authority normally has no port and
-		// the default is 80; for CONNECT re-entry this preserves the original
-		// CONNECT authority's arbitrary port.
-		req.headers_mut().insert(
-			::http::header::HeaderName::from_static(TARGET_PORT_HEADER),
-			::http::HeaderValue::from(actor_port),
-		);
+		// Ordinary atunnel ingress uses this header to select the actor port and
+		// strips it before forwarding. Raw CONNECT carries the port in its
+		// authority instead, which atunnel parses directly.
+		if req.method() != ::http::Method::CONNECT {
+			req.headers_mut().insert(
+				::http::header::HeaderName::from_static(TARGET_PORT_HEADER),
+				::http::HeaderValue::from(actor_port),
+			);
+		}
 		req.extensions_mut().insert(SubstrateRequestState {
 			actor,
+			actor_port,
 			ingress: self.clone(),
 			client: client.clone(),
 			current: Arc::new(Mutex::new(None)),
@@ -576,6 +639,11 @@ mod tests {
 		basic_named_route, send_request, setup_proxy_test, simple_bind,
 	};
 	use crate::types::agent::{Backend, ResourceName};
+
+	#[test]
+	fn default_target_port_matches_atunnel_ingress() {
+		assert_eq!(super::default_target_port().get(), 443);
+	}
 
 	#[derive(Clone)]
 	struct MockControl {
