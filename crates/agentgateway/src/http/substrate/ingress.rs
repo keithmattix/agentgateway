@@ -297,10 +297,11 @@ impl SubstrateIngress {
 						format!("ResumeActor timed out after {budget:?}"),
 					));
 				}
-				let response = {
-					let _scope = dtrace::start_scope(TRACE_POLICY_KIND);
-					tokio::time::timeout(remaining, control.resume_actor(message.clone())).await
-				};
+				let response = dtrace::scope_future(
+					Some(TRACE_POLICY_KIND),
+					tokio::time::timeout(remaining, control.resume_actor(message.clone())),
+				)
+				.await;
 				match response {
 					Ok(Ok(response)) => {
 						let actor = response.into_inner().actor.ok_or_else(|| {

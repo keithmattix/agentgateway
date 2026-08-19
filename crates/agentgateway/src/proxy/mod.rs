@@ -68,13 +68,13 @@ impl ProxyError {
 			| ProxyError::MethodNotAllowed
 			| ProxyError::ProcessingString(_)
 			| ProxyError::Processing(_)
-			| ProxyError::SubstrateIngressFailed(_, _)
 			| ProxyError::SubstrateEgressUnavailable(_)
 			| ProxyError::RouteCycleDetected
 			| ProxyError::Body(_)
 			| ProxyError::Http(_)
 			| ProxyError::BackendUnsupportedMirror
 			| ProxyError::FilterError(_) => ProxyResponseReason::Internal,
+			ProxyError::SubstrateIngressFailed(status, _) => substrate_ingress_reason(*status),
 			ProxyError::AIRequest(error) => classify_ai_request(error).reason,
 			ProxyError::AIResponse(error) => classify_ai_response(error).reason,
 			ProxyError::JwtAuthenticationFailure(_) => ProxyResponseReason::JwtAuth,
@@ -98,6 +98,16 @@ impl ProxyError {
 			},
 			ProxyError::GuardrailRejected { .. } => ProxyResponseReason::Guardrail,
 		}
+	}
+}
+
+fn substrate_ingress_reason(status: StatusCode) -> ProxyResponseReason {
+	match status {
+		StatusCode::NOT_FOUND => ProxyResponseReason::NotFound,
+		StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => ProxyResponseReason::Authorization,
+		StatusCode::TOO_MANY_REQUESTS => ProxyResponseReason::RateLimit,
+		StatusCode::REQUEST_TIMEOUT | StatusCode::GATEWAY_TIMEOUT => ProxyResponseReason::Timeout,
+		_ => ProxyResponseReason::Internal,
 	}
 }
 
@@ -644,6 +654,25 @@ pub fn resolve_simple_backend_with_policies(
 #[cfg(test)]
 mod tests {
 	use super::*;
+
+	#[test]
+	fn substrate_ingress_reason_preserves_client_facing_statuses() {
+		for (status, reason) in [
+			(StatusCode::NOT_FOUND, ProxyResponseReason::NotFound),
+			(StatusCode::UNAUTHORIZED, ProxyResponseReason::Authorization),
+			(StatusCode::FORBIDDEN, ProxyResponseReason::Authorization),
+			(
+				StatusCode::TOO_MANY_REQUESTS,
+				ProxyResponseReason::RateLimit,
+			),
+			(StatusCode::GATEWAY_TIMEOUT, ProxyResponseReason::Timeout),
+		] {
+			assert_eq!(
+				ProxyResponse::Error(ProxyError::SubstrateIngressFailed(status, String::new())).as_reason(),
+				reason
+			);
+		}
+	}
 
 	fn assert_ai_error_mapping(
 		make_error: impl Fn() -> ProxyError,
