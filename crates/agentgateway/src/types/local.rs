@@ -3036,10 +3036,10 @@ async fn convert(
 				key: bind_name,
 				address: sockaddr,
 				protocol: if any_auto {
-				  BindProtocol::auto
-			  } else {
-				  detect_bind_protocol(&ls)
-			  },
+					BindProtocol::auto
+				} else {
+					detect_bind_protocol(&ls)
+				},
 				tunnel_protocol: b.tunnel_protocol,
 				mode: b.mode,
 			}),

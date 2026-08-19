@@ -229,19 +229,12 @@ async fn auto_protocol_peek_timeout() {
 async fn auto_protocol_raw_tcp_fallback() {
 	let echo_addr = spawn_tcp_echo().await;
 	let route = basic_named_tcp_route(strng::format!("/{echo_addr}"));
-	let bind = Bind {
-		key: BIND_KEY,
-		address: "127.0.0.1:0".parse().unwrap(),
-		listeners: ListenerSet::from_list([Listener {
-			key: LISTENER_KEY,
-			name: Default::default(),
-			hostname: Default::default(),
-			protocol: ListenerProtocol::TCP,
-		}]),
-		protocol: BindProtocol::auto,
-		tunnel_protocol: Default::default(),
-		mode: Default::default(),
-	};
+	let bind = auto_bind(ListenerSet::from_list([Listener {
+		key: LISTENER_KEY,
+		name: Default::default(),
+		hostname: Default::default(),
+		protocol: ListenerProtocol::TCP,
+	}]));
 
 	let t = setup_proxy_test("{}")
 		.unwrap()
@@ -268,19 +261,12 @@ async fn auto_protocol_raw_tcp_fallback() {
 async fn auto_protocol_raw_tcp_short_prefix() {
 	let echo_addr = spawn_tcp_echo().await;
 	let route = basic_named_tcp_route(strng::format!("/{echo_addr}"));
-	let bind = Bind {
-		key: BIND_KEY,
-		address: "127.0.0.1:0".parse().unwrap(),
-		listeners: ListenerSet::from_list([Listener {
-			key: LISTENER_KEY,
-			name: Default::default(),
-			hostname: Default::default(),
-			protocol: ListenerProtocol::TCP,
-		}]),
-		protocol: BindProtocol::auto,
-		tunnel_protocol: Default::default(),
-		mode: Default::default(),
-	};
+	let bind = auto_bind(ListenerSet::from_list([Listener {
+		key: LISTENER_KEY,
+		name: Default::default(),
+		hostname: Default::default(),
+		protocol: ListenerProtocol::TCP,
+	}]));
 
 	let t = setup_proxy_test("{}")
 		.unwrap()
