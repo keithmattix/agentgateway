@@ -29,6 +29,10 @@ impl RawInputItem {
 		Self(serde_json::to_value(item).expect("responses input item should serialize"))
 	}
 
+	pub(crate) fn from_value(item: Value) -> Self {
+		Self(item)
+	}
+
 	fn from_user_text(text: String) -> Self {
 		Self::from_typed(InputItem::from(InputMessage {
 			content: vec![InputContent::InputText(InputTextContent {
@@ -350,6 +354,9 @@ impl Request {
 }
 
 impl RequestType for Request {
+	fn body_is_json(&self) -> bool {
+		true
+	}
 	fn model(&mut self) -> &mut Option<String> {
 		&mut self.model
 	}
@@ -642,7 +649,17 @@ impl ResponseType for Response {
 			if let OutputItem::Message(msg) = o {
 				for c in &mut msg.content {
 					if let Content::OutputText(t) = c {
+						if t.annotations.is_empty() && t.logprobs.is_none() {
+							f(&mut t.text);
+							continue;
+						}
+						// offset-based metadata cannot survive a text rewrite
+						let original = t.text.clone();
 						f(&mut t.text);
+						if t.text != original {
+							t.annotations.clear();
+							t.logprobs = None;
+						}
 					}
 				}
 			}
@@ -659,11 +676,12 @@ pub mod typed {
 		IncompleteDetails, InputContent, InputItem, InputMessage, InputParam, InputRole,
 		InputTextContent, InputTokenDetails, Item, MessageItem, OutputContent, OutputItem,
 		OutputMessage, OutputMessageContent, OutputStatus, OutputTextContent, OutputTokenDetails,
-		ReasoningEffort, Response, ResponseCompletedEvent, ResponseContentPartAddedEvent,
+		Reasoning, ReasoningEffort, Response, ResponseCompletedEvent, ResponseContentPartAddedEvent,
 		ResponseContentPartDoneEvent, ResponseCreatedEvent, ResponseErrorEvent, ResponseFailedEvent,
 		ResponseFunctionCallArgumentsDeltaEvent, ResponseFunctionCallArgumentsDoneEvent,
-		ResponseIncompleteEvent, ResponseOutputItemAddedEvent, ResponseOutputItemDoneEvent,
-		ResponseTextDeltaEvent, ResponseTextParam, ResponseUsage, Role, Status,
+		ResponseInProgressEvent, ResponseIncompleteEvent, ResponseOutputItemAddedEvent,
+		ResponseOutputItemDoneEvent, ResponseRefusalDeltaEvent, ResponseRefusalDoneEvent,
+		ResponseTextDeltaEvent, ResponseTextDoneEvent, ResponseTextParam, ResponseUsage, Role, Status,
 		TextResponseFormatConfiguration, Tool, ToolChoiceFunction, ToolChoiceOptions, ToolChoiceParam,
 	};
 	use serde::{Deserialize, Serialize};
@@ -676,6 +694,9 @@ pub mod typed {
 		/// An event that is emitted when a response is created.
 		#[serde(rename = "response.created")]
 		ResponseCreated(openai_responses::ResponseCreatedEvent),
+		/// Emitted when a response is in progress (intermediate progress event).
+		#[serde(rename = "response.in_progress")]
+		ResponseInProgress(openai_responses::ResponseInProgressEvent),
 		/// Emitted when a new output item is added.
 		#[serde(rename = "response.output_item.added")]
 		ResponseOutputItemAdded(openai_responses::ResponseOutputItemAddedEvent),
@@ -685,6 +706,15 @@ pub mod typed {
 		/// Emitted when there is an additional text delta.
 		#[serde(rename = "response.output_text.delta")]
 		ResponseOutputTextDelta(openai_responses::ResponseTextDeltaEvent),
+		/// Emitted when text content is finalized.
+		#[serde(rename = "response.output_text.done")]
+		ResponseOutputTextDone(openai_responses::ResponseTextDoneEvent),
+		/// Emitted when there is a partial refusal text.
+		#[serde(rename = "response.refusal.delta")]
+		ResponseRefusalDelta(openai_responses::ResponseRefusalDeltaEvent),
+		/// Emitted when refusal text is finalized.
+		#[serde(rename = "response.refusal.done")]
+		ResponseRefusalDone(openai_responses::ResponseRefusalDoneEvent),
 		/// Emitted when there is a partial function-call arguments delta.
 		#[serde(rename = "response.function_call_arguments.delta")]
 		ResponseFunctionCallArgumentsDelta(openai_responses::ResponseFunctionCallArgumentsDeltaEvent),

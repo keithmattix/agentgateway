@@ -188,8 +188,14 @@ message Backend {
     AwsBackend aws = 8;
     // Not yet implemented. Reserved for a future release.
     GuardrailBackend guardrail = 9;
+    ModelRouterBackend model_router = 10;
   }
   repeated BackendPolicySpec inline_policies = 7;
+}
+
+// Internal LLM model router materialized for an explicitly opted-in HTTPRoute rule.
+message ModelRouterBackend {
+  string router_key = 1;
 }
 
 // GuardrailBackend is a typed backend for AI guardrail provider integrations.
@@ -963,10 +969,18 @@ message TrafficPolicySpec {
       REQUEST = 0;
       TOKEN = 1;
     }
+    message Rule {
+      uint64 max_tokens = 1;
+      uint64 tokens_per_fill = 2;
+      google.protobuf.Duration fill_interval = 3;
+      Type type = 4;
+    }
+    // The singular fields contain the first rule for compatibility with older data planes.
     uint64 max_tokens = 1;
     uint64 tokens_per_fill = 2;
     google.protobuf.Duration fill_interval = 3;
     Type type = 4;
+    repeated Rule rules = 5;
   }
   message ExternalAuth {
     enum FailureMode {
@@ -1409,6 +1423,10 @@ message BackendPolicySpec {
     // CEL transformation expressions to evaluate and set in the LLM request.
     // Expressions are evaluated against the current request body and behave like overrides.
     map<string, string> transformations = 8;
+    // CEL transformation expressions to evaluate and set in the LLM request.
+    // Expressions are evaluated against the current request body and behave like overrides.
+    // This happens after conversion (converting an api interface to another like messages->chat completions)
+    map<string, string> final_transformations = 9;
     PromptEnrichment prompts = 4;
     // Model aliases - map from alias name to actual model name
     map<string, string> model_aliases = 5;
@@ -1439,6 +1457,10 @@ message BackendPolicySpec {
       REALTIME = 8;
       // Processes Cohere /v2/rerank format requests
       RERANK = 10;
+      // Processes Gemini models/{model}:generateContent and :streamGenerateContent format requests
+      GENERATE_CONTENT = 11;
+      // Processes Gemini models/{model}:countTokens format requests
+      GEMINI_COUNT_TOKENS = 12;
     }
 
     // Routes defines how to identify the type of LLM request to handle.
@@ -2054,6 +2076,10 @@ message OAuthTokenExchange {
 
 // Cross App Access / ID-JAG backend authentication.
 message CrossAppAccessAuth {
+  message ScopeOverride {
+    repeated string values = 1;
+  }
+
   message Endpoint {
     // Authorization server token endpoint.
     BackendReference token_endpoint = 1;
@@ -2068,6 +2094,8 @@ message CrossAppAccessAuth {
   message SubjectToken {
     // Where to read the subject token. Defaults to the Authorization Bearer header.
     AuthorizationLocation source = 1;
+    // RFC 8693 subject token type URI. Empty defaults to id_token.
+    string token_type = 2;
   }
 
   // User identity provider authorization server, used for the RFC 8693 ID-JAG exchange.
@@ -2078,13 +2106,15 @@ message CrossAppAccessAuth {
   string audience = 3;
   // resource parameters naming the protected resource APIs.
   repeated string resources = 4;
-  // scope values for the requested token.
+  // Scope values requested when obtaining the ID-JAG from the identity provider.
   repeated string scopes = 5;
   // Response cache configuration. When unset uses InMemory cache with defaults.
   OAuthTokenExchange.TokenCache cache = 6;
-  // Subject token sent to the identity provider. Its type is fixed to an
-  // OpenID Connect ID token until other subject token types are supported.
+  // Subject token sent to the identity provider. Defaults to an OpenID Connect ID token.
   SubjectToken subject_token = 7;
+  // Scope values requested when exchanging the ID-JAG for an access token.
+  // When unset, inherits scopes. When present and empty, omits scope.
+  ScopeOverride access_token_scopes = 8;
 }
 
 message ModelRoute {
@@ -2177,4 +2207,8 @@ message ModelRoute {
 
   // Authorization rules that clients must satisfy to use a concrete model.
   TrafficPolicySpec.RBAC authorization = 8;
+
+  // Internal LLM router backend populated by this model. Empty uses the
+  // legacy listener-scoped implicit model route.
+  string router_key = 9;
 }

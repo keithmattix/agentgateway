@@ -26,7 +26,7 @@ use crate::mcp::{FailureMode, McpAuthorization};
 use crate::store::{LocalWorkload, RequestPolicy};
 use crate::types::agent::{
 	A2aPolicy, Authorization, Backend, BackendKey, BackendReference, BackendTrafficPolicy,
-	BackendWithPolicies, Bind, BindMode, BindProtocol, FrontendPolicy, HeaderMatch,
+	BackendWithPolicies, Bind, BindMode, BindProtocol, BindSnapshot, FrontendPolicy, HeaderMatch,
 	JwtAuthentication, Listener, ListenerKey, ListenerName, ListenerProtocol, ListenerSet,
 	ListenerTarget, LocalMcpAuthentication, McpAuthentication, McpBackend, McpPrefixMode, McpTarget,
 	McpTargetName, McpTargetSpec, OpenAPITarget, PathMatch, PolicyPhase, PolicyTarget, PolicyType,
@@ -303,7 +303,7 @@ fn parse_deprecated_tracing_endpoint(endpoint: &str) -> anyhow::Result<(Target, 
 pub struct NormalizedLocalConfig {
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub model_catalog: Option<Vec<crate::ModelCatalogSource>>,
-	pub binds: Vec<Bind>,
+	pub binds: Vec<BindSnapshot>,
 	pub listener_routes: Vec<(ListenerKey, Vec<Route>)>,
 	pub listener_tcp_routes: Vec<(ListenerKey, Vec<TCPRoute>)>,
 	pub policies: Vec<TargetedPolicy>,
@@ -795,6 +795,10 @@ pub struct LocalLLMModels {
 	/// transformation allows setting values from CEL expressions for the request, overriding any existing values.
 	#[serde(default, skip_serializing_if = "Option::is_none")]
 	transformation: Option<HashMap<String, Arc<cel::Expression>>>,
+	/// final_transformation allows setting values from CEL expressions for the request, overriding any existing values.
+	/// Occurs after conversion of the request to the provider format, allowing for provider-specific transformations.
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	final_transformation: Option<HashMap<String, Arc<cel::Expression>>>,
 	/// requestHeaders modifies headers in requests to the LLM provider.
 	#[serde(default)]
 	request_headers: Option<filters::HeaderModifier>,
@@ -1727,6 +1731,7 @@ impl LocalBackend {
 					prefix_mode: tgt.prefix_mode.unwrap_or_default(),
 					failure_mode: tgt.failure_mode.unwrap_or_default(),
 					session_idle_ttl: mcp_session_ttl,
+					dns_rebinding_protection: tgt.dns_rebinding_protection,
 				};
 				backends.push(Backend::MCP(name, m).into());
 				backends
@@ -1793,6 +1798,10 @@ pub struct LocalMcpBackend {
 	/// Defaults to `failClosed`.
 	#[serde(default, skip_serializing_if = "Option::is_none")]
 	pub failure_mode: Option<FailureMode>,
+	/// Opt-in MCP DNS rebinding protection (Host/Origin must be localhost).
+	/// Off by default; see https://github.com/agentgateway/agentgateway/issues/1855.
+	#[serde(default, skip_serializing_if = "crate::serdes::is_default")]
+	pub dns_rebinding_protection: bool,
 }
 
 #[apply(schema_de!)]
@@ -2051,7 +2060,7 @@ pub struct LocalTCPRouteBackend {
 	#[serde(default = "default_weight")]
 	pub weight: usize,
 	#[serde(flatten)]
-	pub backend: SimpleLocalBackend,
+	pub backend: LocalTCPBackend,
 	/// Backend-level policies for TCP backends, such as TLS, authentication, and tunneling.
 	#[serde(default, skip_serializing_if = "Option::is_none")]
 	pub policies: Option<LocalTCPBackendPolicies>,
@@ -2134,6 +2143,54 @@ impl SimpleLocalBackend {
 			SimpleLocalBackend::Opaque(tgt) => Some(Backend::Opaque(name, tgt.clone())),
 			SimpleLocalBackend::Invalid => Some(Backend::Invalid),
 		}
+	}
+}
+
+#[apply(schema_de!)]
+pub enum LocalTCPBackend {
+	/// Service reference. Service must be defined in the top level services list.
+	Service {
+		/// Name of the target Service, as defined in the top-level `services` list.
+		name: NamespacedHostname,
+		/// Port on the target Service to route to.
+		port: u16,
+	},
+	/// Hostname or IP address
+	#[serde(rename = "host")]
+	Opaque(Target),
+	/// Resolve the dial target from downstream TLS SNI and the original destination port.
+	Dynamic {
+		/// CEL expression evaluated against TCP connection context to compute a
+		/// `host:port` dial target. Available fields include `source.*` and
+		/// `destination.*`; for TLS, `destination.hostname` is the sniffed SNI.
+		#[serde(default, skip_serializing_if = "Option::is_none")]
+		target: Option<Arc<crate::cel::Expression>>,
+	},
+	Backend(
+		/// Explicit backend reference. Backend must be defined in the top level backends list
+		BackendKey,
+	),
+	#[serde(skip_deserializing)]
+	#[cfg_attr(feature = "schema", schemars(skip))]
+	Invalid,
+}
+
+impl LocalTCPBackend {
+	fn as_backend(
+		&self,
+		name: ResourceName,
+		policies: Vec<BackendTrafficPolicy>,
+	) -> Option<BackendWithPolicies> {
+		let backend = match self {
+			LocalTCPBackend::Service { .. } | LocalTCPBackend::Backend(_) => return None,
+			LocalTCPBackend::Opaque(target) => Backend::Opaque(name, target.clone()),
+			LocalTCPBackend::Dynamic { target } => Backend::Dynamic(name, target.clone()),
+			LocalTCPBackend::Invalid => Backend::Invalid,
+		};
+		Some(BackendWithPolicies {
+			backend,
+			inline_policies: policies,
+		})
 	}
 }
 
@@ -2743,6 +2800,9 @@ struct LocalFrontendPolicies {
 	/// CEL authorization for downstream network connections.
 	#[serde(default)]
 	pub network_authorization: Option<frontend::NetworkAuthorization>,
+	/// HTTP external authorization performed once for each downstream network connection.
+	#[serde(default)]
+	pub network_ext_authz: Option<crate::http::ext_authz::ExtAuthz>,
 	/// Enable downstream PROXY protocol handling on this gateway or port, including
 	/// version matching and whether PROXY headers are required or optional.
 	#[serde(default, rename = "proxyProtocol", alias = "proxy")]
@@ -2971,17 +3031,19 @@ async fn convert(
 			// Windows and IPv6 don't mix well apparently?
 			SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), bind_port)
 		};
-		let b = Bind {
-			key: bind_name,
-			address: sockaddr,
-			protocol: if any_auto {
-				BindProtocol::auto
-			} else {
-				detect_bind_protocol(&ls)
-			},
-			listeners: ls,
-			tunnel_protocol: b.tunnel_protocol,
-			mode: b.mode,
+		let b = BindSnapshot {
+			bind: Arc::new(Bind {
+				key: bind_name,
+				address: sockaddr,
+				protocol: if any_auto {
+				  BindProtocol::auto
+			  } else {
+				  detect_bind_protocol(&ls)
+			  },
+				tunnel_protocol: b.tunnel_protocol,
+				mode: b.mode,
+			}),
+			listeners: Arc::new(ls),
 		};
 		all_binds.push(b)
 	}
@@ -3315,16 +3377,17 @@ fn validate_local_listener_ports(config: &LocalConfig) -> anyhow::Result<()> {
 				let protocol = effective_gateway_protocol(listener.protocol, listener.tls.is_some())
 					.with_context(|| format!("gateways.{gateway_name}.listeners[{idx}]"))?;
 				let kind = gateway_route_kind(protocol);
-				if let Some(existing_kind) = listener_kind
-					&& existing_kind != kind
-				{
-					bail!("gateway listeners on port {port} cannot mix HTTP and TCP protocols");
-				}
-				listener_kind = Some(kind);
 				let tls = matches!(
 					protocol,
 					LocalGatewayProtocol::HTTPS | LocalGatewayProtocol::TLS
 				);
+				if let Some(existing_kind) = listener_kind
+					&& existing_kind != kind
+					&& !tls
+				{
+					bail!("gateway listeners on port {port} cannot mix HTTP and TCP protocols");
+				}
+				listener_kind = Some(kind);
 				if let Some(existing_tls) = listener_tls
 					&& existing_tls != tls
 				{
@@ -3430,7 +3493,7 @@ async fn convert_gateways(
 	config: &crate::Config,
 	gateway: ListenerTarget,
 	gateways: IndexMap<Strng, LocalGateway>,
-	all_binds: &mut Vec<Bind>,
+	all_binds: &mut Vec<BindSnapshot>,
 	all_listener_routes: &mut Vec<(ListenerKey, Vec<Route>)>,
 	all_listener_tcp_routes: &mut Vec<(ListenerKey, Vec<TCPRoute>)>,
 	all_policies: &mut Vec<TargetedPolicy>,
@@ -3502,13 +3565,15 @@ async fn convert_gateways(
 		} else {
 			SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), port)
 		};
-		all_binds.push(Bind {
-			key: strng::format!("bind/{port}"),
-			address: sockaddr,
-			protocol: detect_bind_protocol(&listeners),
-			listeners,
-			tunnel_protocol: TunnelProtocol::Direct,
-			mode: BindMode::Standard,
+		all_binds.push(BindSnapshot {
+			bind: Arc::new(Bind {
+				key: strng::format!("bind/{port}"),
+				address: sockaddr,
+				protocol: detect_bind_protocol(&listeners),
+				tunnel_protocol: TunnelProtocol::Direct,
+				mode: BindMode::Standard,
+			}),
+			listeners: Arc::new(listeners),
 		});
 	}
 	Ok(refs)
@@ -4112,7 +4177,7 @@ async fn convert_llm_config(
 	llm_config: LocalLLMConfig,
 	attach_policies_to_route: bool,
 ) -> anyhow::Result<(
-	Bind,
+	BindSnapshot,
 	Vec<Route>,
 	Vec<TargetedPolicy>,
 	Vec<BackendWithPolicies>,
@@ -4372,6 +4437,7 @@ async fn convert_llm_config(
 			defaults: model_config.defaults.clone(),
 			overrides: model_config.overrides.clone(),
 			transformations: model_config.transformation.clone(),
+			final_transformations: model_config.final_transformation.clone(),
 			prompt_guard,
 			prompts: None,
 			model_aliases: Default::default(),
@@ -4596,17 +4662,19 @@ async fn convert_llm_config(
 		SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), port)
 	};
 
-	let bind = Bind {
-		key: strng::format!("bind/{}", port),
-		address: sockaddr,
-		protocol: if tls_enabled {
-			BindProtocol::tls
-		} else {
-			BindProtocol::http
-		},
-		listeners: listener_set,
-		tunnel_protocol: TunnelProtocol::Direct,
-		mode: BindMode::Standard,
+	let bind = BindSnapshot {
+		bind: Arc::new(Bind {
+			key: strng::format!("bind/{}", port),
+			address: sockaddr,
+			protocol: if tls_enabled {
+				BindProtocol::tls
+			} else {
+				BindProtocol::http
+			},
+			tunnel_protocol: TunnelProtocol::Direct,
+			mode: BindMode::Standard,
+		}),
+		listeners: Arc::new(listener_set),
 	};
 
 	Ok((bind, routes, all_policies, all_backends))
@@ -4619,7 +4687,7 @@ async fn convert_mcp_config(
 	mcp_config: LocalSimpleMcpConfig,
 	shared_port: bool,
 ) -> anyhow::Result<(
-	Bind,
+	BindSnapshot,
 	Vec<Route>,
 	Vec<TargetedPolicy>,
 	Vec<BackendWithPolicies>,
@@ -4689,13 +4757,15 @@ async fn convert_mcp_config(
 		SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), port)
 	};
 
-	let bind = Bind {
-		key: strng::format!("bind/{}", port),
-		address: sockaddr,
-		protocol: BindProtocol::http,
-		listeners: listener_set,
-		tunnel_protocol: TunnelProtocol::Direct,
-		mode: BindMode::Standard,
+	let bind = BindSnapshot {
+		bind: Arc::new(Bind {
+			key: strng::format!("bind/{}", port),
+			address: sockaddr,
+			protocol: BindProtocol::http,
+			tunnel_protocol: TunnelProtocol::Direct,
+			mode: BindMode::Standard,
+		}),
+		listeners: Arc::new(listener_set),
 	};
 
 	let backends = LocalBackend::MCP(backend)
@@ -5010,6 +5080,7 @@ async fn split_frontend_policies(
 		tls,
 		tcp,
 		network_authorization,
+		network_ext_authz,
 		proxy_protocol,
 		connect,
 		access_log,
@@ -5028,6 +5099,15 @@ async fn split_frontend_policies(
 		add(
 			FrontendPolicy::NetworkAuthorization(p),
 			"networkAuthorization",
+		);
+	}
+	if let Some(p) = network_ext_authz {
+		if !matches!(p.protocol, crate::http::ext_authz::Protocol::Http { .. }) {
+			bail!("frontendPolicies.networkExtAuthz only supports protocol.http");
+		}
+		add(
+			FrontendPolicy::NetworkExtAuthz(Arc::new(p.with_configured_cache_store())),
+			"networkExtAuthz",
 		);
 	}
 	if let Some(p) = proxy_protocol {
@@ -5340,14 +5420,15 @@ async fn convert_tcp_route(
 			None => Vec::new(),
 		};
 		let bref = match &b.backend {
-			SimpleLocalBackend::Service { name, port } => SimpleBackendReference::Service {
+			LocalTCPBackend::Service { name, port } => BackendReference::Service {
 				name: name.clone(),
 				port: *port,
 			},
-			SimpleLocalBackend::Invalid => SimpleBackendReference::Invalid,
-			_ => SimpleBackendReference::Backend(strng::format!("/{}", backend_key)),
+			LocalTCPBackend::Backend(name) => BackendReference::Backend(name.clone()),
+			LocalTCPBackend::Invalid => BackendReference::Invalid,
+			_ => BackendReference::Backend(strng::format!("/{}", backend_key)),
 		};
-		let maybe_backend = b.backend.as_backends(be_name.clone(), policies);
+		let maybe_backend = b.backend.as_backend(be_name.clone(), policies);
 		let bref = TCPRouteBackendReference {
 			weight: b.weight,
 			backend: bref,
@@ -5355,7 +5436,7 @@ async fn convert_tcp_route(
 		};
 		backend_refs.push(bref);
 		if let Some(be) = maybe_backend {
-			external_backends.push(be.into());
+			external_backends.push(be);
 		}
 	}
 

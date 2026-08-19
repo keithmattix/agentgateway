@@ -20,7 +20,7 @@ env:
   CI: true
   RUST_VERSION: "1.97.0"
   CARGO_BUILD_WARNINGS: deny
-  GO_VERSION: "1.26.4"
+  GO_VERSION: "1.27.0"
 
 jobs:
   #### Proxy jobs ####
@@ -109,13 +109,14 @@ jobs:
         persist-credentials: false
     - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
       with:
-        node-version: 24
+        node-version-file: ui/.nvmrc
     - name: Lint
       run: |
-        npm ci
-        npm run lint
+        corepack enable
+        pnpm install --frozen-lockfile
+        pnpm lint
     - name: End-to-end tests
-      run: npm run test:e2e
+      run: pnpm test:e2e
     - name: Upload Playwright traces
       if: failure()
       uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
