@@ -287,7 +287,7 @@ fn public_interface_url(
 			return None;
 		};
 		let rest = strip_complete_path_prefix(iface_path, replacement)?;
-		Some(format!("{matched}{rest}"))
+		Some(join_path_prefix(matched, rest))
 	}) {
 		return replace_path(gateway_base, &path);
 	}
@@ -300,7 +300,19 @@ fn replace_path(uri: &str, path: &str) -> String {
 	let Ok(uri) = uri.parse::<Uri>() else {
 		return format!("{uri}{path}");
 	};
-	uri.to_string().replace(uri.path(), path)
+	let original = uri.to_string();
+	let query = uri.query().map(str::to_string);
+	let mut path_and_query = path.to_string();
+	if let Some(query) = query {
+		path_and_query.push('?');
+		path_and_query.push_str(&query);
+	}
+	let Ok(path_and_query) = path_and_query.parse() else {
+		return original;
+	};
+	let mut parts = uri.into_parts();
+	parts.path_and_query = Some(path_and_query);
+	Uri::from_parts(parts).map_or(original, |uri| uri.to_string())
 }
 
 /// Strip `prefix` only when it ends on a path-segment boundary.
@@ -308,7 +320,8 @@ fn strip_complete_path_prefix<'a>(path: &'a str, prefix: &str) -> Option<&'a str
 	if prefix.is_empty() {
 		return None;
 	}
-	if prefix == "/" {
+	let prefix = prefix.trim_end_matches('/');
+	if prefix.is_empty() {
 		return Some(path);
 	}
 	if path == prefix {
@@ -316,6 +329,17 @@ fn strip_complete_path_prefix<'a>(path: &'a str, prefix: &str) -> Option<&'a str
 	}
 	let stripped = path.strip_prefix(prefix)?;
 	stripped.starts_with('/').then_some(stripped)
+}
+
+fn join_path_prefix(prefix: &str, rest: &str) -> String {
+	let prefix = prefix.trim_end_matches('/');
+	let rest = rest.trim_start_matches('/');
+	match (prefix, rest) {
+		("", "") => "/".to_string(),
+		("", rest) => format!("/{rest}"),
+		(prefix, "") => prefix.to_string(),
+		(prefix, rest) => format!("{prefix}/{rest}"),
+	}
 }
 
 #[cfg(test)]

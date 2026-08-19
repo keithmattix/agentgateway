@@ -770,6 +770,23 @@ async fn test_apply_to_response_uses_prefix_rewrite_context() {
 	);
 }
 
+#[test]
+fn test_strip_complete_path_prefix_normalizes_trailing_slashes() {
+	assert_eq!(
+		strip_complete_path_prefix("/svc/agent", "/svc/"),
+		Some("/agent")
+	);
+	assert_eq!(join_path_prefix("/gw/", "/svc/agent"), "/gw/svc/agent");
+}
+
+#[test]
+fn test_replace_path_changes_only_the_path() {
+	assert_eq!(
+		replace_path("https://gateway.example/?redirect=/", "/gw/svc/agent"),
+		"https://gateway.example/gw/svc/agent?redirect=/"
+	);
+}
+
 #[tokio::test]
 async fn test_apply_to_response_records_v1_nested_task_telemetry() {
 	// A2A v1.0 shape: the `oneof payload` puts the Task under `result.task`, with no
