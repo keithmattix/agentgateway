@@ -3,8 +3,11 @@ use std::sync::Arc;
 use http::HeaderValue;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
+use crate::http::substrate::STALE_ASSIGNMENT_HEADER;
 use crate::transport::stream::{Socket, TLSConnectionInfo};
 use crate::transport::{hbone, stream};
+
+const PROXY_AUTHORIZATION_HEADER: &str = "proxy-authorization";
 
 #[derive(Debug, thiserror::Error)]
 #[error("atunnel rejected a stale worker assignment")]
@@ -20,15 +23,15 @@ pub fn is_stale_assignment_error(error: &anyhow::Error) -> bool {
 			response.status == http::StatusCode::MISDIRECTED_REQUEST
 				&& response
 					.headers
-					.get("x-ate-assignment-stale")
+					.get(STALE_ASSIGNMENT_HEADER)
 					.is_some_and(|value| value == "true")
 		})
 }
 
 /// Establish an HTTP/1.1 CONNECT tunnel.
 ///
-/// This is retained for configured, conventional HTTP proxy tunnels. Native
-/// atunnel CONNECT uses [`handshake`], which selects the framing from ALPN.
+/// This is the HTTP/1.1 fallback selected by [`handshake`] after ALPN
+/// negotiation.
 pub async fn handshake_h1(
 	conn: Socket,
 	dest: &str,
@@ -48,7 +51,8 @@ pub async fn handshake_h1(
 	.into_bytes();
 
 	if let Some(auth) = auth {
-		buf.extend_from_slice(b"Proxy-Authorization: ");
+		buf.extend_from_slice(PROXY_AUTHORIZATION_HEADER.as_bytes());
+		buf.extend_from_slice(b": ");
 		buf.extend_from_slice(auth.as_bytes());
 		buf.extend_from_slice(b"\r\n");
 	}
@@ -98,7 +102,7 @@ fn h1_stale_assignment(response: &[u8]) -> bool {
 			let Some((name, value)) = line.split_once(':') else {
 				return false;
 			};
-			name.eq_ignore_ascii_case("x-ate-assignment-stale") && value.trim() == "true"
+			name.eq_ignore_ascii_case(STALE_ASSIGNMENT_HEADER) && value.trim() == "true"
 		})
 	})
 }
@@ -111,14 +115,18 @@ fn h1_stale_assignment(response: &[u8]) -> bool {
 pub async fn handshake(
 	conn: Socket,
 	dest: &str,
+	auth: Option<HeaderValue>,
 	hbone_config: Arc<agent_hbone::Config>,
 ) -> Result<Socket, anyhow::Error> {
+	// `TunnelConfig::token` has always authenticated configured HTTP proxies
+	// through Proxy-Authorization. Preserve that contract for either protocol
+	// selected by ALPN; native atunnel callers pass no token.
 	match conn
 		.ext::<TLSConnectionInfo>()
 		.and_then(|info| info.negotiated_alpn)
 	{
-		Some(stream::Alpn::H2) => handshake_h2(conn, dest, hbone_config).await,
-		Some(stream::Alpn::Http11) => handshake_h1(conn, dest, None).await,
+		Some(stream::Alpn::H2) => handshake_h2(conn, dest, auth, hbone_config).await,
+		Some(stream::Alpn::Http11) => handshake_h1(conn, dest, auth).await,
 		alpn => Err(anyhow::anyhow!(
 			"atunnel CONNECT negotiated unsupported ALPN: {alpn:?}"
 		)),
@@ -128,6 +136,7 @@ pub async fn handshake(
 async fn handshake_h2(
 	conn: Socket,
 	dest: &str,
+	auth: Option<HeaderValue>,
 	hbone_config: Arc<agent_hbone::Config>,
 ) -> Result<Socket, anyhow::Error> {
 	let target = conn.target_address();
@@ -144,11 +153,16 @@ async fn handshake_h2(
 		.authority(dest)
 		.path_and_query("/")
 		.build()?;
-	let request = http::Request::builder()
+	let mut request = http::Request::builder()
 		.method(http::Method::CONNECT)
 		.uri(uri)
 		.version(http::Version::HTTP_2)
 		.body(())?;
+	if let Some(auth) = auth {
+		request
+			.headers_mut()
+			.insert(PROXY_AUTHORIZATION_HEADER, auth);
+	}
 	let stream = sender.send_request(request).await?;
 	Ok(Socket::from_hbone(
 		Arc::new(ext),
@@ -225,7 +239,8 @@ mod tests {
 		let (client, mut server) = tokio::io::duplex(1024);
 		let server_task = tokio::spawn(async move {
 			let mut request = [0; 256];
-			server.read(&mut request).await.expect("read request");
+			let bytes_read = server.read(&mut request).await.expect("read request");
+			assert!(bytes_read > 0, "CONNECT request must not be empty");
 			server
 				.write_all(b"HTTP/1.1 421 Misdirected Request\r\nx-ate-assignment-stale: true\r\n\r\n")
 				.await

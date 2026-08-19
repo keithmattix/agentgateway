@@ -1187,7 +1187,7 @@ impl HTTPProxy {
 		if let Some((_, target)) = &substrate_connect_authority {
 			req
 				.extensions_mut()
-				.insert(DynamicBackendOverride(target.clone()));
+				.insert(DynamicBackendOverride::substrate(target.clone()));
 		}
 		let backend_call = build_connect_backend_call(
 			self.inputs.as_ref(),
@@ -1238,6 +1238,7 @@ impl HTTPProxy {
 			match crate::client::connect_tunnel::handshake(
 				upstream,
 				&authority,
+				None,
 				self.inputs.cfg.hbone.clone(),
 			)
 			.await
@@ -1977,13 +1978,35 @@ impl DerefMut for MustSnapshot<'_> {
 	}
 }
 
+/// A concrete target resolved by an in-process dynamic backend implementation.
+///
+/// This is deliberately distinct from a configured CEL target expression: the
+/// latter is evaluated against the request at the dynamic-backend boundary,
+/// while this value is already a trusted, concrete result of that operation.
 #[derive(Debug, Clone)]
-pub(crate) struct DynamicBackendOverride(pub Target);
+pub(crate) enum DynamicBackendOverride {
+	Substrate(Target),
+}
+
+impl DynamicBackendOverride {
+	pub(crate) fn substrate(target: Target) -> Self {
+		Self::Substrate(target)
+	}
+
+	fn target(&self) -> &Target {
+		match self {
+			Self::Substrate(target) => target,
+		}
+	}
+}
+
+enum DynamicBackendTargetInput<'a> {
+	InProcess(&'a DynamicBackendOverride),
+	Cel(&'a crate::cel::Expression),
+	Fallback,
+}
 
 fn target_from_request(req: &Request) -> Result<Target, ProxyError> {
-	if let Some(target) = req.extensions().get::<DynamicBackendOverride>() {
-		return Ok(target.0.clone());
-	}
 	let host = http::get_host(req)?;
 	let port = req
 		.uri()
@@ -1995,16 +2018,32 @@ fn target_from_request(req: &Request) -> Result<Target, ProxyError> {
 	Ok(Target::from((host, port)))
 }
 
-/// Evaluates a `Backend::Dynamic` target expression using the caller's CEL
-/// context. Returns `Ok(None)` when there's no expression, so HTTP and TCP
-/// callers can apply their respective default target behavior.
-pub(super) fn dynamic_backend_target_override<'a>(
+/// Resolves a dynamic backend to a concrete target with consistent precedence:
+/// an in-process result, then the configured CEL expression, then the
+/// caller-provided protocol fallback.
+pub(super) fn resolve_dynamic_backend_target<'a>(
+	in_process: Option<&'a DynamicBackendOverride>,
 	executor: &'a crate::cel::Executor<'a>,
 	expr: &'a Option<Arc<crate::cel::Expression>>,
-) -> Result<Option<Target>, ProxyError> {
-	let Some(expr) = expr else {
-		return Ok(None);
+	fallback: impl FnOnce() -> Result<Target, ProxyError>,
+) -> Result<Target, ProxyError> {
+	let input = match (in_process, expr.as_deref()) {
+		(Some(target), _) => DynamicBackendTargetInput::InProcess(target),
+		(None, Some(expr)) => DynamicBackendTargetInput::Cel(expr),
+		(None, None) => DynamicBackendTargetInput::Fallback,
 	};
+
+	match input {
+		DynamicBackendTargetInput::InProcess(target) => Ok(target.target().clone()),
+		DynamicBackendTargetInput::Fallback => fallback(),
+		DynamicBackendTargetInput::Cel(expr) => evaluate_dynamic_backend_target(executor, expr),
+	}
+}
+
+fn evaluate_dynamic_backend_target(
+	executor: &crate::cel::Executor<'_>,
+	expr: &crate::cel::Expression,
+) -> Result<Target, ProxyError> {
 	let value = executor.eval(expr).map_err(|e| {
 		ProxyError::ProcessingString(format!("dynamic backend target expression eval: {e}"))
 	})?;
@@ -2020,7 +2059,7 @@ pub(super) fn dynamic_backend_target_override<'a>(
 	};
 	let target = Target::try_from(s.as_str())
 		.map_err(|e| ProxyError::ProcessingString(format!("dynamic backend target {s:?}: {e}")))?;
-	Ok(Some(target))
+	Ok(target)
 }
 
 fn resolve_tunnel_backend_call(
@@ -2422,10 +2461,12 @@ async fn make_backend_call(
 		},
 		Backend::Dynamic(_, expr) => {
 			let executor = crate::cel::Executor::new_request(&req);
-			let target = match dynamic_backend_target_override(&executor, expr)? {
-				Some(target) => target,
-				None => target_from_request(&req)?,
-			};
+			let target = resolve_dynamic_backend_target(
+				req.extensions().get::<DynamicBackendOverride>(),
+				&executor,
+				expr,
+				|| target_from_request(&req),
+			)?;
 			let backend_call = BackendCall::from_shared(target, policies);
 			(backend_call, None)
 		},
@@ -2485,10 +2526,12 @@ async fn make_backend_call(
 	// endpoint routing) to take effect on the actual upstream connection target.
 	if let Backend::Dynamic(_, expr) = backend {
 		let executor = crate::cel::Executor::new_request(&req);
-		backend_call.target = match dynamic_backend_target_override(&executor, expr)? {
-			Some(target) => target,
-			None => target_from_request(&req)?,
-		};
+		backend_call.target = resolve_dynamic_backend_target(
+			req.extensions().get::<DynamicBackendOverride>(),
+			&executor,
+			expr,
+			|| target_from_request(&req),
+		)?;
 	}
 	if let Some(tunnel) = backend_call.backend_policies.tunnel.clone() {
 		backend_call.set_tunnel_proxy(resolve_tunnel_backend_call(&inputs, &tunnel, &req)?);
@@ -2952,7 +2995,7 @@ async fn make_backend_call(
 	Ok(resp)
 }
 
-/// Resolves a Substrate actor assignment into the generic override used by dynamic backends.
+/// Resolves a Substrate actor assignment into an in-process dynamic backend result.
 async fn handle_substrate_backend_selection(
 	req: &mut Request,
 	backend: &Backend,
@@ -2971,7 +3014,9 @@ async fn handle_substrate_backend_selection(
 			);
 		}
 		let target = Box::pin(state.resolve_target()).await?;
-		req.extensions_mut().insert(DynamicBackendOverride(target));
+		req
+			.extensions_mut()
+			.insert(DynamicBackendOverride::substrate(target));
 	} else if req.extensions().get::<DynamicBackendOverride>().is_some()
 		&& !matches!(backend, Backend::Dynamic(_, _))
 	{
@@ -3036,13 +3081,12 @@ fn build_connect_backend_call(
 			// concrete worker endpoint on the request. This has the same precedence
 			// for CONNECT as it does for ordinary HTTP requests.
 			let executor = crate::cel::Executor::new_request(req);
-			let target = match req.extensions().get::<DynamicBackendOverride>() {
-				Some(target) => target.0.clone(),
-				None => match dynamic_backend_target_override(&executor, expr)? {
-					Some(target) => target,
-					None => connect_authority_target(req)?,
-				},
-			};
+			let target = resolve_dynamic_backend_target(
+				req.extensions().get::<DynamicBackendOverride>(),
+				&executor,
+				expr,
+				|| connect_authority_target(req),
+			)?;
 			Ok(BackendCall::from_shared(target, policies))
 		},
 		Backend::Invalid => Err(ProxyError::BackendDoesNotExist),

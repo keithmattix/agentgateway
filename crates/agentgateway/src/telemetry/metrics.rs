@@ -196,6 +196,7 @@ impl OutboundCallSubtype {
 			Self::Llm => "Llm",
 			Self::Mcp => "Mcp",
 			Self::ExtAuthz => "ExtAuthz",
+			Self::Substrate => "Substrate",
 			Self::ExtProc => "ExtProc",
 			Self::Guardrail => "Guardrail",
 			Self::RateLimit => "RateLimit",

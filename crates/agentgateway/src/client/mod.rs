@@ -319,7 +319,16 @@ impl Connector {
 				// This is recursive but bounded: we cannot even tunnel to a tunnel
 				let con = Box::pin(self.connect(tcfg.target, proxy_dst, *tcfg.transport, false)).await?;
 
-				let con = connect_tunnel::handshake_h1(con, &dest, tcfg.token)
+				let hbone_config = self
+					.hbone_pool
+					.as_ref()
+					.ok_or_else(|| {
+						crate::http::Error::new(anyhow::anyhow!(
+							"HBONE configuration is required for an HTTP/2 CONNECT tunnel"
+						))
+					})?
+					.config();
+				let con = connect_tunnel::handshake(con, &dest, tcfg.token, hbone_config)
 					.await
 					.map_err(crate::http::Error::new)?;
 				debug!(%dest, "connected to tunnel proxy (CONNECT)");

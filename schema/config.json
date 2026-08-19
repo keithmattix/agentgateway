@@ -7357,17 +7357,35 @@
           ]
         },
         "targetPort": {
-          "description": "Port on the resumed actor pod. Defaults to 80.",
+          "description": "Port on the resumed worker pod's ordinary atunnel ingress. Defaults to 443.\nThis is independent from `connect_target_port`, which is used for raw CONNECT tunnels.",
           "type": "integer",
           "format": "uint16",
           "minimum": 1,
           "maximum": 65535,
-          "default": 80
+          "default": 443
+        },
+        "connectTargetPort": {
+          "description": "Port on the resumed worker pod's atunnel CONNECT listener. Defaults to 444.",
+          "type": "integer",
+          "format": "uint16",
+          "minimum": 1,
+          "maximum": 65535,
+          "default": 444
         },
         "cacheTtl": {
           "description": "How long successful actor assignments are reused. Defaults to 5s; 0s disables reuse.",
           "type": "string",
           "default": "5s"
+        },
+        "requestParking": {
+          "description": "Bounded request parking while a suspended actor is waiting for worker capacity.",
+          "$ref": "#/$defs/RequestParking",
+          "default": {
+            "budget": "5s",
+            "max": 1024,
+            "retryInterval": "100ms",
+            "retryFactor": 1.1
+          }
         }
       },
       "unevaluatedProperties": false,
@@ -7429,6 +7447,36 @@
         }
       ]
     },
+    "RequestParking": {
+      "description": "Bounds requests held while an actor is waiting for capacity to resume.",
+      "type": "object",
+      "properties": {
+        "budget": {
+          "description": "Maximum time to wait for the actor to become routable.",
+          "type": "string",
+          "default": "5s"
+        },
+        "max": {
+          "description": "Maximum concurrent requests that may wait for actor resumption. Set to 0 to disable parking.",
+          "type": "integer",
+          "format": "uint",
+          "minimum": 0,
+          "default": 1024
+        },
+        "retryInterval": {
+          "description": "Initial delay between ResumeActor retries while parked.",
+          "type": "string",
+          "default": "100ms"
+        },
+        "retryFactor": {
+          "description": "Multiplier applied to the delay after each parked retry.",
+          "type": "number",
+          "format": "double",
+          "default": 1.1
+        }
+      },
+      "additionalProperties": false
+    },
     "SubstrateEgress": {
       "description": "Authorizes an actor's egress to the hostname recovered from an internal CONNECT listener.",
       "type": "object",
@@ -7445,6 +7493,7 @@
           ]
         }
       },
+      "unevaluatedProperties": false,
       "oneOf": [
         {
           "description": "Service reference. Service must be defined in the top level services list.",

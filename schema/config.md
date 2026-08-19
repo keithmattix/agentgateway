@@ -5020,12 +5020,14 @@
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.transformations.request.add`|object|Headers to append using CEL expressions for values.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.transformations.request.set`|object|Headers to set using CEL expressions for values.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.transformations.request.remove`|[]string|Header names to remove.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.transformations.request.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.transformations.request.body`|string|CEL expression that computes a replacement body.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.transformations.request.metadata`|object|Metadata values to add using CEL expressions.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.transformations.response`|object|Transform the response before it is returned.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.transformations.response.add`|object|Headers to append using CEL expressions for values.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.transformations.response.set`|object|Headers to set using CEL expressions for values.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.transformations.response.remove`|[]string|Header names to remove.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.transformations.response.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.transformations.response.body`|string|CEL expression that computes a replacement body.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.transformations.response.metadata`|object|Metadata values to add using CEL expressions.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendTLS`|object|TLS settings used when connecting to this backend.|
@@ -5075,6 +5077,7 @@
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.aws.region`|string||
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.aws.sessionToken`|string||
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.aws.serviceName`|string|AWS SigV4 signing service name (for example, "bedrock", "bedrock-agentcore", or "execute-api").|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.aws.region`|string|AWS SigV4 signing region (for example, "us-east-1"). If unset, typed AWS<br>backends may provide this automatically; otherwise the ambient AWS region<br>is used.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.aws.assumeRole`|object|Optional AWS STS role to assume before signing requests.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.aws.assumeRole.roleArn`|string|AWS IAM role ARN to assume.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.aws.assumeRole.sessionName`|string|Custom session name (RoleSessionName) for CloudTrail and Cost & Usage Report<br>attribution. Either a static string or `{expression: ...}` with a CEL<br>expression evaluated against each request. Max 64 chars, matching<br>`[\w+=,.@-]`. If unset, the AWS SDK generates a random session name.|
@@ -5097,6 +5100,22 @@
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.azure.explicitConfig.workloadIdentity`|object||
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.azure.developerImplicit`|object|Use implicit Azure auth. Note that this is for developer use-cases only!|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.azure.implicit`|object|Automatically detect authentication method based on environment.<br>Uses Workload Identity on K8s, Managed Identity on Azure VMs, or Developer Tools locally.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.jwtSign`|object|Sign a short-lived JWT with a private key on each request.<br>Signs a short-lived JWT with a private key on each request and sends it to<br>the backend. For upstreams that require per-request keypair JWTs (e.g. the<br>Snowflake SQL API) rather than a static credential.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.jwtSign.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.jwtSign.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.jwtSign.alg`|enum|JWS signing algorithm. Defaults to RS256.<br>Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.jwtSign.kid`|string|Optional JWS key ID header.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.jwtSign.claims`|object|Static claims added to every token (e.g. iss, sub, aud). Values may be<br>any JSON value (e.g. a string, number, bool, or array). `iat`, `exp`,<br>and `nbf` are reserved for the signer and cannot be configured here.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.jwtSign.ttl`|string|Token lifetime used for `exp`. Defaults to 300s.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.jwtSign.location`|object|Where the signed token is written. Defaults to the Authorization<br>header with a `Bearer ` prefix.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.jwtSign.location.header`|object|Read the credential from an HTTP header.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.jwtSign.location.header.name`|string|Header name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.jwtSign.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.jwtSign.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.jwtSign.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.jwtSign.location.cookie`|object|Read the credential from a request cookie.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.jwtSign.location.cookie.name`|string|Cookie name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.jwtSign.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange`|object|Use OAuth token exchange flows to obtain a backend access token.<br>Exactly one of service, host, or backend may be set.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.service`|object|Service reference. Service must be defined in the top level services list.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
@@ -5132,7 +5151,7 @@
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.audiences`|[]string|`audience` parameters naming the target services at the authorization server.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.scopes`|[]string|`scope` values for the requested token, sent space-delimited.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.resources`|[]string|`resource` parameters with the target service URIs.|
-|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.requestedTokenType`|string|`requested_token_type` parameter. When unset, the form field is omitted<br>and a declared response type is expected to be access_token.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.requestedTokenType`|string|`requested_token_type` parameter. When unset it is omitted from the request<br>(RFC 8693 makes it optional). Some providers (e.g. Auth0 custom token exchange)<br>reject an explicit access_token value paired with a custom `subject_token_type`.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth`|object|Client authentication used when calling the token endpoint.<br>When unset, no client authentication fields are sent.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object||
@@ -5141,7 +5160,10 @@
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
-|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `ES256`, `ES384`.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.kid`|string||
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.assertionAudience`|string||
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
@@ -5176,7 +5198,10 @@
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
-|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `ES256`, `ES384`.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.kid`|string||
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.assertionAudience`|string||
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
@@ -5197,17 +5222,44 @@
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
-|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `ES256`, `ES384`.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.kid`|string||
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.assertionAudience`|string||
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.audience`|string|Identifier of the resource authorization server. The issued ID-JAG is bound to this audience.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resources`|[]string|`resource` parameters naming the protected resource APIs.|
-|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.scopes`|[]string|`scope` values for the requested token, sent space-delimited.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.scopes`|[]string|`scope` values requested when obtaining the ID-JAG from the identity provider, sent<br>space-delimited.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.accessTokenScopes`|[]string|`scope` values requested when exchanging the ID-JAG for an access token. When unset,<br>inherits `scopes`. When empty, omits `scope`.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken`|object|Subject token sent to the identity provider. Defaults to an OpenID Connect ID token read<br>from the Authorization Bearer header.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source`|object|Where to read the subject token. Defaults to the Authorization Bearer header.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.tokenType`|string|RFC 8693 subject token type URI. Defaults to an OpenID Connect ID token.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.credentials`|[]object||
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.credentials[].location`|object|Where the credential is inserted on the backend request.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.credentials[].location.header`|object|Read the credential from an HTTP header.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.credentials[].location.header.name`|string|Header name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.credentials[].location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.credentials[].location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.credentials[].location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.credentials[].location.cookie`|object|Read the credential from a request cookie.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.credentials[].location.cookie.name`|string|Cookie name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.credentials[].location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.credentials[].key`|object|Credential value.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.credentials[].key.file`|string|Path to a file on disk to load the value from.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.http`|object|HTTP protocol settings for this backend.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.http.version`|string|HTTP version to use when connecting to the backend.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.http.requestTimeout`|string|Maximum time allowed for a backend HTTP request.|
@@ -5225,8 +5277,15 @@
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendTunnel.proxy.service.port`|integer|Port on the target Service to route to.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendTunnel.proxy.host`|string|Hostname or IP address|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
-|`binds[].listeners[].routes[].policies.substrateIngress.targetPort`|integer|Port on the resumed actor pod. Defaults to 80.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
+|`binds[].listeners[].routes[].policies.substrateIngress.targetPort`|integer|Port on the resumed worker pod's ordinary atunnel ingress. Defaults to 443.<br>This is independent from `connect_target_port`, which is used for raw CONNECT tunnels.|
+|`binds[].listeners[].routes[].policies.substrateIngress.connectTargetPort`|integer|Port on the resumed worker pod's atunnel CONNECT listener. Defaults to 444.|
 |`binds[].listeners[].routes[].policies.substrateIngress.cacheTtl`|string|How long successful actor assignments are reused. Defaults to 5s; 0s disables reuse.|
+|`binds[].listeners[].routes[].policies.substrateIngress.requestParking`|object|Bounded request parking while a suspended actor is waiting for worker capacity.|
+|`binds[].listeners[].routes[].policies.substrateIngress.requestParking.budget`|string|Maximum time to wait for the actor to become routable.|
+|`binds[].listeners[].routes[].policies.substrateIngress.requestParking.max`|integer|Maximum concurrent requests that may wait for actor resumption. Set to 0 to disable parking.|
+|`binds[].listeners[].routes[].policies.substrateIngress.requestParking.retryInterval`|string|Initial delay between ResumeActor retries while parked.|
+|`binds[].listeners[].routes[].policies.substrateIngress.requestParking.retryFactor`|number|Multiplier applied to the delay after each parked retry.|
 |`binds[].listeners[].routes[].policies.substrateEgress`|object|Authorize CONNECT egress using the originating actor's dynamic policy.|
 |`binds[].listeners[].routes[].policies.substrateEgress.service`|object|Service reference. Service must be defined in the top level services list.|
 |`binds[].listeners[].routes[].policies.substrateEgress.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
@@ -5243,12 +5302,14 @@
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.transformations.request.add`|object|Headers to append using CEL expressions for values.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.transformations.request.set`|object|Headers to set using CEL expressions for values.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.transformations.request.remove`|[]string|Header names to remove.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.transformations.request.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.transformations.request.body`|string|CEL expression that computes a replacement body.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.transformations.request.metadata`|object|Metadata values to add using CEL expressions.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.transformations.response`|object|Transform the response before it is returned.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.transformations.response.add`|object|Headers to append using CEL expressions for values.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.transformations.response.set`|object|Headers to set using CEL expressions for values.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.transformations.response.remove`|[]string|Header names to remove.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.transformations.response.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.transformations.response.body`|string|CEL expression that computes a replacement body.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.transformations.response.metadata`|object|Metadata values to add using CEL expressions.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendTLS`|object|TLS settings used when connecting to this backend.|
@@ -5298,6 +5359,7 @@
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.aws.region`|string||
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.aws.sessionToken`|string||
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.aws.serviceName`|string|AWS SigV4 signing service name (for example, "bedrock", "bedrock-agentcore", or "execute-api").|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.aws.region`|string|AWS SigV4 signing region (for example, "us-east-1"). If unset, typed AWS<br>backends may provide this automatically; otherwise the ambient AWS region<br>is used.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.aws.assumeRole`|object|Optional AWS STS role to assume before signing requests.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.aws.assumeRole.roleArn`|string|AWS IAM role ARN to assume.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.aws.assumeRole.sessionName`|string|Custom session name (RoleSessionName) for CloudTrail and Cost & Usage Report<br>attribution. Either a static string or `{expression: ...}` with a CEL<br>expression evaluated against each request. Max 64 chars, matching<br>`[\w+=,.@-]`. If unset, the AWS SDK generates a random session name.|
@@ -5320,6 +5382,22 @@
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.azure.explicitConfig.workloadIdentity`|object||
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.azure.developerImplicit`|object|Use implicit Azure auth. Note that this is for developer use-cases only!|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.azure.implicit`|object|Automatically detect authentication method based on environment.<br>Uses Workload Identity on K8s, Managed Identity on Azure VMs, or Developer Tools locally.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.jwtSign`|object|Sign a short-lived JWT with a private key on each request.<br>Signs a short-lived JWT with a private key on each request and sends it to<br>the backend. For upstreams that require per-request keypair JWTs (e.g. the<br>Snowflake SQL API) rather than a static credential.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.jwtSign.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.jwtSign.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.jwtSign.alg`|enum|JWS signing algorithm. Defaults to RS256.<br>Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.jwtSign.kid`|string|Optional JWS key ID header.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.jwtSign.claims`|object|Static claims added to every token (e.g. iss, sub, aud). Values may be<br>any JSON value (e.g. a string, number, bool, or array). `iat`, `exp`,<br>and `nbf` are reserved for the signer and cannot be configured here.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.jwtSign.ttl`|string|Token lifetime used for `exp`. Defaults to 300s.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.jwtSign.location`|object|Where the signed token is written. Defaults to the Authorization<br>header with a `Bearer ` prefix.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.jwtSign.location.header`|object|Read the credential from an HTTP header.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.jwtSign.location.header.name`|string|Header name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.jwtSign.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.jwtSign.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.jwtSign.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.jwtSign.location.cookie`|object|Read the credential from a request cookie.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.jwtSign.location.cookie.name`|string|Cookie name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.jwtSign.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange`|object|Use OAuth token exchange flows to obtain a backend access token.<br>Exactly one of service, host, or backend may be set.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.service`|object|Service reference. Service must be defined in the top level services list.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
@@ -5355,7 +5433,7 @@
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.audiences`|[]string|`audience` parameters naming the target services at the authorization server.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.scopes`|[]string|`scope` values for the requested token, sent space-delimited.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.resources`|[]string|`resource` parameters with the target service URIs.|
-|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.requestedTokenType`|string|`requested_token_type` parameter. When unset, the form field is omitted<br>and a declared response type is expected to be access_token.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.requestedTokenType`|string|`requested_token_type` parameter. When unset it is omitted from the request<br>(RFC 8693 makes it optional). Some providers (e.g. Auth0 custom token exchange)<br>reject an explicit access_token value paired with a custom `subject_token_type`.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth`|object|Client authentication used when calling the token endpoint.<br>When unset, no client authentication fields are sent.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object||
@@ -5364,7 +5442,10 @@
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
-|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `ES256`, `ES384`.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.kid`|string||
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.assertionAudience`|string||
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
@@ -5399,7 +5480,10 @@
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
-|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `ES256`, `ES384`.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.kid`|string||
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.assertionAudience`|string||
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
@@ -5420,17 +5504,44 @@
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
-|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `ES256`, `ES384`.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.kid`|string||
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.assertionAudience`|string||
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.audience`|string|Identifier of the resource authorization server. The issued ID-JAG is bound to this audience.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resources`|[]string|`resource` parameters naming the protected resource APIs.|
-|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.scopes`|[]string|`scope` values for the requested token, sent space-delimited.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.scopes`|[]string|`scope` values requested when obtaining the ID-JAG from the identity provider, sent<br>space-delimited.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.accessTokenScopes`|[]string|`scope` values requested when exchanging the ID-JAG for an access token. When unset,<br>inherits `scopes`. When empty, omits `scope`.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken`|object|Subject token sent to the identity provider. Defaults to an OpenID Connect ID token read<br>from the Authorization Bearer header.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source`|object|Where to read the subject token. Defaults to the Authorization Bearer header.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.tokenType`|string|RFC 8693 subject token type URI. Defaults to an OpenID Connect ID token.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.credentials`|[]object||
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.credentials[].location`|object|Where the credential is inserted on the backend request.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.credentials[].location.header`|object|Read the credential from an HTTP header.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.credentials[].location.header.name`|string|Header name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.credentials[].location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.credentials[].location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.credentials[].location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.credentials[].location.cookie`|object|Read the credential from a request cookie.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.credentials[].location.cookie.name`|string|Cookie name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.credentials[].location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.credentials[].key`|object|Credential value.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.credentials[].key.file`|string|Path to a file on disk to load the value from.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.http`|object|HTTP protocol settings for this backend.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.http.version`|string|HTTP version to use when connecting to the backend.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.http.requestTimeout`|string|Maximum time allowed for a backend HTTP request.|
@@ -5448,6 +5559,7 @@
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendTunnel.proxy.service.port`|integer|Port on the target Service to route to.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendTunnel.proxy.host`|string|Hostname or IP address|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
 |`binds[].listeners[].routes[].policies.transformations`|object|Modify request and response headers, bodies, or metadata.|
 |`binds[].listeners[].routes[].policies.transformations.conditional`|[]object|conditional policy entries. An entry without a condition must be the final fallback.|
 |`binds[].listeners[].routes[].policies.transformations.conditional[].condition`|string|condition must evaluate to true for this policy to execute. If unset, the policy is the fallback.|
@@ -23532,12 +23644,14 @@
 |`policies[].policy.substrateIngress.policies.transformations.request.add`|object|Headers to append using CEL expressions for values.|
 |`policies[].policy.substrateIngress.policies.transformations.request.set`|object|Headers to set using CEL expressions for values.|
 |`policies[].policy.substrateIngress.policies.transformations.request.remove`|[]string|Header names to remove.|
+|`policies[].policy.substrateIngress.policies.transformations.request.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
 |`policies[].policy.substrateIngress.policies.transformations.request.body`|string|CEL expression that computes a replacement body.|
 |`policies[].policy.substrateIngress.policies.transformations.request.metadata`|object|Metadata values to add using CEL expressions.|
 |`policies[].policy.substrateIngress.policies.transformations.response`|object|Transform the response before it is returned.|
 |`policies[].policy.substrateIngress.policies.transformations.response.add`|object|Headers to append using CEL expressions for values.|
 |`policies[].policy.substrateIngress.policies.transformations.response.set`|object|Headers to set using CEL expressions for values.|
 |`policies[].policy.substrateIngress.policies.transformations.response.remove`|[]string|Header names to remove.|
+|`policies[].policy.substrateIngress.policies.transformations.response.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
 |`policies[].policy.substrateIngress.policies.transformations.response.body`|string|CEL expression that computes a replacement body.|
 |`policies[].policy.substrateIngress.policies.transformations.response.metadata`|object|Metadata values to add using CEL expressions.|
 |`policies[].policy.substrateIngress.policies.backendTLS`|object|TLS settings used when connecting to this backend.|
@@ -23587,6 +23701,7 @@
 |`policies[].policy.substrateIngress.policies.backendAuth.aws.region`|string||
 |`policies[].policy.substrateIngress.policies.backendAuth.aws.sessionToken`|string||
 |`policies[].policy.substrateIngress.policies.backendAuth.aws.serviceName`|string|AWS SigV4 signing service name (for example, "bedrock", "bedrock-agentcore", or "execute-api").|
+|`policies[].policy.substrateIngress.policies.backendAuth.aws.region`|string|AWS SigV4 signing region (for example, "us-east-1"). If unset, typed AWS<br>backends may provide this automatically; otherwise the ambient AWS region<br>is used.|
 |`policies[].policy.substrateIngress.policies.backendAuth.aws.assumeRole`|object|Optional AWS STS role to assume before signing requests.|
 |`policies[].policy.substrateIngress.policies.backendAuth.aws.assumeRole.roleArn`|string|AWS IAM role ARN to assume.|
 |`policies[].policy.substrateIngress.policies.backendAuth.aws.assumeRole.sessionName`|string|Custom session name (RoleSessionName) for CloudTrail and Cost & Usage Report<br>attribution. Either a static string or `{expression: ...}` with a CEL<br>expression evaluated against each request. Max 64 chars, matching<br>`[\w+=,.@-]`. If unset, the AWS SDK generates a random session name.|
@@ -23609,6 +23724,22 @@
 |`policies[].policy.substrateIngress.policies.backendAuth.azure.explicitConfig.workloadIdentity`|object||
 |`policies[].policy.substrateIngress.policies.backendAuth.azure.developerImplicit`|object|Use implicit Azure auth. Note that this is for developer use-cases only!|
 |`policies[].policy.substrateIngress.policies.backendAuth.azure.implicit`|object|Automatically detect authentication method based on environment.<br>Uses Workload Identity on K8s, Managed Identity on Azure VMs, or Developer Tools locally.|
+|`policies[].policy.substrateIngress.policies.backendAuth.jwtSign`|object|Sign a short-lived JWT with a private key on each request.<br>Signs a short-lived JWT with a private key on each request and sends it to<br>the backend. For upstreams that require per-request keypair JWTs (e.g. the<br>Snowflake SQL API) rather than a static credential.|
+|`policies[].policy.substrateIngress.policies.backendAuth.jwtSign.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`policies[].policy.substrateIngress.policies.backendAuth.jwtSign.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`policies[].policy.substrateIngress.policies.backendAuth.jwtSign.alg`|enum|JWS signing algorithm. Defaults to RS256.<br>Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`policies[].policy.substrateIngress.policies.backendAuth.jwtSign.kid`|string|Optional JWS key ID header.|
+|`policies[].policy.substrateIngress.policies.backendAuth.jwtSign.claims`|object|Static claims added to every token (e.g. iss, sub, aud). Values may be<br>any JSON value (e.g. a string, number, bool, or array). `iat`, `exp`,<br>and `nbf` are reserved for the signer and cannot be configured here.|
+|`policies[].policy.substrateIngress.policies.backendAuth.jwtSign.ttl`|string|Token lifetime used for `exp`. Defaults to 300s.|
+|`policies[].policy.substrateIngress.policies.backendAuth.jwtSign.location`|object|Where the signed token is written. Defaults to the Authorization<br>header with a `Bearer ` prefix.|
+|`policies[].policy.substrateIngress.policies.backendAuth.jwtSign.location.header`|object|Read the credential from an HTTP header.|
+|`policies[].policy.substrateIngress.policies.backendAuth.jwtSign.location.header.name`|string|Header name containing the credential.|
+|`policies[].policy.substrateIngress.policies.backendAuth.jwtSign.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`policies[].policy.substrateIngress.policies.backendAuth.jwtSign.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`policies[].policy.substrateIngress.policies.backendAuth.jwtSign.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`policies[].policy.substrateIngress.policies.backendAuth.jwtSign.location.cookie`|object|Read the credential from a request cookie.|
+|`policies[].policy.substrateIngress.policies.backendAuth.jwtSign.location.cookie.name`|string|Cookie name containing the credential.|
+|`policies[].policy.substrateIngress.policies.backendAuth.jwtSign.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
 |`policies[].policy.substrateIngress.policies.backendAuth.oauthTokenExchange`|object|Use OAuth token exchange flows to obtain a backend access token.<br>Exactly one of service, host, or backend may be set.|
 |`policies[].policy.substrateIngress.policies.backendAuth.oauthTokenExchange.service`|object|Service reference. Service must be defined in the top level services list.|
 |`policies[].policy.substrateIngress.policies.backendAuth.oauthTokenExchange.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
@@ -23644,7 +23775,7 @@
 |`policies[].policy.substrateIngress.policies.backendAuth.oauthTokenExchange.audiences`|[]string|`audience` parameters naming the target services at the authorization server.|
 |`policies[].policy.substrateIngress.policies.backendAuth.oauthTokenExchange.scopes`|[]string|`scope` values for the requested token, sent space-delimited.|
 |`policies[].policy.substrateIngress.policies.backendAuth.oauthTokenExchange.resources`|[]string|`resource` parameters with the target service URIs.|
-|`policies[].policy.substrateIngress.policies.backendAuth.oauthTokenExchange.requestedTokenType`|string|`requested_token_type` parameter. When unset, the form field is omitted<br>and a declared response type is expected to be access_token.|
+|`policies[].policy.substrateIngress.policies.backendAuth.oauthTokenExchange.requestedTokenType`|string|`requested_token_type` parameter. When unset it is omitted from the request<br>(RFC 8693 makes it optional). Some providers (e.g. Auth0 custom token exchange)<br>reject an explicit access_token value paired with a custom `subject_token_type`.|
 |`policies[].policy.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth`|object|Client authentication used when calling the token endpoint.<br>When unset, no client authentication fields are sent.|
 |`policies[].policy.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
 |`policies[].policy.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object||
@@ -23653,7 +23784,10 @@
 |`policies[].policy.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
 |`policies[].policy.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
 |`policies[].policy.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
-|`policies[].policy.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `ES256`, `ES384`.|
+|`policies[].policy.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`policies[].policy.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`policies[].policy.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`policies[].policy.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
 |`policies[].policy.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.kid`|string||
 |`policies[].policy.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.assertionAudience`|string||
 |`policies[].policy.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
@@ -23688,7 +23822,10 @@
 |`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
 |`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
 |`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
-|`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `ES256`, `ES384`.|
+|`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
 |`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.kid`|string||
 |`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.assertionAudience`|string||
 |`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
@@ -23709,17 +23846,44 @@
 |`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
 |`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
 |`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
-|`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `ES256`, `ES384`.|
+|`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
 |`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.kid`|string||
 |`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.assertionAudience`|string||
 |`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
 |`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
 |`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.audience`|string|Identifier of the resource authorization server. The issued ID-JAG is bound to this audience.|
 |`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.resources`|[]string|`resource` parameters naming the protected resource APIs.|
-|`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.scopes`|[]string|`scope` values for the requested token, sent space-delimited.|
+|`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.scopes`|[]string|`scope` values requested when obtaining the ID-JAG from the identity provider, sent<br>space-delimited.|
+|`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.accessTokenScopes`|[]string|`scope` values requested when exchanging the ID-JAG for an access token. When unset,<br>inherits `scopes`. When empty, omits `scope`.|
+|`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken`|object|Subject token sent to the identity provider. Defaults to an OpenID Connect ID token read<br>from the Authorization Bearer header.|
+|`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source`|object|Where to read the subject token. Defaults to the Authorization Bearer header.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.tokenType`|string|RFC 8693 subject token type URI. Defaults to an OpenID Connect ID token.|
 |`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
 |`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
 |`policies[].policy.substrateIngress.policies.backendAuth.crossAppAccess.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`policies[].policy.substrateIngress.policies.backendAuth.credentials`|[]object||
+|`policies[].policy.substrateIngress.policies.backendAuth.credentials[].location`|object|Where the credential is inserted on the backend request.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`policies[].policy.substrateIngress.policies.backendAuth.credentials[].location.header`|object|Read the credential from an HTTP header.|
+|`policies[].policy.substrateIngress.policies.backendAuth.credentials[].location.header.name`|string|Header name containing the credential.|
+|`policies[].policy.substrateIngress.policies.backendAuth.credentials[].location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`policies[].policy.substrateIngress.policies.backendAuth.credentials[].location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`policies[].policy.substrateIngress.policies.backendAuth.credentials[].location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`policies[].policy.substrateIngress.policies.backendAuth.credentials[].location.cookie`|object|Read the credential from a request cookie.|
+|`policies[].policy.substrateIngress.policies.backendAuth.credentials[].location.cookie.name`|string|Cookie name containing the credential.|
+|`policies[].policy.substrateIngress.policies.backendAuth.credentials[].location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`policies[].policy.substrateIngress.policies.backendAuth.credentials[].key`|object|Credential value.|
+|`policies[].policy.substrateIngress.policies.backendAuth.credentials[].key.file`|string|Path to a file on disk to load the value from.|
 |`policies[].policy.substrateIngress.policies.http`|object|HTTP protocol settings for this backend.|
 |`policies[].policy.substrateIngress.policies.http.version`|string|HTTP version to use when connecting to the backend.|
 |`policies[].policy.substrateIngress.policies.http.requestTimeout`|string|Maximum time allowed for a backend HTTP request.|
@@ -23737,8 +23901,15 @@
 |`policies[].policy.substrateIngress.policies.backendTunnel.proxy.service.port`|integer|Port on the target Service to route to.|
 |`policies[].policy.substrateIngress.policies.backendTunnel.proxy.host`|string|Hostname or IP address|
 |`policies[].policy.substrateIngress.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
-|`policies[].policy.substrateIngress.targetPort`|integer|Port on the resumed actor pod. Defaults to 80.|
+|`policies[].policy.substrateIngress.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
+|`policies[].policy.substrateIngress.targetPort`|integer|Port on the resumed worker pod's ordinary atunnel ingress. Defaults to 443.<br>This is independent from `connect_target_port`, which is used for raw CONNECT tunnels.|
+|`policies[].policy.substrateIngress.connectTargetPort`|integer|Port on the resumed worker pod's atunnel CONNECT listener. Defaults to 444.|
 |`policies[].policy.substrateIngress.cacheTtl`|string|How long successful actor assignments are reused. Defaults to 5s; 0s disables reuse.|
+|`policies[].policy.substrateIngress.requestParking`|object|Bounded request parking while a suspended actor is waiting for worker capacity.|
+|`policies[].policy.substrateIngress.requestParking.budget`|string|Maximum time to wait for the actor to become routable.|
+|`policies[].policy.substrateIngress.requestParking.max`|integer|Maximum concurrent requests that may wait for actor resumption. Set to 0 to disable parking.|
+|`policies[].policy.substrateIngress.requestParking.retryInterval`|string|Initial delay between ResumeActor retries while parked.|
+|`policies[].policy.substrateIngress.requestParking.retryFactor`|number|Multiplier applied to the delay after each parked retry.|
 |`policies[].policy.substrateEgress`|object|Authorize CONNECT egress using the originating actor's dynamic policy.|
 |`policies[].policy.substrateEgress.service`|object|Service reference. Service must be defined in the top level services list.|
 |`policies[].policy.substrateEgress.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
@@ -23755,12 +23926,14 @@
 |`policies[].policy.substrateEgress.policies.transformations.request.add`|object|Headers to append using CEL expressions for values.|
 |`policies[].policy.substrateEgress.policies.transformations.request.set`|object|Headers to set using CEL expressions for values.|
 |`policies[].policy.substrateEgress.policies.transformations.request.remove`|[]string|Header names to remove.|
+|`policies[].policy.substrateEgress.policies.transformations.request.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
 |`policies[].policy.substrateEgress.policies.transformations.request.body`|string|CEL expression that computes a replacement body.|
 |`policies[].policy.substrateEgress.policies.transformations.request.metadata`|object|Metadata values to add using CEL expressions.|
 |`policies[].policy.substrateEgress.policies.transformations.response`|object|Transform the response before it is returned.|
 |`policies[].policy.substrateEgress.policies.transformations.response.add`|object|Headers to append using CEL expressions for values.|
 |`policies[].policy.substrateEgress.policies.transformations.response.set`|object|Headers to set using CEL expressions for values.|
 |`policies[].policy.substrateEgress.policies.transformations.response.remove`|[]string|Header names to remove.|
+|`policies[].policy.substrateEgress.policies.transformations.response.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
 |`policies[].policy.substrateEgress.policies.transformations.response.body`|string|CEL expression that computes a replacement body.|
 |`policies[].policy.substrateEgress.policies.transformations.response.metadata`|object|Metadata values to add using CEL expressions.|
 |`policies[].policy.substrateEgress.policies.backendTLS`|object|TLS settings used when connecting to this backend.|
@@ -23810,6 +23983,7 @@
 |`policies[].policy.substrateEgress.policies.backendAuth.aws.region`|string||
 |`policies[].policy.substrateEgress.policies.backendAuth.aws.sessionToken`|string||
 |`policies[].policy.substrateEgress.policies.backendAuth.aws.serviceName`|string|AWS SigV4 signing service name (for example, "bedrock", "bedrock-agentcore", or "execute-api").|
+|`policies[].policy.substrateEgress.policies.backendAuth.aws.region`|string|AWS SigV4 signing region (for example, "us-east-1"). If unset, typed AWS<br>backends may provide this automatically; otherwise the ambient AWS region<br>is used.|
 |`policies[].policy.substrateEgress.policies.backendAuth.aws.assumeRole`|object|Optional AWS STS role to assume before signing requests.|
 |`policies[].policy.substrateEgress.policies.backendAuth.aws.assumeRole.roleArn`|string|AWS IAM role ARN to assume.|
 |`policies[].policy.substrateEgress.policies.backendAuth.aws.assumeRole.sessionName`|string|Custom session name (RoleSessionName) for CloudTrail and Cost & Usage Report<br>attribution. Either a static string or `{expression: ...}` with a CEL<br>expression evaluated against each request. Max 64 chars, matching<br>`[\w+=,.@-]`. If unset, the AWS SDK generates a random session name.|
@@ -23832,6 +24006,22 @@
 |`policies[].policy.substrateEgress.policies.backendAuth.azure.explicitConfig.workloadIdentity`|object||
 |`policies[].policy.substrateEgress.policies.backendAuth.azure.developerImplicit`|object|Use implicit Azure auth. Note that this is for developer use-cases only!|
 |`policies[].policy.substrateEgress.policies.backendAuth.azure.implicit`|object|Automatically detect authentication method based on environment.<br>Uses Workload Identity on K8s, Managed Identity on Azure VMs, or Developer Tools locally.|
+|`policies[].policy.substrateEgress.policies.backendAuth.jwtSign`|object|Sign a short-lived JWT with a private key on each request.<br>Signs a short-lived JWT with a private key on each request and sends it to<br>the backend. For upstreams that require per-request keypair JWTs (e.g. the<br>Snowflake SQL API) rather than a static credential.|
+|`policies[].policy.substrateEgress.policies.backendAuth.jwtSign.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`policies[].policy.substrateEgress.policies.backendAuth.jwtSign.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`policies[].policy.substrateEgress.policies.backendAuth.jwtSign.alg`|enum|JWS signing algorithm. Defaults to RS256.<br>Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`policies[].policy.substrateEgress.policies.backendAuth.jwtSign.kid`|string|Optional JWS key ID header.|
+|`policies[].policy.substrateEgress.policies.backendAuth.jwtSign.claims`|object|Static claims added to every token (e.g. iss, sub, aud). Values may be<br>any JSON value (e.g. a string, number, bool, or array). `iat`, `exp`,<br>and `nbf` are reserved for the signer and cannot be configured here.|
+|`policies[].policy.substrateEgress.policies.backendAuth.jwtSign.ttl`|string|Token lifetime used for `exp`. Defaults to 300s.|
+|`policies[].policy.substrateEgress.policies.backendAuth.jwtSign.location`|object|Where the signed token is written. Defaults to the Authorization<br>header with a `Bearer ` prefix.|
+|`policies[].policy.substrateEgress.policies.backendAuth.jwtSign.location.header`|object|Read the credential from an HTTP header.|
+|`policies[].policy.substrateEgress.policies.backendAuth.jwtSign.location.header.name`|string|Header name containing the credential.|
+|`policies[].policy.substrateEgress.policies.backendAuth.jwtSign.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`policies[].policy.substrateEgress.policies.backendAuth.jwtSign.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`policies[].policy.substrateEgress.policies.backendAuth.jwtSign.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`policies[].policy.substrateEgress.policies.backendAuth.jwtSign.location.cookie`|object|Read the credential from a request cookie.|
+|`policies[].policy.substrateEgress.policies.backendAuth.jwtSign.location.cookie.name`|string|Cookie name containing the credential.|
+|`policies[].policy.substrateEgress.policies.backendAuth.jwtSign.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
 |`policies[].policy.substrateEgress.policies.backendAuth.oauthTokenExchange`|object|Use OAuth token exchange flows to obtain a backend access token.<br>Exactly one of service, host, or backend may be set.|
 |`policies[].policy.substrateEgress.policies.backendAuth.oauthTokenExchange.service`|object|Service reference. Service must be defined in the top level services list.|
 |`policies[].policy.substrateEgress.policies.backendAuth.oauthTokenExchange.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
@@ -23867,7 +24057,7 @@
 |`policies[].policy.substrateEgress.policies.backendAuth.oauthTokenExchange.audiences`|[]string|`audience` parameters naming the target services at the authorization server.|
 |`policies[].policy.substrateEgress.policies.backendAuth.oauthTokenExchange.scopes`|[]string|`scope` values for the requested token, sent space-delimited.|
 |`policies[].policy.substrateEgress.policies.backendAuth.oauthTokenExchange.resources`|[]string|`resource` parameters with the target service URIs.|
-|`policies[].policy.substrateEgress.policies.backendAuth.oauthTokenExchange.requestedTokenType`|string|`requested_token_type` parameter. When unset, the form field is omitted<br>and a declared response type is expected to be access_token.|
+|`policies[].policy.substrateEgress.policies.backendAuth.oauthTokenExchange.requestedTokenType`|string|`requested_token_type` parameter. When unset it is omitted from the request<br>(RFC 8693 makes it optional). Some providers (e.g. Auth0 custom token exchange)<br>reject an explicit access_token value paired with a custom `subject_token_type`.|
 |`policies[].policy.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth`|object|Client authentication used when calling the token endpoint.<br>When unset, no client authentication fields are sent.|
 |`policies[].policy.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
 |`policies[].policy.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object||
@@ -23876,7 +24066,10 @@
 |`policies[].policy.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
 |`policies[].policy.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
 |`policies[].policy.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
-|`policies[].policy.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `ES256`, `ES384`.|
+|`policies[].policy.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`policies[].policy.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`policies[].policy.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`policies[].policy.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
 |`policies[].policy.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.kid`|string||
 |`policies[].policy.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.assertionAudience`|string||
 |`policies[].policy.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
@@ -23911,7 +24104,10 @@
 |`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
 |`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
 |`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
-|`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `ES256`, `ES384`.|
+|`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
 |`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.kid`|string||
 |`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.assertionAudience`|string||
 |`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
@@ -23932,17 +24128,44 @@
 |`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
 |`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
 |`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
-|`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `ES256`, `ES384`.|
+|`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
 |`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.kid`|string||
 |`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.assertionAudience`|string||
 |`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
 |`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
 |`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.audience`|string|Identifier of the resource authorization server. The issued ID-JAG is bound to this audience.|
 |`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.resources`|[]string|`resource` parameters naming the protected resource APIs.|
-|`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.scopes`|[]string|`scope` values for the requested token, sent space-delimited.|
+|`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.scopes`|[]string|`scope` values requested when obtaining the ID-JAG from the identity provider, sent<br>space-delimited.|
+|`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.accessTokenScopes`|[]string|`scope` values requested when exchanging the ID-JAG for an access token. When unset,<br>inherits `scopes`. When empty, omits `scope`.|
+|`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken`|object|Subject token sent to the identity provider. Defaults to an OpenID Connect ID token read<br>from the Authorization Bearer header.|
+|`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source`|object|Where to read the subject token. Defaults to the Authorization Bearer header.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.tokenType`|string|RFC 8693 subject token type URI. Defaults to an OpenID Connect ID token.|
 |`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
 |`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
 |`policies[].policy.substrateEgress.policies.backendAuth.crossAppAccess.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`policies[].policy.substrateEgress.policies.backendAuth.credentials`|[]object||
+|`policies[].policy.substrateEgress.policies.backendAuth.credentials[].location`|object|Where the credential is inserted on the backend request.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`policies[].policy.substrateEgress.policies.backendAuth.credentials[].location.header`|object|Read the credential from an HTTP header.|
+|`policies[].policy.substrateEgress.policies.backendAuth.credentials[].location.header.name`|string|Header name containing the credential.|
+|`policies[].policy.substrateEgress.policies.backendAuth.credentials[].location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`policies[].policy.substrateEgress.policies.backendAuth.credentials[].location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`policies[].policy.substrateEgress.policies.backendAuth.credentials[].location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`policies[].policy.substrateEgress.policies.backendAuth.credentials[].location.cookie`|object|Read the credential from a request cookie.|
+|`policies[].policy.substrateEgress.policies.backendAuth.credentials[].location.cookie.name`|string|Cookie name containing the credential.|
+|`policies[].policy.substrateEgress.policies.backendAuth.credentials[].location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`policies[].policy.substrateEgress.policies.backendAuth.credentials[].key`|object|Credential value.|
+|`policies[].policy.substrateEgress.policies.backendAuth.credentials[].key.file`|string|Path to a file on disk to load the value from.|
 |`policies[].policy.substrateEgress.policies.http`|object|HTTP protocol settings for this backend.|
 |`policies[].policy.substrateEgress.policies.http.version`|string|HTTP version to use when connecting to the backend.|
 |`policies[].policy.substrateEgress.policies.http.requestTimeout`|string|Maximum time allowed for a backend HTTP request.|
@@ -23960,6 +24183,7 @@
 |`policies[].policy.substrateEgress.policies.backendTunnel.proxy.service.port`|integer|Port on the target Service to route to.|
 |`policies[].policy.substrateEgress.policies.backendTunnel.proxy.host`|string|Hostname or IP address|
 |`policies[].policy.substrateEgress.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`policies[].policy.substrateEgress.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
 |`policies[].policy.transformations`|object|Modify request and response headers, bodies, or metadata.|
 |`policies[].policy.transformations.conditional`|[]object|conditional policy entries. An entry without a condition must be the final fallback.|
 |`policies[].policy.transformations.conditional[].condition`|string|condition must evaluate to true for this policy to execute. If unset, the policy is the fallback.|
@@ -39236,12 +39460,14 @@
 |`routeGroups[].routes[].policies.substrateIngress.policies.transformations.request.add`|object|Headers to append using CEL expressions for values.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.transformations.request.set`|object|Headers to set using CEL expressions for values.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.transformations.request.remove`|[]string|Header names to remove.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.transformations.request.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.transformations.request.body`|string|CEL expression that computes a replacement body.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.transformations.request.metadata`|object|Metadata values to add using CEL expressions.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.transformations.response`|object|Transform the response before it is returned.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.transformations.response.add`|object|Headers to append using CEL expressions for values.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.transformations.response.set`|object|Headers to set using CEL expressions for values.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.transformations.response.remove`|[]string|Header names to remove.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.transformations.response.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.transformations.response.body`|string|CEL expression that computes a replacement body.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.transformations.response.metadata`|object|Metadata values to add using CEL expressions.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendTLS`|object|TLS settings used when connecting to this backend.|
@@ -39291,6 +39517,7 @@
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.aws.region`|string||
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.aws.sessionToken`|string||
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.aws.serviceName`|string|AWS SigV4 signing service name (for example, "bedrock", "bedrock-agentcore", or "execute-api").|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.aws.region`|string|AWS SigV4 signing region (for example, "us-east-1"). If unset, typed AWS<br>backends may provide this automatically; otherwise the ambient AWS region<br>is used.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.aws.assumeRole`|object|Optional AWS STS role to assume before signing requests.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.aws.assumeRole.roleArn`|string|AWS IAM role ARN to assume.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.aws.assumeRole.sessionName`|string|Custom session name (RoleSessionName) for CloudTrail and Cost & Usage Report<br>attribution. Either a static string or `{expression: ...}` with a CEL<br>expression evaluated against each request. Max 64 chars, matching<br>`[\w+=,.@-]`. If unset, the AWS SDK generates a random session name.|
@@ -39313,6 +39540,22 @@
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.azure.explicitConfig.workloadIdentity`|object||
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.azure.developerImplicit`|object|Use implicit Azure auth. Note that this is for developer use-cases only!|
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.azure.implicit`|object|Automatically detect authentication method based on environment.<br>Uses Workload Identity on K8s, Managed Identity on Azure VMs, or Developer Tools locally.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.jwtSign`|object|Sign a short-lived JWT with a private key on each request.<br>Signs a short-lived JWT with a private key on each request and sends it to<br>the backend. For upstreams that require per-request keypair JWTs (e.g. the<br>Snowflake SQL API) rather than a static credential.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.jwtSign.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.jwtSign.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.jwtSign.alg`|enum|JWS signing algorithm. Defaults to RS256.<br>Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.jwtSign.kid`|string|Optional JWS key ID header.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.jwtSign.claims`|object|Static claims added to every token (e.g. iss, sub, aud). Values may be<br>any JSON value (e.g. a string, number, bool, or array). `iat`, `exp`,<br>and `nbf` are reserved for the signer and cannot be configured here.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.jwtSign.ttl`|string|Token lifetime used for `exp`. Defaults to 300s.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.jwtSign.location`|object|Where the signed token is written. Defaults to the Authorization<br>header with a `Bearer ` prefix.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.jwtSign.location.header`|object|Read the credential from an HTTP header.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.jwtSign.location.header.name`|string|Header name containing the credential.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.jwtSign.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.jwtSign.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.jwtSign.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.jwtSign.location.cookie`|object|Read the credential from a request cookie.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.jwtSign.location.cookie.name`|string|Cookie name containing the credential.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.jwtSign.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange`|object|Use OAuth token exchange flows to obtain a backend access token.<br>Exactly one of service, host, or backend may be set.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.service`|object|Service reference. Service must be defined in the top level services list.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
@@ -39348,7 +39591,7 @@
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.audiences`|[]string|`audience` parameters naming the target services at the authorization server.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.scopes`|[]string|`scope` values for the requested token, sent space-delimited.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.resources`|[]string|`resource` parameters with the target service URIs.|
-|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.requestedTokenType`|string|`requested_token_type` parameter. When unset, the form field is omitted<br>and a declared response type is expected to be access_token.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.requestedTokenType`|string|`requested_token_type` parameter. When unset it is omitted from the request<br>(RFC 8693 makes it optional). Some providers (e.g. Auth0 custom token exchange)<br>reject an explicit access_token value paired with a custom `subject_token_type`.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth`|object|Client authentication used when calling the token endpoint.<br>When unset, no client authentication fields are sent.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object||
@@ -39357,7 +39600,10 @@
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
-|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `ES256`, `ES384`.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.kid`|string||
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.assertionAudience`|string||
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
@@ -39392,7 +39638,10 @@
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
-|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `ES256`, `ES384`.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.kid`|string||
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.assertionAudience`|string||
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
@@ -39413,17 +39662,44 @@
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
-|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `ES256`, `ES384`.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.kid`|string||
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.assertionAudience`|string||
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.audience`|string|Identifier of the resource authorization server. The issued ID-JAG is bound to this audience.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resources`|[]string|`resource` parameters naming the protected resource APIs.|
-|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.scopes`|[]string|`scope` values for the requested token, sent space-delimited.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.scopes`|[]string|`scope` values requested when obtaining the ID-JAG from the identity provider, sent<br>space-delimited.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.accessTokenScopes`|[]string|`scope` values requested when exchanging the ID-JAG for an access token. When unset,<br>inherits `scopes`. When empty, omits `scope`.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken`|object|Subject token sent to the identity provider. Defaults to an OpenID Connect ID token read<br>from the Authorization Bearer header.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source`|object|Where to read the subject token. Defaults to the Authorization Bearer header.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.tokenType`|string|RFC 8693 subject token type URI. Defaults to an OpenID Connect ID token.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.credentials`|[]object||
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.credentials[].location`|object|Where the credential is inserted on the backend request.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.credentials[].location.header`|object|Read the credential from an HTTP header.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.credentials[].location.header.name`|string|Header name containing the credential.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.credentials[].location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.credentials[].location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.credentials[].location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.credentials[].location.cookie`|object|Read the credential from a request cookie.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.credentials[].location.cookie.name`|string|Cookie name containing the credential.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.credentials[].location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.credentials[].key`|object|Credential value.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.credentials[].key.file`|string|Path to a file on disk to load the value from.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.http`|object|HTTP protocol settings for this backend.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.http.version`|string|HTTP version to use when connecting to the backend.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.http.requestTimeout`|string|Maximum time allowed for a backend HTTP request.|
@@ -39441,8 +39717,15 @@
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendTunnel.proxy.service.port`|integer|Port on the target Service to route to.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendTunnel.proxy.host`|string|Hostname or IP address|
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
-|`routeGroups[].routes[].policies.substrateIngress.targetPort`|integer|Port on the resumed actor pod. Defaults to 80.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
+|`routeGroups[].routes[].policies.substrateIngress.targetPort`|integer|Port on the resumed worker pod's ordinary atunnel ingress. Defaults to 443.<br>This is independent from `connect_target_port`, which is used for raw CONNECT tunnels.|
+|`routeGroups[].routes[].policies.substrateIngress.connectTargetPort`|integer|Port on the resumed worker pod's atunnel CONNECT listener. Defaults to 444.|
 |`routeGroups[].routes[].policies.substrateIngress.cacheTtl`|string|How long successful actor assignments are reused. Defaults to 5s; 0s disables reuse.|
+|`routeGroups[].routes[].policies.substrateIngress.requestParking`|object|Bounded request parking while a suspended actor is waiting for worker capacity.|
+|`routeGroups[].routes[].policies.substrateIngress.requestParking.budget`|string|Maximum time to wait for the actor to become routable.|
+|`routeGroups[].routes[].policies.substrateIngress.requestParking.max`|integer|Maximum concurrent requests that may wait for actor resumption. Set to 0 to disable parking.|
+|`routeGroups[].routes[].policies.substrateIngress.requestParking.retryInterval`|string|Initial delay between ResumeActor retries while parked.|
+|`routeGroups[].routes[].policies.substrateIngress.requestParking.retryFactor`|number|Multiplier applied to the delay after each parked retry.|
 |`routeGroups[].routes[].policies.substrateEgress`|object|Authorize CONNECT egress using the originating actor's dynamic policy.|
 |`routeGroups[].routes[].policies.substrateEgress.service`|object|Service reference. Service must be defined in the top level services list.|
 |`routeGroups[].routes[].policies.substrateEgress.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
@@ -39459,12 +39742,14 @@
 |`routeGroups[].routes[].policies.substrateEgress.policies.transformations.request.add`|object|Headers to append using CEL expressions for values.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.transformations.request.set`|object|Headers to set using CEL expressions for values.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.transformations.request.remove`|[]string|Header names to remove.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.transformations.request.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.transformations.request.body`|string|CEL expression that computes a replacement body.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.transformations.request.metadata`|object|Metadata values to add using CEL expressions.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.transformations.response`|object|Transform the response before it is returned.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.transformations.response.add`|object|Headers to append using CEL expressions for values.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.transformations.response.set`|object|Headers to set using CEL expressions for values.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.transformations.response.remove`|[]string|Header names to remove.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.transformations.response.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.transformations.response.body`|string|CEL expression that computes a replacement body.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.transformations.response.metadata`|object|Metadata values to add using CEL expressions.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendTLS`|object|TLS settings used when connecting to this backend.|
@@ -39514,6 +39799,7 @@
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.aws.region`|string||
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.aws.sessionToken`|string||
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.aws.serviceName`|string|AWS SigV4 signing service name (for example, "bedrock", "bedrock-agentcore", or "execute-api").|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.aws.region`|string|AWS SigV4 signing region (for example, "us-east-1"). If unset, typed AWS<br>backends may provide this automatically; otherwise the ambient AWS region<br>is used.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.aws.assumeRole`|object|Optional AWS STS role to assume before signing requests.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.aws.assumeRole.roleArn`|string|AWS IAM role ARN to assume.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.aws.assumeRole.sessionName`|string|Custom session name (RoleSessionName) for CloudTrail and Cost & Usage Report<br>attribution. Either a static string or `{expression: ...}` with a CEL<br>expression evaluated against each request. Max 64 chars, matching<br>`[\w+=,.@-]`. If unset, the AWS SDK generates a random session name.|
@@ -39536,6 +39822,22 @@
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.azure.explicitConfig.workloadIdentity`|object||
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.azure.developerImplicit`|object|Use implicit Azure auth. Note that this is for developer use-cases only!|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.azure.implicit`|object|Automatically detect authentication method based on environment.<br>Uses Workload Identity on K8s, Managed Identity on Azure VMs, or Developer Tools locally.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.jwtSign`|object|Sign a short-lived JWT with a private key on each request.<br>Signs a short-lived JWT with a private key on each request and sends it to<br>the backend. For upstreams that require per-request keypair JWTs (e.g. the<br>Snowflake SQL API) rather than a static credential.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.jwtSign.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.jwtSign.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.jwtSign.alg`|enum|JWS signing algorithm. Defaults to RS256.<br>Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.jwtSign.kid`|string|Optional JWS key ID header.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.jwtSign.claims`|object|Static claims added to every token (e.g. iss, sub, aud). Values may be<br>any JSON value (e.g. a string, number, bool, or array). `iat`, `exp`,<br>and `nbf` are reserved for the signer and cannot be configured here.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.jwtSign.ttl`|string|Token lifetime used for `exp`. Defaults to 300s.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.jwtSign.location`|object|Where the signed token is written. Defaults to the Authorization<br>header with a `Bearer ` prefix.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.jwtSign.location.header`|object|Read the credential from an HTTP header.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.jwtSign.location.header.name`|string|Header name containing the credential.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.jwtSign.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.jwtSign.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.jwtSign.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.jwtSign.location.cookie`|object|Read the credential from a request cookie.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.jwtSign.location.cookie.name`|string|Cookie name containing the credential.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.jwtSign.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange`|object|Use OAuth token exchange flows to obtain a backend access token.<br>Exactly one of service, host, or backend may be set.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.service`|object|Service reference. Service must be defined in the top level services list.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
@@ -39571,7 +39873,7 @@
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.audiences`|[]string|`audience` parameters naming the target services at the authorization server.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.scopes`|[]string|`scope` values for the requested token, sent space-delimited.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.resources`|[]string|`resource` parameters with the target service URIs.|
-|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.requestedTokenType`|string|`requested_token_type` parameter. When unset, the form field is omitted<br>and a declared response type is expected to be access_token.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.requestedTokenType`|string|`requested_token_type` parameter. When unset it is omitted from the request<br>(RFC 8693 makes it optional). Some providers (e.g. Auth0 custom token exchange)<br>reject an explicit access_token value paired with a custom `subject_token_type`.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth`|object|Client authentication used when calling the token endpoint.<br>When unset, no client authentication fields are sent.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object||
@@ -39580,7 +39882,10 @@
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
-|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `ES256`, `ES384`.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.kid`|string||
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.assertionAudience`|string||
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
@@ -39615,7 +39920,10 @@
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
-|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `ES256`, `ES384`.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.kid`|string||
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.assertionAudience`|string||
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
@@ -39636,17 +39944,44 @@
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
-|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `ES256`, `ES384`.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.kid`|string||
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.assertionAudience`|string||
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.audience`|string|Identifier of the resource authorization server. The issued ID-JAG is bound to this audience.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resources`|[]string|`resource` parameters naming the protected resource APIs.|
-|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.scopes`|[]string|`scope` values for the requested token, sent space-delimited.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.scopes`|[]string|`scope` values requested when obtaining the ID-JAG from the identity provider, sent<br>space-delimited.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.accessTokenScopes`|[]string|`scope` values requested when exchanging the ID-JAG for an access token. When unset,<br>inherits `scopes`. When empty, omits `scope`.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken`|object|Subject token sent to the identity provider. Defaults to an OpenID Connect ID token read<br>from the Authorization Bearer header.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source`|object|Where to read the subject token. Defaults to the Authorization Bearer header.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.tokenType`|string|RFC 8693 subject token type URI. Defaults to an OpenID Connect ID token.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.credentials`|[]object||
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.credentials[].location`|object|Where the credential is inserted on the backend request.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.credentials[].location.header`|object|Read the credential from an HTTP header.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.credentials[].location.header.name`|string|Header name containing the credential.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.credentials[].location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.credentials[].location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.credentials[].location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.credentials[].location.cookie`|object|Read the credential from a request cookie.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.credentials[].location.cookie.name`|string|Cookie name containing the credential.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.credentials[].location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.credentials[].key`|object|Credential value.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.credentials[].key.file`|string|Path to a file on disk to load the value from.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.http`|object|HTTP protocol settings for this backend.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.http.version`|string|HTTP version to use when connecting to the backend.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.http.requestTimeout`|string|Maximum time allowed for a backend HTTP request.|
@@ -39664,6 +39999,7 @@
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendTunnel.proxy.service.port`|integer|Port on the target Service to route to.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendTunnel.proxy.host`|string|Hostname or IP address|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
 |`routeGroups[].routes[].policies.transformations`|object|Modify request and response headers, bodies, or metadata.|
 |`routeGroups[].routes[].policies.transformations.conditional`|[]object|conditional policy entries. An entry without a condition must be the final fallback.|
 |`routeGroups[].routes[].policies.transformations.conditional[].condition`|string|condition must evaluate to true for this policy to execute. If unset, the policy is the fallback.|
@@ -57550,12 +57886,14 @@
 |`routes[].policies.substrateIngress.policies.transformations.request.add`|object|Headers to append using CEL expressions for values.|
 |`routes[].policies.substrateIngress.policies.transformations.request.set`|object|Headers to set using CEL expressions for values.|
 |`routes[].policies.substrateIngress.policies.transformations.request.remove`|[]string|Header names to remove.|
+|`routes[].policies.substrateIngress.policies.transformations.request.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
 |`routes[].policies.substrateIngress.policies.transformations.request.body`|string|CEL expression that computes a replacement body.|
 |`routes[].policies.substrateIngress.policies.transformations.request.metadata`|object|Metadata values to add using CEL expressions.|
 |`routes[].policies.substrateIngress.policies.transformations.response`|object|Transform the response before it is returned.|
 |`routes[].policies.substrateIngress.policies.transformations.response.add`|object|Headers to append using CEL expressions for values.|
 |`routes[].policies.substrateIngress.policies.transformations.response.set`|object|Headers to set using CEL expressions for values.|
 |`routes[].policies.substrateIngress.policies.transformations.response.remove`|[]string|Header names to remove.|
+|`routes[].policies.substrateIngress.policies.transformations.response.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
 |`routes[].policies.substrateIngress.policies.transformations.response.body`|string|CEL expression that computes a replacement body.|
 |`routes[].policies.substrateIngress.policies.transformations.response.metadata`|object|Metadata values to add using CEL expressions.|
 |`routes[].policies.substrateIngress.policies.backendTLS`|object|TLS settings used when connecting to this backend.|
@@ -57605,6 +57943,7 @@
 |`routes[].policies.substrateIngress.policies.backendAuth.aws.region`|string||
 |`routes[].policies.substrateIngress.policies.backendAuth.aws.sessionToken`|string||
 |`routes[].policies.substrateIngress.policies.backendAuth.aws.serviceName`|string|AWS SigV4 signing service name (for example, "bedrock", "bedrock-agentcore", or "execute-api").|
+|`routes[].policies.substrateIngress.policies.backendAuth.aws.region`|string|AWS SigV4 signing region (for example, "us-east-1"). If unset, typed AWS<br>backends may provide this automatically; otherwise the ambient AWS region<br>is used.|
 |`routes[].policies.substrateIngress.policies.backendAuth.aws.assumeRole`|object|Optional AWS STS role to assume before signing requests.|
 |`routes[].policies.substrateIngress.policies.backendAuth.aws.assumeRole.roleArn`|string|AWS IAM role ARN to assume.|
 |`routes[].policies.substrateIngress.policies.backendAuth.aws.assumeRole.sessionName`|string|Custom session name (RoleSessionName) for CloudTrail and Cost & Usage Report<br>attribution. Either a static string or `{expression: ...}` with a CEL<br>expression evaluated against each request. Max 64 chars, matching<br>`[\w+=,.@-]`. If unset, the AWS SDK generates a random session name.|
@@ -57627,6 +57966,22 @@
 |`routes[].policies.substrateIngress.policies.backendAuth.azure.explicitConfig.workloadIdentity`|object||
 |`routes[].policies.substrateIngress.policies.backendAuth.azure.developerImplicit`|object|Use implicit Azure auth. Note that this is for developer use-cases only!|
 |`routes[].policies.substrateIngress.policies.backendAuth.azure.implicit`|object|Automatically detect authentication method based on environment.<br>Uses Workload Identity on K8s, Managed Identity on Azure VMs, or Developer Tools locally.|
+|`routes[].policies.substrateIngress.policies.backendAuth.jwtSign`|object|Sign a short-lived JWT with a private key on each request.<br>Signs a short-lived JWT with a private key on each request and sends it to<br>the backend. For upstreams that require per-request keypair JWTs (e.g. the<br>Snowflake SQL API) rather than a static credential.|
+|`routes[].policies.substrateIngress.policies.backendAuth.jwtSign.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`routes[].policies.substrateIngress.policies.backendAuth.jwtSign.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`routes[].policies.substrateIngress.policies.backendAuth.jwtSign.alg`|enum|JWS signing algorithm. Defaults to RS256.<br>Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`routes[].policies.substrateIngress.policies.backendAuth.jwtSign.kid`|string|Optional JWS key ID header.|
+|`routes[].policies.substrateIngress.policies.backendAuth.jwtSign.claims`|object|Static claims added to every token (e.g. iss, sub, aud). Values may be<br>any JSON value (e.g. a string, number, bool, or array). `iat`, `exp`,<br>and `nbf` are reserved for the signer and cannot be configured here.|
+|`routes[].policies.substrateIngress.policies.backendAuth.jwtSign.ttl`|string|Token lifetime used for `exp`. Defaults to 300s.|
+|`routes[].policies.substrateIngress.policies.backendAuth.jwtSign.location`|object|Where the signed token is written. Defaults to the Authorization<br>header with a `Bearer ` prefix.|
+|`routes[].policies.substrateIngress.policies.backendAuth.jwtSign.location.header`|object|Read the credential from an HTTP header.|
+|`routes[].policies.substrateIngress.policies.backendAuth.jwtSign.location.header.name`|string|Header name containing the credential.|
+|`routes[].policies.substrateIngress.policies.backendAuth.jwtSign.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routes[].policies.substrateIngress.policies.backendAuth.jwtSign.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routes[].policies.substrateIngress.policies.backendAuth.jwtSign.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routes[].policies.substrateIngress.policies.backendAuth.jwtSign.location.cookie`|object|Read the credential from a request cookie.|
+|`routes[].policies.substrateIngress.policies.backendAuth.jwtSign.location.cookie.name`|string|Cookie name containing the credential.|
+|`routes[].policies.substrateIngress.policies.backendAuth.jwtSign.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
 |`routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange`|object|Use OAuth token exchange flows to obtain a backend access token.<br>Exactly one of service, host, or backend may be set.|
 |`routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.service`|object|Service reference. Service must be defined in the top level services list.|
 |`routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
@@ -57662,7 +58017,7 @@
 |`routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.audiences`|[]string|`audience` parameters naming the target services at the authorization server.|
 |`routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.scopes`|[]string|`scope` values for the requested token, sent space-delimited.|
 |`routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.resources`|[]string|`resource` parameters with the target service URIs.|
-|`routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.requestedTokenType`|string|`requested_token_type` parameter. When unset, the form field is omitted<br>and a declared response type is expected to be access_token.|
+|`routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.requestedTokenType`|string|`requested_token_type` parameter. When unset it is omitted from the request<br>(RFC 8693 makes it optional). Some providers (e.g. Auth0 custom token exchange)<br>reject an explicit access_token value paired with a custom `subject_token_type`.|
 |`routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth`|object|Client authentication used when calling the token endpoint.<br>When unset, no client authentication fields are sent.|
 |`routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
 |`routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object||
@@ -57671,7 +58026,10 @@
 |`routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
 |`routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
 |`routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
-|`routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `ES256`, `ES384`.|
+|`routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
 |`routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.kid`|string||
 |`routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.assertionAudience`|string||
 |`routes[].policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
@@ -57706,7 +58064,10 @@
 |`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
 |`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
 |`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
-|`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `ES256`, `ES384`.|
+|`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
 |`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.kid`|string||
 |`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.assertionAudience`|string||
 |`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
@@ -57727,17 +58088,44 @@
 |`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
 |`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
 |`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
-|`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `ES256`, `ES384`.|
+|`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
 |`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.kid`|string||
 |`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.assertionAudience`|string||
 |`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
 |`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
 |`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.audience`|string|Identifier of the resource authorization server. The issued ID-JAG is bound to this audience.|
 |`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.resources`|[]string|`resource` parameters naming the protected resource APIs.|
-|`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.scopes`|[]string|`scope` values for the requested token, sent space-delimited.|
+|`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.scopes`|[]string|`scope` values requested when obtaining the ID-JAG from the identity provider, sent<br>space-delimited.|
+|`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.accessTokenScopes`|[]string|`scope` values requested when exchanging the ID-JAG for an access token. When unset,<br>inherits `scopes`. When empty, omits `scope`.|
+|`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken`|object|Subject token sent to the identity provider. Defaults to an OpenID Connect ID token read<br>from the Authorization Bearer header.|
+|`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source`|object|Where to read the subject token. Defaults to the Authorization Bearer header.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.tokenType`|string|RFC 8693 subject token type URI. Defaults to an OpenID Connect ID token.|
 |`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
 |`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
 |`routes[].policies.substrateIngress.policies.backendAuth.crossAppAccess.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`routes[].policies.substrateIngress.policies.backendAuth.credentials`|[]object||
+|`routes[].policies.substrateIngress.policies.backendAuth.credentials[].location`|object|Where the credential is inserted on the backend request.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`routes[].policies.substrateIngress.policies.backendAuth.credentials[].location.header`|object|Read the credential from an HTTP header.|
+|`routes[].policies.substrateIngress.policies.backendAuth.credentials[].location.header.name`|string|Header name containing the credential.|
+|`routes[].policies.substrateIngress.policies.backendAuth.credentials[].location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routes[].policies.substrateIngress.policies.backendAuth.credentials[].location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routes[].policies.substrateIngress.policies.backendAuth.credentials[].location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routes[].policies.substrateIngress.policies.backendAuth.credentials[].location.cookie`|object|Read the credential from a request cookie.|
+|`routes[].policies.substrateIngress.policies.backendAuth.credentials[].location.cookie.name`|string|Cookie name containing the credential.|
+|`routes[].policies.substrateIngress.policies.backendAuth.credentials[].location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routes[].policies.substrateIngress.policies.backendAuth.credentials[].key`|object|Credential value.|
+|`routes[].policies.substrateIngress.policies.backendAuth.credentials[].key.file`|string|Path to a file on disk to load the value from.|
 |`routes[].policies.substrateIngress.policies.http`|object|HTTP protocol settings for this backend.|
 |`routes[].policies.substrateIngress.policies.http.version`|string|HTTP version to use when connecting to the backend.|
 |`routes[].policies.substrateIngress.policies.http.requestTimeout`|string|Maximum time allowed for a backend HTTP request.|
@@ -57755,8 +58143,15 @@
 |`routes[].policies.substrateIngress.policies.backendTunnel.proxy.service.port`|integer|Port on the target Service to route to.|
 |`routes[].policies.substrateIngress.policies.backendTunnel.proxy.host`|string|Hostname or IP address|
 |`routes[].policies.substrateIngress.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
-|`routes[].policies.substrateIngress.targetPort`|integer|Port on the resumed actor pod. Defaults to 80.|
+|`routes[].policies.substrateIngress.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
+|`routes[].policies.substrateIngress.targetPort`|integer|Port on the resumed worker pod's ordinary atunnel ingress. Defaults to 443.<br>This is independent from `connect_target_port`, which is used for raw CONNECT tunnels.|
+|`routes[].policies.substrateIngress.connectTargetPort`|integer|Port on the resumed worker pod's atunnel CONNECT listener. Defaults to 444.|
 |`routes[].policies.substrateIngress.cacheTtl`|string|How long successful actor assignments are reused. Defaults to 5s; 0s disables reuse.|
+|`routes[].policies.substrateIngress.requestParking`|object|Bounded request parking while a suspended actor is waiting for worker capacity.|
+|`routes[].policies.substrateIngress.requestParking.budget`|string|Maximum time to wait for the actor to become routable.|
+|`routes[].policies.substrateIngress.requestParking.max`|integer|Maximum concurrent requests that may wait for actor resumption. Set to 0 to disable parking.|
+|`routes[].policies.substrateIngress.requestParking.retryInterval`|string|Initial delay between ResumeActor retries while parked.|
+|`routes[].policies.substrateIngress.requestParking.retryFactor`|number|Multiplier applied to the delay after each parked retry.|
 |`routes[].policies.substrateEgress`|object|Authorize CONNECT egress using the originating actor's dynamic policy.|
 |`routes[].policies.substrateEgress.service`|object|Service reference. Service must be defined in the top level services list.|
 |`routes[].policies.substrateEgress.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
@@ -57773,12 +58168,14 @@
 |`routes[].policies.substrateEgress.policies.transformations.request.add`|object|Headers to append using CEL expressions for values.|
 |`routes[].policies.substrateEgress.policies.transformations.request.set`|object|Headers to set using CEL expressions for values.|
 |`routes[].policies.substrateEgress.policies.transformations.request.remove`|[]string|Header names to remove.|
+|`routes[].policies.substrateEgress.policies.transformations.request.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
 |`routes[].policies.substrateEgress.policies.transformations.request.body`|string|CEL expression that computes a replacement body.|
 |`routes[].policies.substrateEgress.policies.transformations.request.metadata`|object|Metadata values to add using CEL expressions.|
 |`routes[].policies.substrateEgress.policies.transformations.response`|object|Transform the response before it is returned.|
 |`routes[].policies.substrateEgress.policies.transformations.response.add`|object|Headers to append using CEL expressions for values.|
 |`routes[].policies.substrateEgress.policies.transformations.response.set`|object|Headers to set using CEL expressions for values.|
 |`routes[].policies.substrateEgress.policies.transformations.response.remove`|[]string|Header names to remove.|
+|`routes[].policies.substrateEgress.policies.transformations.response.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
 |`routes[].policies.substrateEgress.policies.transformations.response.body`|string|CEL expression that computes a replacement body.|
 |`routes[].policies.substrateEgress.policies.transformations.response.metadata`|object|Metadata values to add using CEL expressions.|
 |`routes[].policies.substrateEgress.policies.backendTLS`|object|TLS settings used when connecting to this backend.|
@@ -57828,6 +58225,7 @@
 |`routes[].policies.substrateEgress.policies.backendAuth.aws.region`|string||
 |`routes[].policies.substrateEgress.policies.backendAuth.aws.sessionToken`|string||
 |`routes[].policies.substrateEgress.policies.backendAuth.aws.serviceName`|string|AWS SigV4 signing service name (for example, "bedrock", "bedrock-agentcore", or "execute-api").|
+|`routes[].policies.substrateEgress.policies.backendAuth.aws.region`|string|AWS SigV4 signing region (for example, "us-east-1"). If unset, typed AWS<br>backends may provide this automatically; otherwise the ambient AWS region<br>is used.|
 |`routes[].policies.substrateEgress.policies.backendAuth.aws.assumeRole`|object|Optional AWS STS role to assume before signing requests.|
 |`routes[].policies.substrateEgress.policies.backendAuth.aws.assumeRole.roleArn`|string|AWS IAM role ARN to assume.|
 |`routes[].policies.substrateEgress.policies.backendAuth.aws.assumeRole.sessionName`|string|Custom session name (RoleSessionName) for CloudTrail and Cost & Usage Report<br>attribution. Either a static string or `{expression: ...}` with a CEL<br>expression evaluated against each request. Max 64 chars, matching<br>`[\w+=,.@-]`. If unset, the AWS SDK generates a random session name.|
@@ -57850,6 +58248,22 @@
 |`routes[].policies.substrateEgress.policies.backendAuth.azure.explicitConfig.workloadIdentity`|object||
 |`routes[].policies.substrateEgress.policies.backendAuth.azure.developerImplicit`|object|Use implicit Azure auth. Note that this is for developer use-cases only!|
 |`routes[].policies.substrateEgress.policies.backendAuth.azure.implicit`|object|Automatically detect authentication method based on environment.<br>Uses Workload Identity on K8s, Managed Identity on Azure VMs, or Developer Tools locally.|
+|`routes[].policies.substrateEgress.policies.backendAuth.jwtSign`|object|Sign a short-lived JWT with a private key on each request.<br>Signs a short-lived JWT with a private key on each request and sends it to<br>the backend. For upstreams that require per-request keypair JWTs (e.g. the<br>Snowflake SQL API) rather than a static credential.|
+|`routes[].policies.substrateEgress.policies.backendAuth.jwtSign.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`routes[].policies.substrateEgress.policies.backendAuth.jwtSign.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`routes[].policies.substrateEgress.policies.backendAuth.jwtSign.alg`|enum|JWS signing algorithm. Defaults to RS256.<br>Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`routes[].policies.substrateEgress.policies.backendAuth.jwtSign.kid`|string|Optional JWS key ID header.|
+|`routes[].policies.substrateEgress.policies.backendAuth.jwtSign.claims`|object|Static claims added to every token (e.g. iss, sub, aud). Values may be<br>any JSON value (e.g. a string, number, bool, or array). `iat`, `exp`,<br>and `nbf` are reserved for the signer and cannot be configured here.|
+|`routes[].policies.substrateEgress.policies.backendAuth.jwtSign.ttl`|string|Token lifetime used for `exp`. Defaults to 300s.|
+|`routes[].policies.substrateEgress.policies.backendAuth.jwtSign.location`|object|Where the signed token is written. Defaults to the Authorization<br>header with a `Bearer ` prefix.|
+|`routes[].policies.substrateEgress.policies.backendAuth.jwtSign.location.header`|object|Read the credential from an HTTP header.|
+|`routes[].policies.substrateEgress.policies.backendAuth.jwtSign.location.header.name`|string|Header name containing the credential.|
+|`routes[].policies.substrateEgress.policies.backendAuth.jwtSign.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routes[].policies.substrateEgress.policies.backendAuth.jwtSign.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routes[].policies.substrateEgress.policies.backendAuth.jwtSign.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routes[].policies.substrateEgress.policies.backendAuth.jwtSign.location.cookie`|object|Read the credential from a request cookie.|
+|`routes[].policies.substrateEgress.policies.backendAuth.jwtSign.location.cookie.name`|string|Cookie name containing the credential.|
+|`routes[].policies.substrateEgress.policies.backendAuth.jwtSign.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
 |`routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange`|object|Use OAuth token exchange flows to obtain a backend access token.<br>Exactly one of service, host, or backend may be set.|
 |`routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.service`|object|Service reference. Service must be defined in the top level services list.|
 |`routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
@@ -57885,7 +58299,7 @@
 |`routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.audiences`|[]string|`audience` parameters naming the target services at the authorization server.|
 |`routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.scopes`|[]string|`scope` values for the requested token, sent space-delimited.|
 |`routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.resources`|[]string|`resource` parameters with the target service URIs.|
-|`routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.requestedTokenType`|string|`requested_token_type` parameter. When unset, the form field is omitted<br>and a declared response type is expected to be access_token.|
+|`routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.requestedTokenType`|string|`requested_token_type` parameter. When unset it is omitted from the request<br>(RFC 8693 makes it optional). Some providers (e.g. Auth0 custom token exchange)<br>reject an explicit access_token value paired with a custom `subject_token_type`.|
 |`routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth`|object|Client authentication used when calling the token endpoint.<br>When unset, no client authentication fields are sent.|
 |`routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
 |`routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object||
@@ -57894,7 +58308,10 @@
 |`routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
 |`routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
 |`routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
-|`routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `ES256`, `ES384`.|
+|`routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
 |`routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.kid`|string||
 |`routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.assertionAudience`|string||
 |`routes[].policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
@@ -57929,7 +58346,10 @@
 |`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
 |`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
 |`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
-|`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `ES256`, `ES384`.|
+|`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
 |`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.kid`|string||
 |`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.assertionAudience`|string||
 |`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
@@ -57950,17 +58370,44 @@
 |`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
 |`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
 |`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
-|`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `ES256`, `ES384`.|
+|`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
 |`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.kid`|string||
 |`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.assertionAudience`|string||
 |`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
 |`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
 |`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.audience`|string|Identifier of the resource authorization server. The issued ID-JAG is bound to this audience.|
 |`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.resources`|[]string|`resource` parameters naming the protected resource APIs.|
-|`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.scopes`|[]string|`scope` values for the requested token, sent space-delimited.|
+|`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.scopes`|[]string|`scope` values requested when obtaining the ID-JAG from the identity provider, sent<br>space-delimited.|
+|`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.accessTokenScopes`|[]string|`scope` values requested when exchanging the ID-JAG for an access token. When unset,<br>inherits `scopes`. When empty, omits `scope`.|
+|`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken`|object|Subject token sent to the identity provider. Defaults to an OpenID Connect ID token read<br>from the Authorization Bearer header.|
+|`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source`|object|Where to read the subject token. Defaults to the Authorization Bearer header.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.tokenType`|string|RFC 8693 subject token type URI. Defaults to an OpenID Connect ID token.|
 |`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
 |`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
 |`routes[].policies.substrateEgress.policies.backendAuth.crossAppAccess.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`routes[].policies.substrateEgress.policies.backendAuth.credentials`|[]object||
+|`routes[].policies.substrateEgress.policies.backendAuth.credentials[].location`|object|Where the credential is inserted on the backend request.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`routes[].policies.substrateEgress.policies.backendAuth.credentials[].location.header`|object|Read the credential from an HTTP header.|
+|`routes[].policies.substrateEgress.policies.backendAuth.credentials[].location.header.name`|string|Header name containing the credential.|
+|`routes[].policies.substrateEgress.policies.backendAuth.credentials[].location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routes[].policies.substrateEgress.policies.backendAuth.credentials[].location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routes[].policies.substrateEgress.policies.backendAuth.credentials[].location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routes[].policies.substrateEgress.policies.backendAuth.credentials[].location.cookie`|object|Read the credential from a request cookie.|
+|`routes[].policies.substrateEgress.policies.backendAuth.credentials[].location.cookie.name`|string|Cookie name containing the credential.|
+|`routes[].policies.substrateEgress.policies.backendAuth.credentials[].location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routes[].policies.substrateEgress.policies.backendAuth.credentials[].key`|object|Credential value.|
+|`routes[].policies.substrateEgress.policies.backendAuth.credentials[].key.file`|string|Path to a file on disk to load the value from.|
 |`routes[].policies.substrateEgress.policies.http`|object|HTTP protocol settings for this backend.|
 |`routes[].policies.substrateEgress.policies.http.version`|string|HTTP version to use when connecting to the backend.|
 |`routes[].policies.substrateEgress.policies.http.requestTimeout`|string|Maximum time allowed for a backend HTTP request.|
@@ -57978,6 +58425,7 @@
 |`routes[].policies.substrateEgress.policies.backendTunnel.proxy.service.port`|integer|Port on the target Service to route to.|
 |`routes[].policies.substrateEgress.policies.backendTunnel.proxy.host`|string|Hostname or IP address|
 |`routes[].policies.substrateEgress.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`routes[].policies.substrateEgress.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
 |`routes[].policies.transformations`|object|Modify request and response headers, bodies, or metadata.|
 |`routes[].policies.transformations.conditional`|[]object|conditional policy entries. An entry without a condition must be the final fallback.|
 |`routes[].policies.transformations.conditional[].condition`|string|condition must evaluate to true for this policy to execute. If unset, the policy is the fallback.|
@@ -80867,12 +81315,14 @@
 |`mcp.policies.substrateIngress.policies.transformations.request.add`|object|Headers to append using CEL expressions for values.|
 |`mcp.policies.substrateIngress.policies.transformations.request.set`|object|Headers to set using CEL expressions for values.|
 |`mcp.policies.substrateIngress.policies.transformations.request.remove`|[]string|Header names to remove.|
+|`mcp.policies.substrateIngress.policies.transformations.request.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
 |`mcp.policies.substrateIngress.policies.transformations.request.body`|string|CEL expression that computes a replacement body.|
 |`mcp.policies.substrateIngress.policies.transformations.request.metadata`|object|Metadata values to add using CEL expressions.|
 |`mcp.policies.substrateIngress.policies.transformations.response`|object|Transform the response before it is returned.|
 |`mcp.policies.substrateIngress.policies.transformations.response.add`|object|Headers to append using CEL expressions for values.|
 |`mcp.policies.substrateIngress.policies.transformations.response.set`|object|Headers to set using CEL expressions for values.|
 |`mcp.policies.substrateIngress.policies.transformations.response.remove`|[]string|Header names to remove.|
+|`mcp.policies.substrateIngress.policies.transformations.response.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
 |`mcp.policies.substrateIngress.policies.transformations.response.body`|string|CEL expression that computes a replacement body.|
 |`mcp.policies.substrateIngress.policies.transformations.response.metadata`|object|Metadata values to add using CEL expressions.|
 |`mcp.policies.substrateIngress.policies.backendTLS`|object|TLS settings used when connecting to this backend.|
@@ -80922,6 +81372,7 @@
 |`mcp.policies.substrateIngress.policies.backendAuth.aws.region`|string||
 |`mcp.policies.substrateIngress.policies.backendAuth.aws.sessionToken`|string||
 |`mcp.policies.substrateIngress.policies.backendAuth.aws.serviceName`|string|AWS SigV4 signing service name (for example, "bedrock", "bedrock-agentcore", or "execute-api").|
+|`mcp.policies.substrateIngress.policies.backendAuth.aws.region`|string|AWS SigV4 signing region (for example, "us-east-1"). If unset, typed AWS<br>backends may provide this automatically; otherwise the ambient AWS region<br>is used.|
 |`mcp.policies.substrateIngress.policies.backendAuth.aws.assumeRole`|object|Optional AWS STS role to assume before signing requests.|
 |`mcp.policies.substrateIngress.policies.backendAuth.aws.assumeRole.roleArn`|string|AWS IAM role ARN to assume.|
 |`mcp.policies.substrateIngress.policies.backendAuth.aws.assumeRole.sessionName`|string|Custom session name (RoleSessionName) for CloudTrail and Cost & Usage Report<br>attribution. Either a static string or `{expression: ...}` with a CEL<br>expression evaluated against each request. Max 64 chars, matching<br>`[\w+=,.@-]`. If unset, the AWS SDK generates a random session name.|
@@ -80944,6 +81395,22 @@
 |`mcp.policies.substrateIngress.policies.backendAuth.azure.explicitConfig.workloadIdentity`|object||
 |`mcp.policies.substrateIngress.policies.backendAuth.azure.developerImplicit`|object|Use implicit Azure auth. Note that this is for developer use-cases only!|
 |`mcp.policies.substrateIngress.policies.backendAuth.azure.implicit`|object|Automatically detect authentication method based on environment.<br>Uses Workload Identity on K8s, Managed Identity on Azure VMs, or Developer Tools locally.|
+|`mcp.policies.substrateIngress.policies.backendAuth.jwtSign`|object|Sign a short-lived JWT with a private key on each request.<br>Signs a short-lived JWT with a private key on each request and sends it to<br>the backend. For upstreams that require per-request keypair JWTs (e.g. the<br>Snowflake SQL API) rather than a static credential.|
+|`mcp.policies.substrateIngress.policies.backendAuth.jwtSign.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`mcp.policies.substrateIngress.policies.backendAuth.jwtSign.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`mcp.policies.substrateIngress.policies.backendAuth.jwtSign.alg`|enum|JWS signing algorithm. Defaults to RS256.<br>Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`mcp.policies.substrateIngress.policies.backendAuth.jwtSign.kid`|string|Optional JWS key ID header.|
+|`mcp.policies.substrateIngress.policies.backendAuth.jwtSign.claims`|object|Static claims added to every token (e.g. iss, sub, aud). Values may be<br>any JSON value (e.g. a string, number, bool, or array). `iat`, `exp`,<br>and `nbf` are reserved for the signer and cannot be configured here.|
+|`mcp.policies.substrateIngress.policies.backendAuth.jwtSign.ttl`|string|Token lifetime used for `exp`. Defaults to 300s.|
+|`mcp.policies.substrateIngress.policies.backendAuth.jwtSign.location`|object|Where the signed token is written. Defaults to the Authorization<br>header with a `Bearer ` prefix.|
+|`mcp.policies.substrateIngress.policies.backendAuth.jwtSign.location.header`|object|Read the credential from an HTTP header.|
+|`mcp.policies.substrateIngress.policies.backendAuth.jwtSign.location.header.name`|string|Header name containing the credential.|
+|`mcp.policies.substrateIngress.policies.backendAuth.jwtSign.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`mcp.policies.substrateIngress.policies.backendAuth.jwtSign.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`mcp.policies.substrateIngress.policies.backendAuth.jwtSign.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`mcp.policies.substrateIngress.policies.backendAuth.jwtSign.location.cookie`|object|Read the credential from a request cookie.|
+|`mcp.policies.substrateIngress.policies.backendAuth.jwtSign.location.cookie.name`|string|Cookie name containing the credential.|
+|`mcp.policies.substrateIngress.policies.backendAuth.jwtSign.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
 |`mcp.policies.substrateIngress.policies.backendAuth.oauthTokenExchange`|object|Use OAuth token exchange flows to obtain a backend access token.<br>Exactly one of service, host, or backend may be set.|
 |`mcp.policies.substrateIngress.policies.backendAuth.oauthTokenExchange.service`|object|Service reference. Service must be defined in the top level services list.|
 |`mcp.policies.substrateIngress.policies.backendAuth.oauthTokenExchange.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
@@ -80979,7 +81446,7 @@
 |`mcp.policies.substrateIngress.policies.backendAuth.oauthTokenExchange.audiences`|[]string|`audience` parameters naming the target services at the authorization server.|
 |`mcp.policies.substrateIngress.policies.backendAuth.oauthTokenExchange.scopes`|[]string|`scope` values for the requested token, sent space-delimited.|
 |`mcp.policies.substrateIngress.policies.backendAuth.oauthTokenExchange.resources`|[]string|`resource` parameters with the target service URIs.|
-|`mcp.policies.substrateIngress.policies.backendAuth.oauthTokenExchange.requestedTokenType`|string|`requested_token_type` parameter. When unset, the form field is omitted<br>and a declared response type is expected to be access_token.|
+|`mcp.policies.substrateIngress.policies.backendAuth.oauthTokenExchange.requestedTokenType`|string|`requested_token_type` parameter. When unset it is omitted from the request<br>(RFC 8693 makes it optional). Some providers (e.g. Auth0 custom token exchange)<br>reject an explicit access_token value paired with a custom `subject_token_type`.|
 |`mcp.policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth`|object|Client authentication used when calling the token endpoint.<br>When unset, no client authentication fields are sent.|
 |`mcp.policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
 |`mcp.policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object||
@@ -80988,7 +81455,10 @@
 |`mcp.policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
 |`mcp.policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
 |`mcp.policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
-|`mcp.policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `ES256`, `ES384`.|
+|`mcp.policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`mcp.policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`mcp.policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`mcp.policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
 |`mcp.policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.kid`|string||
 |`mcp.policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.assertionAudience`|string||
 |`mcp.policies.substrateIngress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
@@ -81023,7 +81493,10 @@
 |`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
 |`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
 |`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
-|`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `ES256`, `ES384`.|
+|`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
 |`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.kid`|string||
 |`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.assertionAudience`|string||
 |`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
@@ -81044,17 +81517,44 @@
 |`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
 |`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
 |`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
-|`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `ES256`, `ES384`.|
+|`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
 |`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.kid`|string||
 |`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.assertionAudience`|string||
 |`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
 |`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
 |`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.audience`|string|Identifier of the resource authorization server. The issued ID-JAG is bound to this audience.|
 |`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.resources`|[]string|`resource` parameters naming the protected resource APIs.|
-|`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.scopes`|[]string|`scope` values for the requested token, sent space-delimited.|
+|`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.scopes`|[]string|`scope` values requested when obtaining the ID-JAG from the identity provider, sent<br>space-delimited.|
+|`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.accessTokenScopes`|[]string|`scope` values requested when exchanging the ID-JAG for an access token. When unset,<br>inherits `scopes`. When empty, omits `scope`.|
+|`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken`|object|Subject token sent to the identity provider. Defaults to an OpenID Connect ID token read<br>from the Authorization Bearer header.|
+|`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source`|object|Where to read the subject token. Defaults to the Authorization Bearer header.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.subjectToken.tokenType`|string|RFC 8693 subject token type URI. Defaults to an OpenID Connect ID token.|
 |`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
 |`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
 |`mcp.policies.substrateIngress.policies.backendAuth.crossAppAccess.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`mcp.policies.substrateIngress.policies.backendAuth.credentials`|[]object||
+|`mcp.policies.substrateIngress.policies.backendAuth.credentials[].location`|object|Where the credential is inserted on the backend request.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`mcp.policies.substrateIngress.policies.backendAuth.credentials[].location.header`|object|Read the credential from an HTTP header.|
+|`mcp.policies.substrateIngress.policies.backendAuth.credentials[].location.header.name`|string|Header name containing the credential.|
+|`mcp.policies.substrateIngress.policies.backendAuth.credentials[].location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`mcp.policies.substrateIngress.policies.backendAuth.credentials[].location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`mcp.policies.substrateIngress.policies.backendAuth.credentials[].location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`mcp.policies.substrateIngress.policies.backendAuth.credentials[].location.cookie`|object|Read the credential from a request cookie.|
+|`mcp.policies.substrateIngress.policies.backendAuth.credentials[].location.cookie.name`|string|Cookie name containing the credential.|
+|`mcp.policies.substrateIngress.policies.backendAuth.credentials[].location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`mcp.policies.substrateIngress.policies.backendAuth.credentials[].key`|object|Credential value.|
+|`mcp.policies.substrateIngress.policies.backendAuth.credentials[].key.file`|string|Path to a file on disk to load the value from.|
 |`mcp.policies.substrateIngress.policies.http`|object|HTTP protocol settings for this backend.|
 |`mcp.policies.substrateIngress.policies.http.version`|string|HTTP version to use when connecting to the backend.|
 |`mcp.policies.substrateIngress.policies.http.requestTimeout`|string|Maximum time allowed for a backend HTTP request.|
@@ -81072,8 +81572,15 @@
 |`mcp.policies.substrateIngress.policies.backendTunnel.proxy.service.port`|integer|Port on the target Service to route to.|
 |`mcp.policies.substrateIngress.policies.backendTunnel.proxy.host`|string|Hostname or IP address|
 |`mcp.policies.substrateIngress.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
-|`mcp.policies.substrateIngress.targetPort`|integer|Port on the resumed actor pod. Defaults to 80.|
+|`mcp.policies.substrateIngress.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
+|`mcp.policies.substrateIngress.targetPort`|integer|Port on the resumed worker pod's ordinary atunnel ingress. Defaults to 443.<br>This is independent from `connect_target_port`, which is used for raw CONNECT tunnels.|
+|`mcp.policies.substrateIngress.connectTargetPort`|integer|Port on the resumed worker pod's atunnel CONNECT listener. Defaults to 444.|
 |`mcp.policies.substrateIngress.cacheTtl`|string|How long successful actor assignments are reused. Defaults to 5s; 0s disables reuse.|
+|`mcp.policies.substrateIngress.requestParking`|object|Bounded request parking while a suspended actor is waiting for worker capacity.|
+|`mcp.policies.substrateIngress.requestParking.budget`|string|Maximum time to wait for the actor to become routable.|
+|`mcp.policies.substrateIngress.requestParking.max`|integer|Maximum concurrent requests that may wait for actor resumption. Set to 0 to disable parking.|
+|`mcp.policies.substrateIngress.requestParking.retryInterval`|string|Initial delay between ResumeActor retries while parked.|
+|`mcp.policies.substrateIngress.requestParking.retryFactor`|number|Multiplier applied to the delay after each parked retry.|
 |`mcp.policies.substrateEgress`|object|Authorize CONNECT egress using the originating actor's dynamic policy.|
 |`mcp.policies.substrateEgress.service`|object|Service reference. Service must be defined in the top level services list.|
 |`mcp.policies.substrateEgress.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
@@ -81090,12 +81597,14 @@
 |`mcp.policies.substrateEgress.policies.transformations.request.add`|object|Headers to append using CEL expressions for values.|
 |`mcp.policies.substrateEgress.policies.transformations.request.set`|object|Headers to set using CEL expressions for values.|
 |`mcp.policies.substrateEgress.policies.transformations.request.remove`|[]string|Header names to remove.|
+|`mcp.policies.substrateEgress.policies.transformations.request.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
 |`mcp.policies.substrateEgress.policies.transformations.request.body`|string|CEL expression that computes a replacement body.|
 |`mcp.policies.substrateEgress.policies.transformations.request.metadata`|object|Metadata values to add using CEL expressions.|
 |`mcp.policies.substrateEgress.policies.transformations.response`|object|Transform the response before it is returned.|
 |`mcp.policies.substrateEgress.policies.transformations.response.add`|object|Headers to append using CEL expressions for values.|
 |`mcp.policies.substrateEgress.policies.transformations.response.set`|object|Headers to set using CEL expressions for values.|
 |`mcp.policies.substrateEgress.policies.transformations.response.remove`|[]string|Header names to remove.|
+|`mcp.policies.substrateEgress.policies.transformations.response.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
 |`mcp.policies.substrateEgress.policies.transformations.response.body`|string|CEL expression that computes a replacement body.|
 |`mcp.policies.substrateEgress.policies.transformations.response.metadata`|object|Metadata values to add using CEL expressions.|
 |`mcp.policies.substrateEgress.policies.backendTLS`|object|TLS settings used when connecting to this backend.|
@@ -81145,6 +81654,7 @@
 |`mcp.policies.substrateEgress.policies.backendAuth.aws.region`|string||
 |`mcp.policies.substrateEgress.policies.backendAuth.aws.sessionToken`|string||
 |`mcp.policies.substrateEgress.policies.backendAuth.aws.serviceName`|string|AWS SigV4 signing service name (for example, "bedrock", "bedrock-agentcore", or "execute-api").|
+|`mcp.policies.substrateEgress.policies.backendAuth.aws.region`|string|AWS SigV4 signing region (for example, "us-east-1"). If unset, typed AWS<br>backends may provide this automatically; otherwise the ambient AWS region<br>is used.|
 |`mcp.policies.substrateEgress.policies.backendAuth.aws.assumeRole`|object|Optional AWS STS role to assume before signing requests.|
 |`mcp.policies.substrateEgress.policies.backendAuth.aws.assumeRole.roleArn`|string|AWS IAM role ARN to assume.|
 |`mcp.policies.substrateEgress.policies.backendAuth.aws.assumeRole.sessionName`|string|Custom session name (RoleSessionName) for CloudTrail and Cost & Usage Report<br>attribution. Either a static string or `{expression: ...}` with a CEL<br>expression evaluated against each request. Max 64 chars, matching<br>`[\w+=,.@-]`. If unset, the AWS SDK generates a random session name.|
@@ -81167,6 +81677,22 @@
 |`mcp.policies.substrateEgress.policies.backendAuth.azure.explicitConfig.workloadIdentity`|object||
 |`mcp.policies.substrateEgress.policies.backendAuth.azure.developerImplicit`|object|Use implicit Azure auth. Note that this is for developer use-cases only!|
 |`mcp.policies.substrateEgress.policies.backendAuth.azure.implicit`|object|Automatically detect authentication method based on environment.<br>Uses Workload Identity on K8s, Managed Identity on Azure VMs, or Developer Tools locally.|
+|`mcp.policies.substrateEgress.policies.backendAuth.jwtSign`|object|Sign a short-lived JWT with a private key on each request.<br>Signs a short-lived JWT with a private key on each request and sends it to<br>the backend. For upstreams that require per-request keypair JWTs (e.g. the<br>Snowflake SQL API) rather than a static credential.|
+|`mcp.policies.substrateEgress.policies.backendAuth.jwtSign.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`mcp.policies.substrateEgress.policies.backendAuth.jwtSign.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`mcp.policies.substrateEgress.policies.backendAuth.jwtSign.alg`|enum|JWS signing algorithm. Defaults to RS256.<br>Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`mcp.policies.substrateEgress.policies.backendAuth.jwtSign.kid`|string|Optional JWS key ID header.|
+|`mcp.policies.substrateEgress.policies.backendAuth.jwtSign.claims`|object|Static claims added to every token (e.g. iss, sub, aud). Values may be<br>any JSON value (e.g. a string, number, bool, or array). `iat`, `exp`,<br>and `nbf` are reserved for the signer and cannot be configured here.|
+|`mcp.policies.substrateEgress.policies.backendAuth.jwtSign.ttl`|string|Token lifetime used for `exp`. Defaults to 300s.|
+|`mcp.policies.substrateEgress.policies.backendAuth.jwtSign.location`|object|Where the signed token is written. Defaults to the Authorization<br>header with a `Bearer ` prefix.|
+|`mcp.policies.substrateEgress.policies.backendAuth.jwtSign.location.header`|object|Read the credential from an HTTP header.|
+|`mcp.policies.substrateEgress.policies.backendAuth.jwtSign.location.header.name`|string|Header name containing the credential.|
+|`mcp.policies.substrateEgress.policies.backendAuth.jwtSign.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`mcp.policies.substrateEgress.policies.backendAuth.jwtSign.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`mcp.policies.substrateEgress.policies.backendAuth.jwtSign.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`mcp.policies.substrateEgress.policies.backendAuth.jwtSign.location.cookie`|object|Read the credential from a request cookie.|
+|`mcp.policies.substrateEgress.policies.backendAuth.jwtSign.location.cookie.name`|string|Cookie name containing the credential.|
+|`mcp.policies.substrateEgress.policies.backendAuth.jwtSign.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
 |`mcp.policies.substrateEgress.policies.backendAuth.oauthTokenExchange`|object|Use OAuth token exchange flows to obtain a backend access token.<br>Exactly one of service, host, or backend may be set.|
 |`mcp.policies.substrateEgress.policies.backendAuth.oauthTokenExchange.service`|object|Service reference. Service must be defined in the top level services list.|
 |`mcp.policies.substrateEgress.policies.backendAuth.oauthTokenExchange.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
@@ -81202,7 +81728,7 @@
 |`mcp.policies.substrateEgress.policies.backendAuth.oauthTokenExchange.audiences`|[]string|`audience` parameters naming the target services at the authorization server.|
 |`mcp.policies.substrateEgress.policies.backendAuth.oauthTokenExchange.scopes`|[]string|`scope` values for the requested token, sent space-delimited.|
 |`mcp.policies.substrateEgress.policies.backendAuth.oauthTokenExchange.resources`|[]string|`resource` parameters with the target service URIs.|
-|`mcp.policies.substrateEgress.policies.backendAuth.oauthTokenExchange.requestedTokenType`|string|`requested_token_type` parameter. When unset, the form field is omitted<br>and a declared response type is expected to be access_token.|
+|`mcp.policies.substrateEgress.policies.backendAuth.oauthTokenExchange.requestedTokenType`|string|`requested_token_type` parameter. When unset it is omitted from the request<br>(RFC 8693 makes it optional). Some providers (e.g. Auth0 custom token exchange)<br>reject an explicit access_token value paired with a custom `subject_token_type`.|
 |`mcp.policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth`|object|Client authentication used when calling the token endpoint.<br>When unset, no client authentication fields are sent.|
 |`mcp.policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
 |`mcp.policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object||
@@ -81211,7 +81737,10 @@
 |`mcp.policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
 |`mcp.policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
 |`mcp.policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
-|`mcp.policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `ES256`, `ES384`.|
+|`mcp.policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`mcp.policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`mcp.policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`mcp.policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
 |`mcp.policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.kid`|string||
 |`mcp.policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.assertionAudience`|string||
 |`mcp.policies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
@@ -81246,7 +81775,10 @@
 |`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
 |`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
 |`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
-|`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `ES256`, `ES384`.|
+|`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
 |`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.kid`|string||
 |`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.assertionAudience`|string||
 |`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
@@ -81267,17 +81799,44 @@
 |`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
 |`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
 |`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
-|`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `ES256`, `ES384`.|
+|`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
 |`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.kid`|string||
 |`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.assertionAudience`|string||
 |`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
 |`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
 |`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.audience`|string|Identifier of the resource authorization server. The issued ID-JAG is bound to this audience.|
 |`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.resources`|[]string|`resource` parameters naming the protected resource APIs.|
-|`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.scopes`|[]string|`scope` values for the requested token, sent space-delimited.|
+|`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.scopes`|[]string|`scope` values requested when obtaining the ID-JAG from the identity provider, sent<br>space-delimited.|
+|`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.accessTokenScopes`|[]string|`scope` values requested when exchanging the ID-JAG for an access token. When unset,<br>inherits `scopes`. When empty, omits `scope`.|
+|`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken`|object|Subject token sent to the identity provider. Defaults to an OpenID Connect ID token read<br>from the Authorization Bearer header.|
+|`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source`|object|Where to read the subject token. Defaults to the Authorization Bearer header.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.tokenType`|string|RFC 8693 subject token type URI. Defaults to an OpenID Connect ID token.|
 |`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
 |`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
 |`mcp.policies.substrateEgress.policies.backendAuth.crossAppAccess.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`mcp.policies.substrateEgress.policies.backendAuth.credentials`|[]object||
+|`mcp.policies.substrateEgress.policies.backendAuth.credentials[].location`|object|Where the credential is inserted on the backend request.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`mcp.policies.substrateEgress.policies.backendAuth.credentials[].location.header`|object|Read the credential from an HTTP header.|
+|`mcp.policies.substrateEgress.policies.backendAuth.credentials[].location.header.name`|string|Header name containing the credential.|
+|`mcp.policies.substrateEgress.policies.backendAuth.credentials[].location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`mcp.policies.substrateEgress.policies.backendAuth.credentials[].location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`mcp.policies.substrateEgress.policies.backendAuth.credentials[].location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`mcp.policies.substrateEgress.policies.backendAuth.credentials[].location.cookie`|object|Read the credential from a request cookie.|
+|`mcp.policies.substrateEgress.policies.backendAuth.credentials[].location.cookie.name`|string|Cookie name containing the credential.|
+|`mcp.policies.substrateEgress.policies.backendAuth.credentials[].location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`mcp.policies.substrateEgress.policies.backendAuth.credentials[].key`|object|Credential value.|
+|`mcp.policies.substrateEgress.policies.backendAuth.credentials[].key.file`|string|Path to a file on disk to load the value from.|
 |`mcp.policies.substrateEgress.policies.http`|object|HTTP protocol settings for this backend.|
 |`mcp.policies.substrateEgress.policies.http.version`|string|HTTP version to use when connecting to the backend.|
 |`mcp.policies.substrateEgress.policies.http.requestTimeout`|string|Maximum time allowed for a backend HTTP request.|
@@ -81295,6 +81854,7 @@
 |`mcp.policies.substrateEgress.policies.backendTunnel.proxy.service.port`|integer|Port on the target Service to route to.|
 |`mcp.policies.substrateEgress.policies.backendTunnel.proxy.host`|string|Hostname or IP address|
 |`mcp.policies.substrateEgress.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`mcp.policies.substrateEgress.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
 |`mcp.policies.transformations`|object|Modify request and response headers, bodies, or metadata.|
 |`mcp.policies.transformations.conditional`|[]object|conditional policy entries. An entry without a condition must be the final fallback.|
 |`mcp.policies.transformations.conditional[].condition`|string|condition must evaluate to true for this policy to execute. If unset, the policy is the fallback.|
