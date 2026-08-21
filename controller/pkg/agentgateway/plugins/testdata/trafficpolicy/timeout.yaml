@@ -12,7 +12,7 @@ spec:
     inheritance: Override
   traffic:
     timeouts:
-      request: 30s
+      backendRequest: 10s
 ---
 # Output
 output:
@@ -33,7 +33,7 @@ output:
           namespace: default
       traffic:
         timeout:
-          request: 30s
+          backendRequest: 10s
 status:
 - apiVersion: agentgateway.dev/v1alpha1
   kind: AgentgatewayPolicy

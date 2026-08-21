@@ -3256,12 +3256,19 @@ type HostnameRewrite struct {
 
 // +kubebuilder:validation:AtLeastOneFieldSet
 type Timeouts struct {
-	// Timeout for an individual request from the gateway to a backend. This covers the time from when
-	// the request first starts being sent from the gateway to when the full response has been received from the backend.
+	// Maximum time allowed for the full downstream request and response. This includes time spent
+	// before the gateway starts the backend request.
 	//
 	// +kubebuilder:validation:XValidation:rule="duration(self) >= duration('1ms')",message="request must be at least 1ms"
 	// +optional
 	Request *Duration `json:"request,omitempty"`
+
+	// Maximum time allowed for an individual backend request. This is measured from when the gateway
+	// starts sending the request to the backend until it receives the full backend response.
+	//
+	// +kubebuilder:validation:XValidation:rule="duration(self) >= duration('1ms')",message="backendRequest must be at least 1ms"
+	// +optional
+	BackendRequest *Duration `json:"backendRequest,omitempty"`
 }
 
 // Artificial latency injection for fault-injection testing.

@@ -10145,10 +10145,20 @@ spec:
                       It is applicable to `HTTPRoute` resources and ignored for other targeted
                       kinds.
                     properties:
+                      backendRequest:
+                        description: |-
+                          Maximum time allowed for an individual backend request. This is measured from when the gateway
+                          starts sending the request to the backend until it receives the full backend response.
+                        maxLength: 32
+                        pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
+                        type: string
+                        x-kubernetes-validations:
+                        - message: backendRequest must be at least 1ms
+                          rule: duration(self) >= duration('1ms')
                       request:
                         description: |-
-                          Timeout for an individual request from the gateway to a backend. This covers the time from when
-                          the request first starts being sent from the gateway to when the full response has been received from the backend.
+                          Maximum time allowed for the full downstream request and response. This includes time spent
+                          before the gateway starts the backend request.
                         maxLength: 32
                         pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
                         type: string
@@ -10157,8 +10167,10 @@ spec:
                           rule: duration(self) >= duration('1ms')
                     type: object
                     x-kubernetes-validations:
-                    - message: at least one of the fields in [request] must be set
-                      rule: '[has(self.request)].filter(x,x==true).size() >= 1'
+                    - message: at least one of the fields in [backendRequest request]
+                        must be set
+                      rule: '[has(self.backendRequest),has(self.request)].filter(x,x==true).size()
+                        >= 1'
                   transformation:
                     description: |-
                       Mutates and transforms requests and responses
