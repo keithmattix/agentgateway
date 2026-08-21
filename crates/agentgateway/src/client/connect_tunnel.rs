@@ -7,7 +7,7 @@ use crate::http::substrate::STALE_ASSIGNMENT_HEADER;
 use crate::transport::stream::{Socket, TLSConnectionInfo};
 use crate::transport::{hbone, stream};
 
-const PROXY_AUTHORIZATION_HEADER: &str = "proxy-authorization";
+const PROXY_AUTHORIZATION_HEADER: &str = "Proxy-Authorization";
 
 #[derive(Debug, thiserror::Error)]
 #[error("atunnel rejected a stale worker assignment")]
@@ -30,8 +30,8 @@ pub fn is_stale_assignment_error(error: &anyhow::Error) -> bool {
 
 /// Establish an HTTP/1.1 CONNECT tunnel.
 ///
-/// This is the HTTP/1.1 fallback selected by [`handshake`] after ALPN
-/// negotiation.
+/// This is the HTTP/1.1 fallback selected by [`handshake_proxy`] when its
+/// connection does not negotiate ALPN.
 pub async fn handshake_h1(
 	conn: Socket,
 	dest: &str,
@@ -107,28 +107,62 @@ fn h1_stale_assignment(response: &[u8]) -> bool {
 	})
 }
 
-/// Establish a CONNECT tunnel using the protocol selected by TLS ALPN.
+/// Establish a configured backend proxy tunnel.
 ///
-/// atunnel advertises both HTTP/2 and HTTP/1.1. HTTP/2 CONNECT is represented
-/// by a bidirectional request/response stream, whereas HTTP/1.1 CONNECT can
-/// continue using the raw socket after its response headers.
-pub async fn handshake(
+/// HTTP/1.1 is the established protocol for a plaintext proxy connection,
+/// which cannot negotiate ALPN. TLS proxy connections use their negotiated
+/// protocol when available.
+pub async fn handshake_proxy(
 	conn: Socket,
 	dest: &str,
 	auth: Option<HeaderValue>,
-	hbone_config: Arc<agent_hbone::Config>,
+	h2_config: Arc<agent_hbone::H2Config>,
+) -> Result<Socket, anyhow::Error> {
+	handshake(conn, dest, auth, h2_config, AlpnRequirement::Optional).await
+}
+
+/// Establish a native atunnel CONNECT tunnel.
+///
+/// atunnel advertises both HTTP/2 and HTTP/1.1 over TLS. Require ALPN here so
+/// a misconfigured atunnel is rejected before sending an HTTP request.
+pub async fn handshake_atunnel(
+	conn: Socket,
+	dest: &str,
+	h2_config: Arc<agent_hbone::H2Config>,
+) -> Result<Socket, anyhow::Error> {
+	handshake(conn, dest, None, h2_config, AlpnRequirement::Required).await
+}
+
+#[derive(Clone, Copy)]
+enum AlpnRequirement {
+	Optional,
+	Required,
+}
+
+async fn handshake(
+	conn: Socket,
+	dest: &str,
+	auth: Option<HeaderValue>,
+	h2_config: Arc<agent_hbone::H2Config>,
+	alpn_requirement: AlpnRequirement,
 ) -> Result<Socket, anyhow::Error> {
 	// `TunnelConfig::token` has always authenticated configured HTTP proxies
 	// through Proxy-Authorization. Preserve that contract for either protocol
-	// selected by ALPN; native atunnel callers pass no token.
+	// selected by ALPN.
 	match conn
 		.ext::<TLSConnectionInfo>()
 		.and_then(|info| info.negotiated_alpn)
 	{
-		Some(stream::Alpn::H2) => handshake_h2(conn, dest, auth, hbone_config).await,
+		Some(stream::Alpn::H2) => handshake_h2(conn, dest, auth, h2_config).await,
 		Some(stream::Alpn::Http11) => handshake_h1(conn, dest, auth).await,
-		alpn => Err(anyhow::anyhow!(
-			"atunnel CONNECT negotiated unsupported ALPN: {alpn:?}"
+		None if matches!(alpn_requirement, AlpnRequirement::Optional) => {
+			handshake_h1(conn, dest, auth).await
+		},
+		None => Err(anyhow::anyhow!(
+			"atunnel CONNECT requires a negotiated ALPN protocol"
+		)),
+		Some(alpn) => Err(anyhow::anyhow!(
+			"CONNECT negotiated unsupported ALPN: {alpn:?}"
 		)),
 	}
 }
@@ -137,7 +171,7 @@ async fn handshake_h2(
 	conn: Socket,
 	dest: &str,
 	auth: Option<HeaderValue>,
-	hbone_config: Arc<agent_hbone::Config>,
+	h2_config: Arc<agent_hbone::H2Config>,
 ) -> Result<Socket, anyhow::Error> {
 	let target = conn.target_address();
 	let (ext, _metrics, inner) = conn.into_parts();
@@ -146,8 +180,7 @@ async fn handshake_h2(
 		dst_id: vec![],
 		dst: target,
 	};
-	let mut sender =
-		agent_hbone::client::spawn_connection(hbone_config, inner, drain_rx, key).await?;
+	let mut sender = agent_hbone::client::spawn_connection(&h2_config, inner, drain_rx, key).await?;
 	let uri = http::Uri::builder()
 		.scheme(http::uri::Scheme::HTTPS)
 		.authority(dest)

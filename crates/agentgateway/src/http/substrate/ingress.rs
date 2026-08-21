@@ -542,6 +542,13 @@ pub(crate) fn is_stale_assignment(response: &Response) -> bool {
 			.is_some_and(|value| value == "true")
 }
 
+pub(crate) fn stale_assignment_unavailable() -> Response {
+	::http::Response::builder()
+		.status(StatusCode::SERVICE_UNAVAILABLE)
+		.body(crate::http::Body::empty())
+		.expect("a static status-only response is valid")
+}
+
 impl RequestPolicyTrait for SubstrateIngress {
 	async fn apply(
 		&self,
@@ -735,5 +742,47 @@ mod tests {
 		}
 		assert_eq!(actor_calls.load(Ordering::Relaxed), 3);
 		assert_eq!(control_calls.load(Ordering::Relaxed), 2);
+	}
+
+	#[tokio::test]
+	async fn stale_assignment_is_not_exposed_after_retries_are_exhausted() {
+		let actor = MockServer::start().await;
+		Mock::given(method("GET"))
+			.and(header(
+				"host",
+				"my-actor.my-space.actors.resources.substrate.ate.dev",
+			))
+			.respond_with(ResponseTemplate::new(421).insert_header(STALE_ASSIGNMENT_HEADER, "true"))
+			.mount(&actor)
+			.await;
+		let control = crate::test_helpers::spawn_service(ControlServer::new(MockControl {
+			pod_ip: actor.address().ip().to_string(),
+			calls: Arc::new(AtomicUsize::new(0)),
+		}))
+		.await;
+
+		let dynamic = Backend::Dynamic(ResourceName::new("dynamic".into(), "".into()), None);
+		let mut proxy = setup_proxy_test("{}")
+			.unwrap()
+			.with_raw_backend(dynamic.into())
+			.with_bind(simple_bind())
+			.with_route(basic_named_route(strng::literal!("/dynamic")));
+		proxy
+			.attach_route_policy(serde_json::json!({
+				"substrateIngress": {
+					"host": control.address.to_string(),
+					"targetPort": actor.address().port(),
+				}
+			}))
+			.await;
+		let response = send_request(
+			proxy.serve_http("bind".into()),
+			Method::GET,
+			"http://my-actor.my-space.actors.resources.substrate.ate.dev/",
+		)
+		.await;
+
+		assert_eq!(response.status(), ::http::StatusCode::SERVICE_UNAVAILABLE);
+		assert!(response.headers().get(STALE_ASSIGNMENT_HEADER).is_none());
 	}
 }

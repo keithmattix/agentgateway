@@ -5040,6 +5040,7 @@
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendTLS.alpn`|[]string|ALPN protocols to offer to the backend.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendTLS.subjectAltNames`|[]string|Additional subject alternative names accepted for the backend certificate.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendTLS.keyExchangeGroups`|[]enum|Key exchange groups allowed for negotiating TLS.<br>Possible values: `X25519`, `P-256`, `P-384`, `X25519_MLKEM768`.|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendTLS.spiffe`|object|Get the gateway's client identity and trust roots from the SPIFFE Workload API.<br>Mutually exclusive with `cert`/`key`/`root`/`insecure`/`insecureHost`.<br>Pin specific upstream SPIFFE IDs via `subjectAltNames` (e.g. `spiffe://td/ns/foo/sa/bar`);<br>If `subjectAltNames` is omitted, any SVID chaining to the SPIFFE trust bundle is accepted|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth`|object|Authentication credentials sent to this backend.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.key`|object||
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendAuth.key.file`|string|Path to a file on disk to load the value from.|
@@ -5277,6 +5278,7 @@
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendTunnel.proxy.service.port`|integer|Port on the target Service to route to.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendTunnel.proxy.host`|string|Hostname or IP address|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`binds[].listeners[].routes[].policies.substrateIngress.policies.backendTunnel.mode`|enum|How requests are sent through the proxy.<br>Possible values: `auto`, `connect`.|
 |`binds[].listeners[].routes[].policies.substrateIngress.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
 |`binds[].listeners[].routes[].policies.substrateIngress.targetPort`|integer|Port on the resumed worker pod's ordinary atunnel ingress. Defaults to 443.<br>This is independent from `connect_target_port`, which is used for raw CONNECT tunnels.|
 |`binds[].listeners[].routes[].policies.substrateIngress.connectTargetPort`|integer|Port on the resumed worker pod's atunnel CONNECT listener. Defaults to 444.|
@@ -5322,6 +5324,7 @@
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendTLS.alpn`|[]string|ALPN protocols to offer to the backend.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendTLS.subjectAltNames`|[]string|Additional subject alternative names accepted for the backend certificate.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendTLS.keyExchangeGroups`|[]enum|Key exchange groups allowed for negotiating TLS.<br>Possible values: `X25519`, `P-256`, `P-384`, `X25519_MLKEM768`.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendTLS.spiffe`|object|Get the gateway's client identity and trust roots from the SPIFFE Workload API.<br>Mutually exclusive with `cert`/`key`/`root`/`insecure`/`insecureHost`.<br>Pin specific upstream SPIFFE IDs via `subjectAltNames` (e.g. `spiffe://td/ns/foo/sa/bar`);<br>If `subjectAltNames` is omitted, any SVID chaining to the SPIFFE trust bundle is accepted|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth`|object|Authentication credentials sent to this backend.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.key`|object||
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.key.file`|string|Path to a file on disk to load the value from.|
@@ -5559,6 +5562,7 @@
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendTunnel.proxy.service.port`|integer|Port on the target Service to route to.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendTunnel.proxy.host`|string|Hostname or IP address|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendTunnel.mode`|enum|How requests are sent through the proxy.<br>Possible values: `auto`, `connect`.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
 |`binds[].listeners[].routes[].policies.transformations`|object|Modify request and response headers, bodies, or metadata.|
 |`binds[].listeners[].routes[].policies.transformations.conditional`|[]object|conditional policy entries. An entry without a condition must be the final fallback.|
@@ -23664,6 +23668,7 @@
 |`policies[].policy.substrateIngress.policies.backendTLS.alpn`|[]string|ALPN protocols to offer to the backend.|
 |`policies[].policy.substrateIngress.policies.backendTLS.subjectAltNames`|[]string|Additional subject alternative names accepted for the backend certificate.|
 |`policies[].policy.substrateIngress.policies.backendTLS.keyExchangeGroups`|[]enum|Key exchange groups allowed for negotiating TLS.<br>Possible values: `X25519`, `P-256`, `P-384`, `X25519_MLKEM768`.|
+|`policies[].policy.substrateIngress.policies.backendTLS.spiffe`|object|Get the gateway's client identity and trust roots from the SPIFFE Workload API.<br>Mutually exclusive with `cert`/`key`/`root`/`insecure`/`insecureHost`.<br>Pin specific upstream SPIFFE IDs via `subjectAltNames` (e.g. `spiffe://td/ns/foo/sa/bar`);<br>If `subjectAltNames` is omitted, any SVID chaining to the SPIFFE trust bundle is accepted|
 |`policies[].policy.substrateIngress.policies.backendAuth`|object|Authentication credentials sent to this backend.|
 |`policies[].policy.substrateIngress.policies.backendAuth.key`|object||
 |`policies[].policy.substrateIngress.policies.backendAuth.key.file`|string|Path to a file on disk to load the value from.|
@@ -23901,6 +23906,7 @@
 |`policies[].policy.substrateIngress.policies.backendTunnel.proxy.service.port`|integer|Port on the target Service to route to.|
 |`policies[].policy.substrateIngress.policies.backendTunnel.proxy.host`|string|Hostname or IP address|
 |`policies[].policy.substrateIngress.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`policies[].policy.substrateIngress.policies.backendTunnel.mode`|enum|How requests are sent through the proxy.<br>Possible values: `auto`, `connect`.|
 |`policies[].policy.substrateIngress.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
 |`policies[].policy.substrateIngress.targetPort`|integer|Port on the resumed worker pod's ordinary atunnel ingress. Defaults to 443.<br>This is independent from `connect_target_port`, which is used for raw CONNECT tunnels.|
 |`policies[].policy.substrateIngress.connectTargetPort`|integer|Port on the resumed worker pod's atunnel CONNECT listener. Defaults to 444.|
@@ -23946,6 +23952,7 @@
 |`policies[].policy.substrateEgress.policies.backendTLS.alpn`|[]string|ALPN protocols to offer to the backend.|
 |`policies[].policy.substrateEgress.policies.backendTLS.subjectAltNames`|[]string|Additional subject alternative names accepted for the backend certificate.|
 |`policies[].policy.substrateEgress.policies.backendTLS.keyExchangeGroups`|[]enum|Key exchange groups allowed for negotiating TLS.<br>Possible values: `X25519`, `P-256`, `P-384`, `X25519_MLKEM768`.|
+|`policies[].policy.substrateEgress.policies.backendTLS.spiffe`|object|Get the gateway's client identity and trust roots from the SPIFFE Workload API.<br>Mutually exclusive with `cert`/`key`/`root`/`insecure`/`insecureHost`.<br>Pin specific upstream SPIFFE IDs via `subjectAltNames` (e.g. `spiffe://td/ns/foo/sa/bar`);<br>If `subjectAltNames` is omitted, any SVID chaining to the SPIFFE trust bundle is accepted|
 |`policies[].policy.substrateEgress.policies.backendAuth`|object|Authentication credentials sent to this backend.|
 |`policies[].policy.substrateEgress.policies.backendAuth.key`|object||
 |`policies[].policy.substrateEgress.policies.backendAuth.key.file`|string|Path to a file on disk to load the value from.|
@@ -24183,6 +24190,7 @@
 |`policies[].policy.substrateEgress.policies.backendTunnel.proxy.service.port`|integer|Port on the target Service to route to.|
 |`policies[].policy.substrateEgress.policies.backendTunnel.proxy.host`|string|Hostname or IP address|
 |`policies[].policy.substrateEgress.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`policies[].policy.substrateEgress.policies.backendTunnel.mode`|enum|How requests are sent through the proxy.<br>Possible values: `auto`, `connect`.|
 |`policies[].policy.substrateEgress.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
 |`policies[].policy.transformations`|object|Modify request and response headers, bodies, or metadata.|
 |`policies[].policy.transformations.conditional`|[]object|conditional policy entries. An entry without a condition must be the final fallback.|
@@ -39480,6 +39488,7 @@
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendTLS.alpn`|[]string|ALPN protocols to offer to the backend.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendTLS.subjectAltNames`|[]string|Additional subject alternative names accepted for the backend certificate.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendTLS.keyExchangeGroups`|[]enum|Key exchange groups allowed for negotiating TLS.<br>Possible values: `X25519`, `P-256`, `P-384`, `X25519_MLKEM768`.|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendTLS.spiffe`|object|Get the gateway's client identity and trust roots from the SPIFFE Workload API.<br>Mutually exclusive with `cert`/`key`/`root`/`insecure`/`insecureHost`.<br>Pin specific upstream SPIFFE IDs via `subjectAltNames` (e.g. `spiffe://td/ns/foo/sa/bar`);<br>If `subjectAltNames` is omitted, any SVID chaining to the SPIFFE trust bundle is accepted|
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth`|object|Authentication credentials sent to this backend.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.key`|object||
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendAuth.key.file`|string|Path to a file on disk to load the value from.|
@@ -39717,6 +39726,7 @@
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendTunnel.proxy.service.port`|integer|Port on the target Service to route to.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendTunnel.proxy.host`|string|Hostname or IP address|
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`routeGroups[].routes[].policies.substrateIngress.policies.backendTunnel.mode`|enum|How requests are sent through the proxy.<br>Possible values: `auto`, `connect`.|
 |`routeGroups[].routes[].policies.substrateIngress.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
 |`routeGroups[].routes[].policies.substrateIngress.targetPort`|integer|Port on the resumed worker pod's ordinary atunnel ingress. Defaults to 443.<br>This is independent from `connect_target_port`, which is used for raw CONNECT tunnels.|
 |`routeGroups[].routes[].policies.substrateIngress.connectTargetPort`|integer|Port on the resumed worker pod's atunnel CONNECT listener. Defaults to 444.|
@@ -39762,6 +39772,7 @@
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendTLS.alpn`|[]string|ALPN protocols to offer to the backend.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendTLS.subjectAltNames`|[]string|Additional subject alternative names accepted for the backend certificate.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendTLS.keyExchangeGroups`|[]enum|Key exchange groups allowed for negotiating TLS.<br>Possible values: `X25519`, `P-256`, `P-384`, `X25519_MLKEM768`.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendTLS.spiffe`|object|Get the gateway's client identity and trust roots from the SPIFFE Workload API.<br>Mutually exclusive with `cert`/`key`/`root`/`insecure`/`insecureHost`.<br>Pin specific upstream SPIFFE IDs via `subjectAltNames` (e.g. `spiffe://td/ns/foo/sa/bar`);<br>If `subjectAltNames` is omitted, any SVID chaining to the SPIFFE trust bundle is accepted|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth`|object|Authentication credentials sent to this backend.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.key`|object||
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.key.file`|string|Path to a file on disk to load the value from.|
@@ -39999,6 +40010,7 @@
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendTunnel.proxy.service.port`|integer|Port on the target Service to route to.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendTunnel.proxy.host`|string|Hostname or IP address|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendTunnel.mode`|enum|How requests are sent through the proxy.<br>Possible values: `auto`, `connect`.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
 |`routeGroups[].routes[].policies.transformations`|object|Modify request and response headers, bodies, or metadata.|
 |`routeGroups[].routes[].policies.transformations.conditional`|[]object|conditional policy entries. An entry without a condition must be the final fallback.|
@@ -57906,6 +57918,7 @@
 |`routes[].policies.substrateIngress.policies.backendTLS.alpn`|[]string|ALPN protocols to offer to the backend.|
 |`routes[].policies.substrateIngress.policies.backendTLS.subjectAltNames`|[]string|Additional subject alternative names accepted for the backend certificate.|
 |`routes[].policies.substrateIngress.policies.backendTLS.keyExchangeGroups`|[]enum|Key exchange groups allowed for negotiating TLS.<br>Possible values: `X25519`, `P-256`, `P-384`, `X25519_MLKEM768`.|
+|`routes[].policies.substrateIngress.policies.backendTLS.spiffe`|object|Get the gateway's client identity and trust roots from the SPIFFE Workload API.<br>Mutually exclusive with `cert`/`key`/`root`/`insecure`/`insecureHost`.<br>Pin specific upstream SPIFFE IDs via `subjectAltNames` (e.g. `spiffe://td/ns/foo/sa/bar`);<br>If `subjectAltNames` is omitted, any SVID chaining to the SPIFFE trust bundle is accepted|
 |`routes[].policies.substrateIngress.policies.backendAuth`|object|Authentication credentials sent to this backend.|
 |`routes[].policies.substrateIngress.policies.backendAuth.key`|object||
 |`routes[].policies.substrateIngress.policies.backendAuth.key.file`|string|Path to a file on disk to load the value from.|
@@ -58143,6 +58156,7 @@
 |`routes[].policies.substrateIngress.policies.backendTunnel.proxy.service.port`|integer|Port on the target Service to route to.|
 |`routes[].policies.substrateIngress.policies.backendTunnel.proxy.host`|string|Hostname or IP address|
 |`routes[].policies.substrateIngress.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`routes[].policies.substrateIngress.policies.backendTunnel.mode`|enum|How requests are sent through the proxy.<br>Possible values: `auto`, `connect`.|
 |`routes[].policies.substrateIngress.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
 |`routes[].policies.substrateIngress.targetPort`|integer|Port on the resumed worker pod's ordinary atunnel ingress. Defaults to 443.<br>This is independent from `connect_target_port`, which is used for raw CONNECT tunnels.|
 |`routes[].policies.substrateIngress.connectTargetPort`|integer|Port on the resumed worker pod's atunnel CONNECT listener. Defaults to 444.|
@@ -58188,6 +58202,7 @@
 |`routes[].policies.substrateEgress.policies.backendTLS.alpn`|[]string|ALPN protocols to offer to the backend.|
 |`routes[].policies.substrateEgress.policies.backendTLS.subjectAltNames`|[]string|Additional subject alternative names accepted for the backend certificate.|
 |`routes[].policies.substrateEgress.policies.backendTLS.keyExchangeGroups`|[]enum|Key exchange groups allowed for negotiating TLS.<br>Possible values: `X25519`, `P-256`, `P-384`, `X25519_MLKEM768`.|
+|`routes[].policies.substrateEgress.policies.backendTLS.spiffe`|object|Get the gateway's client identity and trust roots from the SPIFFE Workload API.<br>Mutually exclusive with `cert`/`key`/`root`/`insecure`/`insecureHost`.<br>Pin specific upstream SPIFFE IDs via `subjectAltNames` (e.g. `spiffe://td/ns/foo/sa/bar`);<br>If `subjectAltNames` is omitted, any SVID chaining to the SPIFFE trust bundle is accepted|
 |`routes[].policies.substrateEgress.policies.backendAuth`|object|Authentication credentials sent to this backend.|
 |`routes[].policies.substrateEgress.policies.backendAuth.key`|object||
 |`routes[].policies.substrateEgress.policies.backendAuth.key.file`|string|Path to a file on disk to load the value from.|
@@ -58425,6 +58440,7 @@
 |`routes[].policies.substrateEgress.policies.backendTunnel.proxy.service.port`|integer|Port on the target Service to route to.|
 |`routes[].policies.substrateEgress.policies.backendTunnel.proxy.host`|string|Hostname or IP address|
 |`routes[].policies.substrateEgress.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`routes[].policies.substrateEgress.policies.backendTunnel.mode`|enum|How requests are sent through the proxy.<br>Possible values: `auto`, `connect`.|
 |`routes[].policies.substrateEgress.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
 |`routes[].policies.transformations`|object|Modify request and response headers, bodies, or metadata.|
 |`routes[].policies.transformations.conditional`|[]object|conditional policy entries. An entry without a condition must be the final fallback.|
@@ -81335,6 +81351,7 @@
 |`mcp.policies.substrateIngress.policies.backendTLS.alpn`|[]string|ALPN protocols to offer to the backend.|
 |`mcp.policies.substrateIngress.policies.backendTLS.subjectAltNames`|[]string|Additional subject alternative names accepted for the backend certificate.|
 |`mcp.policies.substrateIngress.policies.backendTLS.keyExchangeGroups`|[]enum|Key exchange groups allowed for negotiating TLS.<br>Possible values: `X25519`, `P-256`, `P-384`, `X25519_MLKEM768`.|
+|`mcp.policies.substrateIngress.policies.backendTLS.spiffe`|object|Get the gateway's client identity and trust roots from the SPIFFE Workload API.<br>Mutually exclusive with `cert`/`key`/`root`/`insecure`/`insecureHost`.<br>Pin specific upstream SPIFFE IDs via `subjectAltNames` (e.g. `spiffe://td/ns/foo/sa/bar`);<br>If `subjectAltNames` is omitted, any SVID chaining to the SPIFFE trust bundle is accepted|
 |`mcp.policies.substrateIngress.policies.backendAuth`|object|Authentication credentials sent to this backend.|
 |`mcp.policies.substrateIngress.policies.backendAuth.key`|object||
 |`mcp.policies.substrateIngress.policies.backendAuth.key.file`|string|Path to a file on disk to load the value from.|
@@ -81572,6 +81589,7 @@
 |`mcp.policies.substrateIngress.policies.backendTunnel.proxy.service.port`|integer|Port on the target Service to route to.|
 |`mcp.policies.substrateIngress.policies.backendTunnel.proxy.host`|string|Hostname or IP address|
 |`mcp.policies.substrateIngress.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`mcp.policies.substrateIngress.policies.backendTunnel.mode`|enum|How requests are sent through the proxy.<br>Possible values: `auto`, `connect`.|
 |`mcp.policies.substrateIngress.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
 |`mcp.policies.substrateIngress.targetPort`|integer|Port on the resumed worker pod's ordinary atunnel ingress. Defaults to 443.<br>This is independent from `connect_target_port`, which is used for raw CONNECT tunnels.|
 |`mcp.policies.substrateIngress.connectTargetPort`|integer|Port on the resumed worker pod's atunnel CONNECT listener. Defaults to 444.|
@@ -81617,6 +81635,7 @@
 |`mcp.policies.substrateEgress.policies.backendTLS.alpn`|[]string|ALPN protocols to offer to the backend.|
 |`mcp.policies.substrateEgress.policies.backendTLS.subjectAltNames`|[]string|Additional subject alternative names accepted for the backend certificate.|
 |`mcp.policies.substrateEgress.policies.backendTLS.keyExchangeGroups`|[]enum|Key exchange groups allowed for negotiating TLS.<br>Possible values: `X25519`, `P-256`, `P-384`, `X25519_MLKEM768`.|
+|`mcp.policies.substrateEgress.policies.backendTLS.spiffe`|object|Get the gateway's client identity and trust roots from the SPIFFE Workload API.<br>Mutually exclusive with `cert`/`key`/`root`/`insecure`/`insecureHost`.<br>Pin specific upstream SPIFFE IDs via `subjectAltNames` (e.g. `spiffe://td/ns/foo/sa/bar`);<br>If `subjectAltNames` is omitted, any SVID chaining to the SPIFFE trust bundle is accepted|
 |`mcp.policies.substrateEgress.policies.backendAuth`|object|Authentication credentials sent to this backend.|
 |`mcp.policies.substrateEgress.policies.backendAuth.key`|object||
 |`mcp.policies.substrateEgress.policies.backendAuth.key.file`|string|Path to a file on disk to load the value from.|
@@ -81854,6 +81873,7 @@
 |`mcp.policies.substrateEgress.policies.backendTunnel.proxy.service.port`|integer|Port on the target Service to route to.|
 |`mcp.policies.substrateEgress.policies.backendTunnel.proxy.host`|string|Hostname or IP address|
 |`mcp.policies.substrateEgress.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`mcp.policies.substrateEgress.policies.backendTunnel.mode`|enum|How requests are sent through the proxy.<br>Possible values: `auto`, `connect`.|
 |`mcp.policies.substrateEgress.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
 |`mcp.policies.transformations`|object|Modify request and response headers, bodies, or metadata.|
 |`mcp.policies.transformations.conditional`|[]object|conditional policy entries. An entry without a condition must be the final fallback.|

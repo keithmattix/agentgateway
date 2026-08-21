@@ -124,7 +124,7 @@ impl<K: Key> H2ConnectClient<K> {
 }
 
 pub async fn spawn_connection<K>(
-	cfg: Arc<crate::Config>,
+	cfg: &crate::H2Config,
 	s: impl AsyncRead + AsyncWrite + Unpin + Send + 'static,
 	driver_drain: Receiver<bool>,
 	wl_key: K,
@@ -134,7 +134,7 @@ pub async fn spawn_connection<K>(
 		.initial_window_size(cfg.window_size)
 		.initial_connection_window_size(cfg.connection_window_size)
 		.max_frame_size(cfg.frame_size)
-		.initial_max_send_streams(cfg.pool_max_streams_per_conn as usize)
+		.initial_max_send_streams(cfg.max_streams_per_conn as usize)
 		.max_header_list_size(1024 * 16)
 		// 4mb. Aligned with window_size such that we can fill up the buffer, then flush it all in one go, without buffering up too much.
 		.max_send_buffer_size(cfg.window_size as usize)
@@ -147,7 +147,7 @@ pub async fn spawn_connection<K>(
 
 	// We store max as u16, so if they report above that max size we just cap at u16::MAX
 	let max_allowed_streams = std::cmp::min(
-		cfg.pool_max_streams_per_conn,
+		cfg.max_streams_per_conn,
 		connection
 			.max_concurrent_send_streams()
 			.try_into()
