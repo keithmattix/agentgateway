@@ -752,15 +752,7 @@ impl HTTPProxy {
 		});
 
 		crate::http::mark_sensitive_headers(&mut req, &self.inputs.cfg.sensitive_headers);
-		// TLS metadata may describe an outer CONNECT transport rather than the
-		// request currently being routed. In particular, a CONNECT tunnel that
-		// re-enters a plaintext HTTP bind retains the outer mTLS identity for
-		// authorization. Use the selected inner listener to determine the URI
-		// scheme so that dynamic backends do not incorrectly default to port 443.
-		let request_is_tls = selected_listener
-			.as_ref()
-			.is_some_and(|listener| matches!(listener.protocol, ListenerProtocol::HTTPS(_)));
-		normalize_uri(request_is_tls, &mut req)
+		normalize_uri(log.tls_info.as_ref(), &mut req)
 			.map_err(ProxyError::Processing)
 			.snapshot_on_err(log, &mut req)?;
 		let connect_upgrade = if req.method() == ::http::Method::CONNECT {
@@ -925,7 +917,7 @@ impl HTTPProxy {
 		let route_policies = inputs.stores.read_binds().route_policies(&route_path);
 		// Register all expressions
 		route_policies.register_cel_expressions(log.cel.ctx());
-		let explicit_route_retry = route_policies.retry.select("retry", &req).is_some();
+		let explicit_route_retry = !route_policies.retry.is_empty();
 		log.cel.ctx().maybe_buffer_request_body(&mut req).await;
 
 		let policy_client = self.policy_client().with_parent(&req);
@@ -1069,13 +1061,15 @@ impl HTTPProxy {
 					)
 					.await;
 				// The body cannot be retried, but future requests must not reuse this assignment.
-				if response
-					.as_ref()
-					.is_ok_and(http::substrate::is_stale_assignment)
-				{
+				let stale_assignment = is_stale_assignment(&response);
+				if stale_assignment {
 					substrate_state.as_ref().inspect(|state| state.evict());
 				}
-				return response;
+				return if stale_assignment && substrate_state.is_some() {
+					Ok(http::substrate::stale_assignment_unavailable())
+				} else {
+					response
+				};
 			},
 		};
 		let mut last_res: Option<Result<Response, SnapshottedProxyResponse>> = None;
@@ -1113,7 +1107,7 @@ impl HTTPProxy {
 					req,
 				)
 				.await;
-			let stale_assignment = res.as_ref().is_ok_and(http::substrate::is_stale_assignment);
+			let stale_assignment = is_stale_assignment(&res);
 			if stale_assignment {
 				// Clear the request-local assignment and evict the same generation from the shared cache.
 				substrate_state.as_ref().inspect(|state| state.evict());
@@ -1132,7 +1126,11 @@ impl HTTPProxy {
 				if !last {
 					debug!("response not retry-able");
 				}
-				return res;
+				return if stale_assignment && substrate_state.is_some() {
+					Ok(http::substrate::stale_assignment_unavailable())
+				} else {
+					res
+				};
 			}
 			debug!(
 				backoff=?retry_backoff,
@@ -1171,24 +1169,13 @@ impl HTTPProxy {
 		// A Substrate CONNECT first resolves its actor to the worker's atunnel
 		// CONNECT listener. The raw downstream stream is then CONNECTed through
 		// atunnel to the actor port, rather than directly to the worker address.
-		handle_substrate_backend_selection(req, &selected_backend.backend.backend).await?;
-		let substrate_connect_authority = if let Some(state) = req
-			.extensions()
-			.get::<http::substrate::SubstrateRequestState>()
-			.cloned()
-		{
-			Some((
-				state.connect_authority(),
-				state.resolve_connect_target().await?,
-			))
-		} else {
-			None
-		};
-		if let Some((_, target)) = &substrate_connect_authority {
-			req
-				.extensions_mut()
-				.insert(DynamicBackendOverride::substrate(target.clone()));
-		}
+		let substrate_connect_authority = handle_substrate_backend_selection(
+			req,
+			&selected_backend.backend.backend,
+			SubstrateBackendTarget::Connect,
+		)
+		.await?
+		.map(|state| state.connect_authority());
 		let backend_call = build_connect_backend_call(
 			self.inputs.as_ref(),
 			&selected_backend.backend.backend,
@@ -1234,24 +1221,17 @@ impl HTTPProxy {
 			.upstream
 			.connect_raw(backend_call.target, transport)
 			.await?;
-		let upstream = if let Some((authority, _)) = substrate_connect_authority {
-			match crate::client::connect_tunnel::handshake(
+		let upstream = if let Some(authority) = substrate_connect_authority {
+			match crate::client::connect_tunnel::handshake_atunnel(
 				upstream,
 				&authority,
-				None,
-				self.inputs.cfg.hbone.clone(),
+				Arc::new(self.inputs.cfg.hbone.h2.clone()),
 			)
 			.await
 			{
 				Ok(upstream) => upstream,
 				Err(error) if crate::client::connect_tunnel::is_stale_assignment_error(&error) => {
-					return Ok(
-						::http::Response::builder()
-							.status(StatusCode::MISDIRECTED_REQUEST)
-							.header(http::substrate::STALE_ASSIGNMENT_HEADER, "true")
-							.body(http::Body::empty())
-							.map_err(ProxyError::Http)?,
-					);
+					return Err(ProxyError::StaleAssignment.into());
 				},
 				Err(error) => return Err(ProxyError::Processing(error).into()),
 			}
@@ -1975,27 +1955,7 @@ impl DerefMut for MustSnapshot<'_> {
 /// latter is evaluated against the request at the dynamic-backend boundary,
 /// while this value is already a trusted, concrete result of that operation.
 #[derive(Debug, Clone)]
-pub(crate) enum DynamicBackendOverride {
-	Substrate(Target),
-}
-
-impl DynamicBackendOverride {
-	pub(crate) fn substrate(target: Target) -> Self {
-		Self::Substrate(target)
-	}
-
-	fn target(&self) -> &Target {
-		match self {
-			Self::Substrate(target) => target,
-		}
-	}
-}
-
-enum DynamicBackendTargetInput<'a> {
-	InProcess(&'a DynamicBackendOverride),
-	Cel(&'a crate::cel::Expression),
-	Fallback,
-}
+pub(crate) struct DynamicBackendOverride(pub Target);
 
 fn target_from_request(req: &Request) -> Result<Target, ProxyError> {
 	let host = http::get_host(req)?;
@@ -2018,16 +1978,10 @@ pub(super) fn resolve_dynamic_backend_target<'a>(
 	expr: &'a Option<Arc<crate::cel::Expression>>,
 	fallback: impl FnOnce() -> Result<Target, ProxyError>,
 ) -> Result<Target, ProxyError> {
-	let input = match (in_process, expr.as_deref()) {
-		(Some(target), _) => DynamicBackendTargetInput::InProcess(target),
-		(None, Some(expr)) => DynamicBackendTargetInput::Cel(expr),
-		(None, None) => DynamicBackendTargetInput::Fallback,
-	};
-
-	match input {
-		DynamicBackendTargetInput::InProcess(target) => Ok(target.target().clone()),
-		DynamicBackendTargetInput::Fallback => fallback(),
-		DynamicBackendTargetInput::Cel(expr) => evaluate_dynamic_backend_target(executor, expr),
+	match (in_process, expr.as_deref()) {
+		(Some(target), _) => Ok(target.0.clone()),
+		(None, Some(expr)) => evaluate_dynamic_backend_target(executor, expr),
+		(None, None) => fallback(),
 	}
 }
 
@@ -2263,7 +2217,12 @@ async fn make_backend_call(
 		},
 		_ => (backend, base_policies),
 	};
-	handle_substrate_backend_selection(&mut req, backend).await?;
+	Box::pin(handle_substrate_backend_selection(
+		&mut req,
+		backend,
+		SubstrateBackendTarget::Ingress,
+	))
+	.await?;
 
 	log.add(|l| {
 		l.backend_info = Some(backend.backend_info());
@@ -2964,11 +2923,18 @@ async fn make_backend_call(
 	Ok(resp)
 }
 
+#[derive(Clone, Copy)]
+enum SubstrateBackendTarget {
+	Ingress,
+	Connect,
+}
+
 /// Resolves a Substrate actor assignment into an in-process dynamic backend result.
 async fn handle_substrate_backend_selection(
 	req: &mut Request,
 	backend: &Backend,
-) -> Result<(), ProxyResponse> {
+	target: SubstrateBackendTarget,
+) -> Result<Option<http::substrate::SubstrateRequestState>, ProxyResponse> {
 	if let Some(state) = req
 		.extensions()
 		.get::<http::substrate::SubstrateRequestState>()
@@ -2982,19 +2948,22 @@ async fn handle_substrate_backend_selection(
 				.into(),
 			);
 		}
-		let target = Box::pin(state.resolve_target()).await?;
-		req
-			.extensions_mut()
-			.insert(DynamicBackendOverride::substrate(target));
+		let target = match target {
+			SubstrateBackendTarget::Ingress => Box::pin(state.resolve_target()).await?,
+			SubstrateBackendTarget::Connect => state.resolve_connect_target().await?,
+		};
+		req.extensions_mut().insert(DynamicBackendOverride(target));
+		Ok(Some(state))
 	} else if req.extensions().get::<DynamicBackendOverride>().is_some()
 		&& !matches!(backend, Backend::Dynamic(_, _))
 	{
-		return Err(
+		Err(
 			ProxyError::ProcessingString("substrateIngress requires a dynamic route backend".to_owned())
 				.into(),
-		);
+		)
+	} else {
+		Ok(None)
 	}
-	Ok(())
 }
 
 fn set_backend_cel_context(req: &mut http::Request, log: Option<&&mut RequestLog>) {
@@ -3483,6 +3452,16 @@ fn should_retry(
 	}
 }
 
+fn is_stale_assignment(res: &Result<Response, SnapshottedProxyResponse>) -> bool {
+	match res {
+		Ok(response) => http::substrate::is_stale_assignment(response),
+		Err(SnapshottedProxyResponse(ProxyResponse::Error(ProxyError::StaleAssignment))) => true,
+		Err(SnapshottedProxyResponse(ProxyResponse::Error(_) | ProxyResponse::DirectResponse(_))) => {
+			false
+		},
+	}
+}
+
 #[cfg(test)]
 mod tests {
 	use std::collections::{HashMap, HashSet};
@@ -3681,6 +3660,14 @@ mod tests {
 			.body(http::Body::empty())
 			.unwrap();
 		assert!(!super::should_retry(&Ok(resp), &pol, None));
+	}
+
+	#[test]
+	fn stale_assignment_error_is_detected() {
+		let result = Err(super::SnapshottedProxyResponse(
+			crate::proxy::ProxyError::StaleAssignment.into(),
+		));
+		assert!(super::is_stale_assignment(&result));
 	}
 
 	#[test]
@@ -4233,7 +4220,7 @@ fn get_upgrade_type(headers: &HeaderMap) -> Option<HeaderValue> {
 
 // The http library will not put the authority into req.uri().authority for HTTP/1. Normalize so
 // the rest of the code doesn't need to worry about it
-fn normalize_uri(tls: bool, req: &mut Request) -> anyhow::Result<()> {
+fn normalize_uri(tls: Option<&TLSConnectionInfo>, req: &mut Request) -> anyhow::Result<()> {
 	debug!("request before normalization: {req:?}");
 	if let ::http::Version::HTTP_10 | ::http::Version::HTTP_11 = req.version() {
 		let host = req.headers_mut().remove(http::header::HOST);
@@ -4247,7 +4234,7 @@ fn normalize_uri(tls: bool, req: &mut Request) -> anyhow::Result<()> {
 			parts.authority = Some(host);
 			if parts.path_and_query.is_some() {
 				// TODO: or always do this?
-				if tls {
+				if tls.is_some() {
 					parts.scheme = Some(Scheme::HTTPS);
 				} else {
 					parts.scheme = Some(Scheme::HTTP);

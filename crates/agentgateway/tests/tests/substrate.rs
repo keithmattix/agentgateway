@@ -40,6 +40,38 @@ struct ParkingHandler {
 	entered: Option<Arc<Notify>>,
 }
 
+#[derive(Clone)]
+struct SelectiveParkingHandler {
+	pod_ip: String,
+	parked_actor: String,
+	entered: Arc<Notify>,
+	release: Arc<Notify>,
+	calls: Arc<AtomicUsize>,
+}
+
+#[async_trait::async_trait]
+impl ateapimock::Handler for SelectiveParkingHandler {
+	async fn resume_actor(
+		&mut self,
+		request: &protos::ateapi::ResumeActorRequest,
+	) -> Result<ResumeActorResponse, tonic::Status> {
+		let actor = request.actor.as_ref().unwrap();
+		self.calls.fetch_add(1, Ordering::Relaxed);
+		if actor.name == self.parked_actor {
+			self.entered.notify_one();
+			self.release.notified().await;
+		}
+		Ok(ResumeActorResponse {
+			actor: Some(Actor {
+				worker_assignment: Some(protos::ateapi::WorkerAssignment {
+					worker_pod_ip: self.pod_ip.clone(),
+				}),
+				..Default::default()
+			}),
+		})
+	}
+}
+
 #[async_trait::async_trait]
 impl ateapimock::Handler for ParkingHandler {
 	async fn resume_actor(
@@ -216,6 +248,74 @@ async fn actor_ingress_sheds_when_request_parking_is_full() {
 	.await;
 	assert_eq!(second.status(), StatusCode::SERVICE_UNAVAILABLE);
 	assert_eq!(first.await.unwrap().status(), StatusCode::OK);
+}
+
+#[tokio::test]
+async fn actor_ingress_keeps_cached_actor_available_when_parking_is_full() {
+	let actor = simple_mock().await;
+	let calls = Arc::new(AtomicUsize::new(0));
+	let entered = Arc::new(Notify::new());
+	let release = Arc::new(Notify::new());
+	let api = ateapimock::AteApiMock::new({
+		let calls = calls.clone();
+		let entered = entered.clone();
+		let release = release.clone();
+		let pod_ip = actor.address().ip().to_string();
+		move || SelectiveParkingHandler {
+			pod_ip: pod_ip.clone(),
+			parked_actor: "cold-actor".to_string(),
+			entered: entered.clone(),
+			release: release.clone(),
+			calls: calls.clone(),
+		}
+	})
+	.spawn()
+	.await;
+
+	let dynamic = Backend::Dynamic(ResourceName::new("dynamic".into(), "".into()), None);
+	let mut gateway = setup_proxy_test("{}")
+		.unwrap()
+		.with_raw_backend(dynamic.into())
+		.with_bind(simple_bind())
+		.with_route(basic_named_route(strng::literal!("/dynamic")));
+	gateway
+		.attach_route_policy(json!({
+			"substrateIngress": {
+				"host": api.address.to_string(),
+				"targetPort": actor.address().port(),
+				"requestParking": {
+					"budget": "1s",
+					"max": 1,
+				}
+			}
+		}))
+		.await;
+
+	let running_actor = "http://running-actor.demo.actors.resources.substrate.ate.dev/";
+	assert_eq!(
+		send_request(gateway.serve_http(BIND_KEY), Method::GET, running_actor)
+			.await
+			.status(),
+		StatusCode::OK
+	);
+
+	let cold = tokio::spawn(send_request(
+		gateway.serve_http(BIND_KEY),
+		Method::GET,
+		"http://cold-actor.demo.actors.resources.substrate.ate.dev/",
+	));
+	entered.notified().await;
+
+	assert_eq!(
+		send_request(gateway.serve_http(BIND_KEY), Method::GET, running_actor)
+			.await
+			.status(),
+		StatusCode::OK
+	);
+	assert_eq!(calls.load(Ordering::Relaxed), 2);
+
+	release.notify_one();
+	assert_eq!(cold.await.unwrap().status(), StatusCode::OK);
 }
 
 #[tokio::test]

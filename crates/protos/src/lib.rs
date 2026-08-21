@@ -95,7 +95,6 @@ pub mod workload {
 #[allow(clippy::derive_partial_eq_without_eq)]
 pub mod spiffe_workload_api {
 	tonic::include_proto!("_");
-
 }
 #[allow(warnings)]
 #[allow(clippy::derive_partial_eq_without_eq)]
