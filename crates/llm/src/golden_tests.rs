@@ -816,6 +816,7 @@ mod responses {
 	];
 	const COMPLETIONS_RESPONSES: &[(&str, &[&str])] = &[
 		("basic", ALL_COMPLETIONS),
+		("stop_sequence", &[COMPLETIONS_TO_MESSAGES]),
 		("audio", ALL_COMPLETIONS),
 		(
 			"cache_write",
@@ -1338,6 +1339,42 @@ data: [DONE]
 				"output_tokens": 5,
 				"cache_creation_input_tokens": 30,
 				"cache_read_input_tokens": 20,
+			})
+		);
+	}
+
+	#[tokio::test]
+	async fn completions_to_messages_stream_reports_matched_stop_sequence() {
+		let input = r#"data: {"id":"chunk","choices":[{"index":0,"delta":{},"finish_reason":"stop","matched_stop":"STOPPROBE"}],"model":"gpt-5","usage":null}
+
+data: {"id":"chunk","choices":[],"model":"gpt-5","usage":{"prompt_tokens":4,"completion_tokens":2,"total_tokens":6}}
+
+data: [DONE]
+
+"#;
+		let output = conversion::completions::from_messages::translate_stream(
+			axum_core::body::Body::from(input),
+			1024 * 1024,
+			StreamingUsageGuard::default(),
+			LogContentFields::default(),
+		)
+		.collect()
+		.await
+		.unwrap()
+		.to_bytes();
+		let delta = String::from_utf8(output.to_vec())
+			.unwrap()
+			.lines()
+			.filter_map(|line| line.strip_prefix("data: "))
+			.filter_map(|data| serde_json::from_str::<Value>(data).ok())
+			.find(|event| event["type"] == "message_delta")
+			.unwrap();
+
+		assert_eq!(
+			delta["delta"],
+			json!({
+				"stop_reason": "stop_sequence",
+				"stop_sequence": "STOPPROBE",
 			})
 		);
 	}

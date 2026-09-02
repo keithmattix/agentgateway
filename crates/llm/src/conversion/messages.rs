@@ -593,6 +593,7 @@ pub mod from_completions {
 		let finish_reason = resp.stop_reason.as_ref().map(super::translate_stop_reason);
 		// Only one choice for anthropic
 		let choice = completions::ChatChoice {
+			rest: Default::default(),
 			index: 0,
 			message,
 			finish_reason,
@@ -755,6 +756,7 @@ pub mod from_completions {
 						);
 
 						let choice = completions::ChatChoiceStream {
+							rest: Default::default(),
 							index: 0,
 							logprobs: None,
 							delta: completions::StreamResponseDelta {
@@ -820,6 +822,7 @@ pub mod from_completions {
 					};
 					if emit_chunk {
 						let choice = completions::ChatChoiceStream {
+							rest: Default::default(),
 							index: 0,
 							logprobs: None,
 							delta: dr,
@@ -861,6 +864,7 @@ pub mod from_completions {
 					});
 					let choices = finish_reason.map_or_else(Vec::new, |finish_reason| {
 						vec![completions::ChatChoiceStream {
+							rest: Default::default(),
 							index: 0,
 							logprobs: None,
 							delta: completions::StreamResponseDelta::default(),
@@ -901,6 +905,7 @@ pub mod from_completions {
 							// If no arguments were emitted for a tool call, send a synthetic `{}`
 							// for compatibility.
 							let choice = completions::ChatChoiceStream {
+								rest: Default::default(),
 								index: 0,
 								logprobs: None,
 								delta: completions::StreamResponseDelta {

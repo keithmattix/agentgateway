@@ -1240,6 +1240,7 @@ pub mod from_completions {
 							..Default::default()
 						};
 						let choice = completions::ChatChoiceStream {
+							rest: Default::default(),
 							index: 0,
 							logprobs: None,
 							delta: d,
@@ -1319,6 +1320,7 @@ pub mod from_completions {
 
 					if let Some(delta) = delta {
 						let choice = completions::ChatChoiceStream {
+							rest: Default::default(),
 							index: 0,
 							logprobs: None,
 							delta,
@@ -1338,6 +1340,7 @@ pub mod from_completions {
 				bedrock::ConverseStreamOutput::MessageStart(start) => {
 					// Just send a blob with the role
 					let choice = completions::ChatChoiceStream {
+						rest: Default::default(),
 						index: 0,
 						logprobs: None,
 						delta: completions::StreamResponseDelta {
@@ -1357,6 +1360,7 @@ pub mod from_completions {
 
 					// Just send a blob with the finish reason
 					let choice = completions::ChatChoiceStream {
+						rest: Default::default(),
 						index: 0,
 						logprobs: None,
 						delta: completions::StreamResponseDelta::default(),
@@ -3858,6 +3862,7 @@ impl ConverseResponseAdapter {
 		};
 
 		let choice = completions::ChatChoice {
+			rest: Default::default(),
 			index: 0,
 			message,
 			finish_reason: Some(from_completions::translate_stop_reason(&self.stop_reason)),
