@@ -885,6 +885,18 @@ pub mod trustdomain {
 			assert!(info.identity.is_none());
 		}
 
+		#[test]
+		fn substrate_mode_actor_id_no_identity() {
+			let cert = make_cert_with_uri("spiffe://substrate-actor.local/atespace/demo/actor/example");
+			let info = super::super::tls_info_from_der(&cert, super::super::PeerIdentityMode::Substrate)
+				.expect("parse cert");
+			assert_eq!(
+				info.spiffe_id.as_deref(),
+				Some("spiffe://substrate-actor.local/atespace/demo/actor/example")
+			);
+			assert!(info.identity.is_none());
+		}
+
 		/// Minimal no-op ClientCertVerifier — only used to satisfy TrustDomainVerifier's
 		/// constructor; none of its methods are called by verify_trust_domain.
 		#[derive(Debug)]
@@ -1164,6 +1176,9 @@ pub enum PeerIdentityMode {
 	/// SPIFFE peer: capture the raw `spiffe_id` only; do not attempt Istio ns/sa parsing. SPIFFE and
 	/// Istio are distinct trust systems, so a SPIFFE peer is never interpreted as an Istio identity.
 	Spiffe,
+	/// Substrate actor peer: capture the raw `spiffe_id` only. Substrate actor SPIFFE IDs carry
+	/// actor identity in a certificate extension rather than Istio's `ns`/`sa` path shape.
+	Substrate,
 }
 
 pub fn identity_from_connection(
@@ -1232,8 +1247,9 @@ fn sans(
 		.map(|x| &x.value.general_names);
 
 	if let Some(names) = names {
-		// In SPIFFE mode we do not attempt to interpret the peer as an Istio identity, so skip the
-		// ns/sa parse entirely (avoiding a spurious warning for valid non-ns/sa SPIFFE IDs).
+		// In SPIFFE and Substrate modes we do not attempt to interpret the peer as an Istio identity,
+		// so skip the ns/sa parse entirely (avoiding a spurious warning for valid non-Istio SPIFFE
+		// IDs).
 		let istio = if mode == PeerIdentityMode::Istio {
 			names
 				.iter()
