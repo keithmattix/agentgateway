@@ -58,10 +58,9 @@ impl RequestPolicyTrait for SubstrateEgress {
 		})?
 		.into_inner();
 		set_egress_destination_hostname(req);
-		let matched_rule = matching_rule(&policy, req)?;
+		let _matched_rule = matching_rule(&policy, req)?;
 		// TODO: After Substrate defines a credential-provider data-plane contract, apply the
 		// matched hostname rule's `inject_static_headers` effects here.
-		let _ = matched_rule;
 		Ok(PolicyResponse::default())
 	}
 }
@@ -231,7 +230,82 @@ mod tests {
 	}
 
 	#[test]
-	fn first_matching_rule_wins_over_later_all() {
+	fn first_matching_hostname_rule_controls_effects() {
+		let policy = protos::ateapi::EgressPolicy {
+			rules: vec![
+				protos::ateapi::EgressRule {
+					hostnames: Some(protos::ateapi::HostnameRule {
+						patterns: vec!["api.example.com".to_owned()],
+						effects: Some(protos::ateapi::EgressRuleEffects {
+							inject_static_headers: vec![protos::ateapi::CredentialHeaderInjection {
+								header: "Authorization".to_owned(),
+								prefix: "Bearer ".to_owned(),
+								credential_uri: "substrate-secret://example/first/token".to_owned(),
+							}],
+						}),
+						..Default::default()
+					}),
+					..Default::default()
+				},
+				protos::ateapi::EgressRule {
+					hostnames: Some(protos::ateapi::HostnameRule {
+						patterns: vec!["api.example.com".to_owned()],
+						effects: Some(protos::ateapi::EgressRuleEffects {
+							inject_static_headers: vec![protos::ateapi::CredentialHeaderInjection {
+								header: "Authorization".to_owned(),
+								prefix: "Bearer ".to_owned(),
+								credential_uri: "substrate-secret://example/second/token".to_owned(),
+							}],
+						}),
+						..Default::default()
+					}),
+					..Default::default()
+				},
+			],
+			..Default::default()
+		};
+		let matched =
+			matching_rule(&policy, &request("198.51.100.10", Some("api.example.com"))).unwrap();
+		assert_eq!(
+			matched
+				.hostnames
+				.as_ref()
+				.unwrap()
+				.effects
+				.as_ref()
+				.unwrap()
+				.inject_static_headers[0]
+				.credential_uri,
+			"substrate-secret://example/first/token"
+		);
+	}
+
+	#[test]
+	fn first_matching_rule_wins_across_matcher_types() {
+		let policy = protos::ateapi::EgressPolicy {
+			rules: vec![
+				protos::ateapi::EgressRule {
+					ip_blocks: Some(protos::ateapi::IpBlockRule {
+						cidrs: vec!["192.0.2.0/24".to_owned()],
+					}),
+					..Default::default()
+				},
+				protos::ateapi::EgressRule {
+					hostnames: Some(protos::ateapi::HostnameRule {
+						patterns: vec!["api.example.com".to_owned()],
+						..Default::default()
+					}),
+					..Default::default()
+				},
+			],
+			..Default::default()
+		};
+		let matched = matching_rule(&policy, &request("192.0.2.10", Some("api.example.com"))).unwrap();
+		assert!(matched.ip_blocks.is_some());
+	}
+
+	#[test]
+	fn all_matches_only_after_earlier_rules_do_not_match() {
 		let policy = protos::ateapi::EgressPolicy {
 			rules: vec![
 				protos::ateapi::EgressRule {
@@ -248,6 +322,7 @@ mod tests {
 			],
 			..Default::default()
 		};
+
 		let matched =
 			matching_rule(&policy, &request("198.51.100.10", Some("api.example.com"))).unwrap();
 		assert!(matched.hostnames.is_some());
@@ -258,5 +333,26 @@ mod tests {
 		)
 		.unwrap();
 		assert!(matched.all.is_some());
+	}
+
+	#[test]
+	fn no_matching_rule_denies() {
+		let policy = protos::ateapi::EgressPolicy {
+			rules: vec![protos::ateapi::EgressRule {
+				hostnames: Some(protos::ateapi::HostnameRule {
+					patterns: vec!["api.example.com".to_owned()],
+					..Default::default()
+				}),
+				..Default::default()
+			}],
+			..Default::default()
+		};
+		assert!(
+			matching_rule(
+				&policy,
+				&request("198.51.100.10", Some("other.example.com"))
+			)
+			.is_err()
+		);
 	}
 }
