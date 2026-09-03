@@ -1,16 +1,13 @@
-use std::sync::Arc;
-
+use ipnet::IpNet;
 use tonic::Code;
 
 use super::{ActorIdentity, ActorRef, TRACE_POLICY_KIND};
-use crate::http::authorization::{HTTPAuthorizationSet, PolicySet, RuleSet};
 use crate::http::{PolicyResponse, Request};
 use crate::proxy::httpproxy::PolicyClient;
 use crate::proxy::{ProxyError, ProxyResponse};
 use crate::store::RequestPolicyTrait;
 use crate::telemetry::log::RequestLog;
 use crate::telemetry::metrics::{OutboundCallKind, OutboundCallSubtype};
-use crate::transport::stream::TLSConnectionInfo;
 use crate::types::agent::SimpleBackendReferenceWithPolicies;
 use crate::{cel, *};
 
@@ -61,11 +58,10 @@ impl RequestPolicyTrait for SubstrateEgress {
 		})?
 		.into_inner();
 		set_egress_destination_hostname(req);
-		http_authorization(&policy)?.apply(req).map_err(|_| {
-			ProxyError::SubstrateEgressDenied("actor egress policy denied destination".to_owned())
-		})?;
+		let matched_rule = matching_rule(&policy, req)?;
 		// TODO: After Substrate defines a credential-provider data-plane contract, apply the
-		// first matching hostname rule's `inject_static_headers` effects here.
+		// matched hostname rule's `inject_static_headers` effects here.
+		let _ = matched_rule;
 		Ok(PolicyResponse::default())
 	}
 }
@@ -78,17 +74,6 @@ fn set_egress_destination_hostname(req: &mut Request) {
 }
 
 fn request_hostname(req: &Request) -> Option<String> {
-	// TODO: Add a network-level Substrate egress policy for opaque TLS so it can
-	// authorize its sniffed SNI before TCP routing.
-	//
-	// An outer CONNECT is also TLS, but its SNI names the egress gateway. An
-	// inner MITM TLS connection has no actor identity, so its SNI is a fallback
-	// when the decrypted HTTP request has no authority.
-	let inner_tls_sni = req
-		.extensions()
-		.get::<TLSConnectionInfo>()
-		.filter(|tls| tls.src_identity.is_none())
-		.and_then(|tls| tls.server_name.as_deref());
 	let hostname = req
 		.uri()
 		.authority()
@@ -100,8 +85,7 @@ fn request_hostname(req: &Request) -> Option<String> {
 				.and_then(|host| host.to_str().ok())
 				.and_then(|host| host.parse::<::http::uri::Authority>().ok())
 				.map(|authority| authority.host().to_owned())
-		})
-		.or_else(|| inner_tls_sni.map(str::to_owned))?;
+		})?;
 	normalize_hostname(&hostname)
 }
 
@@ -110,61 +94,61 @@ fn normalize_hostname(hostname: &str) -> Option<String> {
 	(!hostname.is_empty()).then(|| hostname.to_ascii_lowercase())
 }
 
-fn http_authorization(
-	policy: &protos::ateapi::EgressPolicy,
-) -> Result<HTTPAuthorizationSet, ProxyResponse> {
-	let mut allow = Vec::new();
+fn matching_rule<'a>(
+	policy: &'a protos::ateapi::EgressPolicy,
+	req: &Request,
+) -> Result<&'a protos::ateapi::EgressRule, ProxyResponse> {
+	let destination = req
+		.extensions()
+		.get::<cel::DestinationContext>()
+		.ok_or_else(|| {
+			ProxyError::SubstrateEgressDenied("missing egress destination context".to_owned())
+		})?;
 	for rule in &policy.rules {
-		if let Some(ip_blocks) = &rule.ip_blocks {
-			for cidr in &ip_blocks.cidrs {
-				let expression = cel::Expression::new_strict(format!(
-					r#"cidr({}).containsIP(destination.address)"#,
-					serde_json::to_string(cidr).expect("CIDR string serializes")
-				))
-				.map_err(|error| {
-					ProxyError::SubstrateEgressDenied(format!("invalid actor egress CIDR: {error}"))
-				})?;
-				allow.push(Arc::new(expression));
-			}
-		}
-		if rule.all.is_some() {
-			let expression = cel::Expression::new_strict("true").expect("literal true is valid CEL");
-			allow.push(Arc::new(expression));
-		}
-		if let Some(hostnames) = &rule.hostnames {
-			for pattern in &hostnames.patterns {
-				let expression = cel::Expression::new_strict(format!(
-					r#"destination.hostname.matches({})"#,
-					serde_json::to_string(&hostname_pattern(pattern)).expect("regex serializes")
-				))
-				.map_err(|error| {
-					ProxyError::SubstrateEgressDenied(format!("invalid actor egress hostname: {error}"))
-				})?;
-				allow.push(Arc::new(expression));
-			}
+		if rule_matches(rule, destination)? {
+			return Ok(rule);
 		}
 	}
-	if allow.is_empty() {
-		// A Substrate policy with no matching rule denies the request, whereas an
-		// empty HTTPAuthorizationSet permits it by default.
-		allow.push(Arc::new(
-			cel::Expression::new_strict("false").expect("literal false is valid CEL"),
-		));
-	}
-	Ok(HTTPAuthorizationSet::new(
-		vec![RuleSet {
-			rules: PolicySet::new(allow, vec![], vec![]),
-		}]
-		.into(),
-	))
+	Err(ProxyError::SubstrateEgressDenied("actor egress policy denied destination".to_owned()).into())
 }
 
-fn hostname_pattern(pattern: &str) -> String {
-	let pattern = regex::escape(&normalize_hostname(pattern).unwrap_or_default());
-	if let Some(suffix) = pattern.strip_prefix(r"\*\.") {
-		format!(r"^[^.]+\.{suffix}$")
+fn rule_matches(
+	rule: &protos::ateapi::EgressRule,
+	destination: &cel::DestinationContext,
+) -> Result<bool, ProxyResponse> {
+	if let Some(hostnames) = &rule.hostnames {
+		return Ok(destination.hostname.as_deref().is_some_and(|hostname| {
+			hostnames
+				.patterns
+				.iter()
+				.any(|pattern| hostname_matches(pattern, hostname))
+		}));
+	}
+	if let Some(ip_blocks) = &rule.ip_blocks {
+		return ip_blocks.cidrs.iter().try_fold(false, |matches, cidr| {
+			if matches {
+				return Ok(true);
+			}
+			let network = cidr.parse::<IpNet>().map_err(|error| {
+				ProxyError::SubstrateEgressDenied(format!("invalid actor egress CIDR: {error}"))
+			})?;
+			Ok(network.contains(&destination.address))
+		});
+	}
+	Ok(rule.all.is_some())
+}
+
+fn hostname_matches(pattern: &str, hostname: &str) -> bool {
+	if let Some(suffix) = pattern.strip_prefix("*.") {
+		let Some(prefix) = hostname.strip_suffix(suffix) else {
+			return false;
+		};
+		let Some(label) = prefix.strip_suffix('.') else {
+			return false;
+		};
+		!label.is_empty() && !label.contains('.')
 	} else {
-		format!(r"^{pattern}$")
+		pattern == hostname
 	}
 }
 
@@ -187,7 +171,7 @@ mod tests {
 
 	#[test]
 	fn cidr_rules_authorize_only_matching_destinations() {
-		let authorization = http_authorization(&protos::ateapi::EgressPolicy {
+		let policy = protos::ateapi::EgressPolicy {
 			rules: vec![protos::ateapi::EgressRule {
 				ip_blocks: Some(protos::ateapi::IpBlockRule {
 					cidrs: vec!["192.0.2.0/24".to_owned()],
@@ -195,19 +179,14 @@ mod tests {
 				..Default::default()
 			}],
 			..Default::default()
-		})
-		.unwrap();
-		assert!(authorization.apply(&request("192.0.2.10", None)).is_ok());
-		assert!(
-			authorization
-				.apply(&request("198.51.100.10", None))
-				.is_err()
-		);
+		};
+		assert!(matching_rule(&policy, &request("192.0.2.10", None)).is_ok());
+		assert!(matching_rule(&policy, &request("198.51.100.10", None)).is_err());
 	}
 
 	#[test]
 	fn hostname_rules_match_exact_and_single_label_wildcards() {
-		let authorization = http_authorization(&protos::ateapi::EgressPolicy {
+		let policy = protos::ateapi::EgressPolicy {
 			rules: vec![protos::ateapi::EgressRule {
 				hostnames: Some(protos::ateapi::HostnameRule {
 					patterns: vec!["api.example.com".to_owned(), "*.example.net".to_owned()],
@@ -216,27 +195,20 @@ mod tests {
 				..Default::default()
 			}],
 			..Default::default()
-		})
-		.unwrap();
+		};
+		assert!(matching_rule(&policy, &request("192.0.2.1", Some("api.example.com"))).is_ok());
+		assert!(matching_rule(&policy, &request("192.0.2.1", Some("one.example.net"))).is_ok());
 		assert!(
-			authorization
-				.apply(&request("192.0.2.1", Some("api.example.com")))
-				.is_ok()
-		);
-		assert!(
-			authorization
-				.apply(&request("192.0.2.1", Some("one.example.net")))
-				.is_ok()
-		);
-		assert!(
-			authorization
-				.apply(&request("192.0.2.1", Some("nested.one.example.net")))
-				.is_err()
+			matching_rule(
+				&policy,
+				&request("192.0.2.1", Some("nested.one.example.net"))
+			)
+			.is_err()
 		);
 	}
 
 	#[test]
-	fn request_hostname_prefers_http_host_and_falls_back_to_inner_tls_sni() {
+	fn request_hostname_uses_inner_http_authority_or_host() {
 		let mut request = ::http::Request::builder()
 			.header(::http::header::HOST, "api.example.com:443")
 			.body(crate::http::Body::empty())
@@ -245,18 +217,46 @@ mod tests {
 			request_hostname(&request).as_deref(),
 			Some("api.example.com")
 		);
-		request.extensions_mut().insert(TLSConnectionInfo {
-			server_name: Some("tls.example.com".to_owned()),
-			..Default::default()
-		});
-		assert_eq!(
-			request_hostname(&request).as_deref(),
-			Some("api.example.com")
-		);
 		request.headers_mut().remove(::http::header::HOST);
+		assert_eq!(request_hostname(&request), None);
+
+		let request = ::http::Request::builder()
+			.uri("http://authority.example.com:8443/path")
+			.body(crate::http::Body::empty())
+			.unwrap();
 		assert_eq!(
 			request_hostname(&request).as_deref(),
-			Some("tls.example.com")
+			Some("authority.example.com")
 		);
+	}
+
+	#[test]
+	fn first_matching_rule_wins_over_later_all() {
+		let policy = protos::ateapi::EgressPolicy {
+			rules: vec![
+				protos::ateapi::EgressRule {
+					hostnames: Some(protos::ateapi::HostnameRule {
+						patterns: vec!["api.example.com".to_owned()],
+						..Default::default()
+					}),
+					..Default::default()
+				},
+				protos::ateapi::EgressRule {
+					all: Some(()),
+					..Default::default()
+				},
+			],
+			..Default::default()
+		};
+		let matched =
+			matching_rule(&policy, &request("198.51.100.10", Some("api.example.com"))).unwrap();
+		assert!(matched.hostnames.is_some());
+
+		let matched = matching_rule(
+			&policy,
+			&request("198.51.100.10", Some("other.example.com")),
+		)
+		.unwrap();
+		assert!(matched.all.is_some());
 	}
 }
