@@ -840,16 +840,22 @@ impl Gateway {
 							(SocketAddr::new(target_ip, port), bind)
 						}
 					};
-					if let Some(policy) = substrate_egress
-						&& let Err(error) = policy
+					let actor_identity = if let Some(policy) = substrate_egress {
+						match policy
 							.authorize_connect(&inputs, connection.as_ref(), &mut req)
 							.await
-					{
-						return Ok(match error {
-							crate::proxy::ProxyResponse::Error(error) => error.into_response_with_grpc(false),
-							crate::proxy::ProxyResponse::DirectResponse(response) => *response,
-						});
-					}
+						{
+							Ok(identity) => Some(identity),
+							Err(error) => {
+								return Ok(match error {
+									crate::proxy::ProxyResponse::Error(error) => error.into_response_with_grpc(false),
+									crate::proxy::ProxyResponse::DirectResponse(response) => *response,
+								});
+							},
+						}
+					} else {
+						None
+					};
 
 					tokio::task::spawn(async move {
 						let downstream = match upgrade.await {
@@ -860,6 +866,9 @@ impl Gateway {
 							},
 						};
 						let mut downstream = Socket::from_upgraded(connection, target_address, downstream);
+						if let Some(identity) = actor_identity {
+							downstream.ext_mut().insert(identity);
+						}
 						downstream.ext_mut().insert(ConnectHeaders(connect_headers));
 						downstream.ext_mut().insert(BufferLimit::new(buffer));
 						Self::proxy_bind(bind.key.clone(), bind.protocol, downstream, inputs, drain).await;

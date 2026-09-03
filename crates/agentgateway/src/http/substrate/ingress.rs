@@ -688,7 +688,8 @@ mod tests {
 	use ::http::Method;
 	use protos::ateapi::control_server::{Control, ControlServer};
 	use protos::ateapi::{
-		Actor, ActorStatus, GetActorRequest, ResumeActorRequest, ResumeActorResponse,
+		Actor, ActorStatus, EgressPolicy, GetActorEgressPolicyRequest, GetActorRequest,
+		ResumeActorRequest, ResumeActorResponse,
 	};
 	use tonic::{Request as GrpcRequest, Response as GrpcResponse, Status};
 	use wiremock::matchers::{header, method};
@@ -743,6 +744,13 @@ mod tests {
 				}),
 				resumed: self.resumed,
 			}))
+		}
+
+		async fn get_actor_egress_policy(
+			&self,
+			_request: GrpcRequest<GetActorEgressPolicyRequest>,
+		) -> Result<GrpcResponse<EgressPolicy>, Status> {
+			Err(Status::unimplemented("not used"))
 		}
 	}
 
