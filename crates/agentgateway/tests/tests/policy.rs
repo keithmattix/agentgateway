@@ -3,6 +3,27 @@ use agentgateway::test_helpers::extauthmock;
 use crate::common::prelude::*;
 
 #[tokio::test]
+async fn request_redirect_without_backend() {
+	let mut bind = setup_proxy_test("{}").unwrap().with_bind(simple_bind());
+	bind
+		.attach_route(json!({
+			"matches": [{"path": {"pathPrefix": "/redirect"}}],
+			"policies": {
+				"requestRedirect": {
+					"scheme": "https",
+					"status": 301,
+				},
+			},
+		}))
+		.await;
+
+	let io = bind.serve_http(BIND_KEY);
+	let res = send_request(io, Method::GET, "http://lo/redirect").await;
+	assert_eq!(res.status(), StatusCode::MOVED_PERMANENTLY);
+	assert_eq!(res.hdr("location"), "https://lo/redirect");
+}
+
+#[tokio::test]
 async fn response_policy_short_circuit() {
 	let (_mock, mut bind, io) = basic_setup().await;
 	bind
