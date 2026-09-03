@@ -257,6 +257,10 @@ async fn apply_request_policies(
 		.apply_without_response("authorization", c, l, req, rp.headers())
 		.await?;
 	pol
+		.substrate_egress
+		.apply_without_response("substrate egress", c, l, req, rp.headers())
+		.await?;
+	pol
 		.substrate_ingress
 		.apply_without_response("substrate ingress", c, l, req, rp.headers())
 		.await?;
@@ -680,6 +684,7 @@ impl HTTPProxy {
 			.expect("tcp connection must be set")
 			.clone();
 		connection.copy::<TLSConnectionInfo>(req.extensions_mut());
+		connection.copy::<http::substrate::ActorIdentity>(req.extensions_mut());
 		connection.copy::<cel::SourceContext>(req.extensions_mut());
 		connection.copy::<cel::DestinationContext>(req.extensions_mut());
 		connection.copy::<WaypointService>(req.extensions_mut());
