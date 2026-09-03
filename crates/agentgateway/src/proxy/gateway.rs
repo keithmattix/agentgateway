@@ -1286,11 +1286,7 @@ impl Gateway {
 					// but should be allowed, but should not be used"
 					// which is the behavior we want for insecure fallback.
 					// So we check again...
-					let include_src_identity = if policies.substrate_egress.is_some() {
-						Some(crate::transport::tls::PeerIdentityMode::Substrate)
-					} else {
-						best.protocol.include_src_identity_for_connection(ssl)
-					};
+					let include_src_identity = best.protocol.include_src_identity_for_connection(ssl);
 					Ok((
 						best,
 						Socket::from_tls_with_identity(ext, counter, tls.into(), include_src_identity)?,
