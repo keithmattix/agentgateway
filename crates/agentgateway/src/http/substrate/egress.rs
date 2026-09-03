@@ -57,40 +57,11 @@ impl RequestPolicyTrait for SubstrateEgress {
 			_ => ProxyError::SubstrateEgressDenied(format!("actor egress policy denied: {status}")),
 		})?
 		.into_inner();
-		set_egress_destination_hostname(req);
 		let _matched_rule = matching_rule(&policy, req)?;
 		// TODO: After Substrate defines a credential-provider data-plane contract, apply the
 		// matched hostname rule's `inject_static_headers` effects here.
 		Ok(PolicyResponse::default())
 	}
-}
-
-fn set_egress_destination_hostname(req: &mut Request) {
-	let hostname = request_hostname(req);
-	if let Some(destination) = req.extensions_mut().get_mut::<cel::DestinationContext>() {
-		destination.hostname = hostname.map(Into::into);
-	}
-}
-
-fn request_hostname(req: &Request) -> Option<String> {
-	let hostname = req
-		.uri()
-		.authority()
-		.map(|authority| authority.host().to_owned())
-		.or_else(|| {
-			req
-				.headers()
-				.get(::http::header::HOST)
-				.and_then(|host| host.to_str().ok())
-				.and_then(|host| host.parse::<::http::uri::Authority>().ok())
-				.map(|authority| authority.host().to_owned())
-		})?;
-	normalize_hostname(&hostname)
-}
-
-fn normalize_hostname(hostname: &str) -> Option<String> {
-	let hostname = hostname.strip_suffix('.').unwrap_or(hostname);
-	(!hostname.is_empty()).then(|| hostname.to_ascii_lowercase())
 }
 
 fn matching_rule<'a>(
@@ -203,29 +174,6 @@ mod tests {
 				&request("192.0.2.1", Some("nested.one.example.net"))
 			)
 			.is_err()
-		);
-	}
-
-	#[test]
-	fn request_hostname_uses_inner_http_authority_or_host() {
-		let mut request = ::http::Request::builder()
-			.header(::http::header::HOST, "api.example.com:443")
-			.body(crate::http::Body::empty())
-			.unwrap();
-		assert_eq!(
-			request_hostname(&request).as_deref(),
-			Some("api.example.com")
-		);
-		request.headers_mut().remove(::http::header::HOST);
-		assert_eq!(request_hostname(&request), None);
-
-		let request = ::http::Request::builder()
-			.uri("http://authority.example.com:8443/path")
-			.body(crate::http::Body::empty())
-			.unwrap();
-		assert_eq!(
-			request_hostname(&request).as_deref(),
-			Some("authority.example.com")
 		);
 	}
 
