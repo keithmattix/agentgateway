@@ -5,6 +5,7 @@ use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
 use ::http::StatusCode;
+use prometheus_client::metrics::gauge::Gauge;
 use quick_cache::sync::Cache;
 use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 use tonic::Code;
@@ -269,6 +270,17 @@ pub struct SubstrateIngress {
 	parking_slots: Arc<OnceLock<Arc<Semaphore>>>,
 }
 
+struct ParkingPermit {
+	_permit: OwnedSemaphorePermit,
+	active: Gauge,
+}
+
+impl Drop for ParkingPermit {
+	fn drop(&mut self) {
+		self.active.dec();
+	}
+}
+
 impl SubstrateIngress {
 	async fn resume_actor(
 		&self,
@@ -362,18 +374,22 @@ impl SubstrateIngress {
 		result.await
 	}
 
-	fn acquire_parking_slot(&self) -> Result<Option<OwnedSemaphorePermit>, ResumeError> {
+	fn acquire_parking_slot(&self, active: &Gauge) -> Result<Option<ParkingPermit>, ResumeError> {
 		if !self.request_parking.enabled() {
 			return Ok(None);
 		}
 		let slots = self
 			.parking_slots
 			.get_or_init(|| Arc::new(Semaphore::new(self.request_parking.max)));
-		slots
+		let permit = slots
 			.clone()
 			.try_acquire_owned()
-			.map(Some)
-			.map_err(|_| ResumeError::ParkingFull)
+			.map_err(|_| ResumeError::ParkingFull)?;
+		active.inc();
+		Ok(Some(ParkingPermit {
+			_permit: permit,
+			active: active.clone(),
+		}))
 	}
 
 	fn retryable_while_parked(&self, code: Code) -> bool {
@@ -405,7 +421,7 @@ impl SubstrateIngress {
 			}
 		}
 		let _parking_permit = self
-			.acquire_parking_slot()
+			.acquire_parking_slot(&client.inputs.metrics.substrate_request_parking_active)
 			.map_err(|error| (error, ResolutionSource::Request))?;
 		loop {
 			match self.cache.entries.get_value_or_guard_async(&actor).await {
