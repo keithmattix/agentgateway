@@ -9,6 +9,7 @@ use frozen_collections::FzHashSet;
 use prometheus_client::encoding::EncodeLabelSet;
 use prometheus_client::metrics::counter;
 use prometheus_client::metrics::family::{Family, MetricConstructor};
+use prometheus_client::metrics::gauge::Gauge;
 use prometheus_client::metrics::histogram::{Histogram as PromHistogram, NativeHistogramConfig};
 use prometheus_client::metrics::info::Info;
 use prometheus_client::registry::{Metric, Unit};
@@ -293,6 +294,9 @@ pub struct Metrics {
 
 	// metrics for request retries
 	pub retries: Counter,
+
+	// Number of requests currently waiting for a Substrate actor to become routable.
+	pub substrate_request_parking_active: Gauge,
 }
 
 // FilteredRegistry is a wrapper around Registry that allows to filter out certain metrics.
@@ -415,6 +419,15 @@ impl Metrics {
 		);
 
 		Metrics {
+			substrate_request_parking_active: {
+				let m = Gauge::default();
+				registry.register(
+					"substrate_request_parking_active",
+					"Number of requests waiting for a Substrate actor to become routable",
+					m.clone(),
+				);
+				m
+			},
 			requests: build(
 				&mut registry,
 				"requests",
@@ -639,6 +652,7 @@ const FIRST_TOKEN_BUCKET: [f64; 16] = [
 #[cfg(test)]
 mod tests {
 	use prometheus_client::encoding::prometheus_protobuf;
+	use prometheus_client::encoding::text::encode;
 	use prometheus_client::registry::Registry;
 
 	use super::*;
@@ -672,5 +686,16 @@ mod tests {
 				"mode: {mode:?}"
 			);
 		}
+	}
+
+	#[test]
+	fn substrate_request_parking_gauge_is_exported() {
+		let mut registry = Registry::default();
+		let metrics = Metrics::new(&mut registry, Default::default(), HistogramMode::Classic);
+		metrics.substrate_request_parking_active.inc();
+
+		let mut encoded = String::new();
+		encode(&mut encoded, &registry).expect("text encoding succeeds");
+		assert!(encoded.contains("substrate_request_parking_active 1"));
 	}
 }
