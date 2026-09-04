@@ -764,7 +764,7 @@ impl Gateway {
 			.map(|h| h.max_buffer_size)
 			.unwrap_or(def.max_buffer_size);
 		let server = auto_server(policies.http.as_ref());
-		let substrate_egress = policies.substrate_egress;
+		let substrate_egress_actor_resolution = policies.substrate_egress_actor_resolution;
 
 		let serve = server.serve_connection_with_upgrades(
 			TokioIo::new(raw_stream),
@@ -772,7 +772,7 @@ impl Gateway {
 				let inputs = inputs.clone();
 				let connection = connection.clone();
 				let drain = drain.clone();
-				let substrate_egress = substrate_egress.clone();
+				let substrate_egress_actor_resolution = substrate_egress_actor_resolution.clone();
 				async move {
 					let mut req = req.map(crate::http::Body::new);
 					req.extensions_mut().insert(BufferLimit::new(buffer));
@@ -840,7 +840,7 @@ impl Gateway {
 							(SocketAddr::new(target_ip, port), bind)
 						}
 					};
-					let actor_identity = if let Some(policy) = substrate_egress {
+					let actor_identity = if let Some(policy) = substrate_egress_actor_resolution {
 						match policy
 							.authorize_connect(&inputs, connection.as_ref(), &mut req)
 							.await

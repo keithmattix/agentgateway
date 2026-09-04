@@ -2892,7 +2892,7 @@ struct LocalFrontendPolicies {
 	pub network_ext_authz: Option<crate::http::ext_authz::ExtAuthz>,
 	/// Validate the originating actor before accepting a CONNECT tunnel.
 	#[serde(default)]
-	pub substrate_egress: Option<crate::http::substrate::EgressActorResolution>,
+	pub substrate_egress_actor_resolution: Option<crate::http::substrate::EgressActorResolution>,
 	/// Enable downstream PROXY protocol handling on this gateway or port, including
 	/// version matching and whether PROXY headers are required or optional.
 	#[serde(default, rename = "proxyProtocol", alias = "proxy")]
@@ -5160,7 +5160,7 @@ async fn split_frontend_policies(
 		tcp,
 		network_authorization,
 		network_ext_authz,
-		substrate_egress,
+		substrate_egress_actor_resolution,
 		proxy_protocol,
 		connect,
 		access_log,
@@ -5190,10 +5190,10 @@ async fn split_frontend_policies(
 			"networkExtAuthz",
 		);
 	}
-	if let Some(p) = substrate_egress {
+	if let Some(p) = substrate_egress_actor_resolution {
 		add(
 			FrontendPolicy::SubstrateEgressActorResolution(p),
-			"substrateEgress",
+			"substrateEgressActorResolution",
 		);
 	}
 	if let Some(p) = proxy_protocol {
