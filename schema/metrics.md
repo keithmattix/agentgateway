@@ -55,4 +55,5 @@
 | --- | --- | --- | --- |
 | `agentgateway_build_info` | Info | — | Agentgateway build information. |
 | `agentgateway_config_synchronized` | Gauge | — | Whether the last configuration load/reload was successful or not, being synchronized with the on-disk configuration. |
+| `agentgateway_substrate_request_parking_active` | Gauge | — | Number of requests waiting for a Substrate actor to become routable. |
 | `agentgateway_upstream_call_duration_seconds` | Histogram | seconds | Duration of outbound calls made by agentgateway (seconds). |
