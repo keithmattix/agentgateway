@@ -5464,6 +5464,7 @@
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.azure.explicitConfig.workloadIdentity`|object||
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.azure.developerImplicit`|object|Use implicit Azure auth. Note that this is for developer use-cases only!|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.azure.implicit`|object|Automatically detect authentication method based on environment.<br>Uses Workload Identity on K8s, Managed Identity on Azure VMs, or Developer Tools locally.|
+|`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.azure.scopes`|[]string|Scopes requested for the Azure access token. When unset, the scope is<br>inferred from the backend hostname.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.jwtSign`|object|Sign a short-lived JWT with a private key on each request.<br>Signs a short-lived JWT with a private key on each request and sends it to<br>the backend. For upstreams that require per-request keypair JWTs (e.g. the<br>Snowflake SQL API) rather than a static credential.|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.jwtSign.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
 |`binds[].listeners[].routes[].policies.substrateEgress.policies.backendAuth.jwtSign.signingKey.file`|string|Path to a file on disk to load the value from.|
@@ -18130,285 +18131,285 @@
 |`frontendPolicies.networkExtAuthz.cache.key`|[]string|CEL expressions that make up the cache key. Empty keys are accepted, but do not produce cache hits.|
 |`frontendPolicies.networkExtAuthz.cache.ttl`|string|CEL expression that returns how long cached authorization results are reused.<br>The expression is evaluated after the authorization response has been applied<br>to the request, and must return either a duration or timestamp.|
 |`frontendPolicies.networkExtAuthz.cache.maxEntries`|integer|Maximum number of authorization results to keep in the cache.|
-|`frontendPolicies.substrateEgress`|object|Validate the originating actor before accepting a CONNECT tunnel.|
-|`frontendPolicies.substrateEgress.service`|object|Service reference. Service must be defined in the top level services list.|
-|`frontendPolicies.substrateEgress.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
-|`frontendPolicies.substrateEgress.service.port`|integer|Port on the target Service to route to.|
-|`frontendPolicies.substrateEgress.host`|string|Hostname or IP address|
-|`frontendPolicies.substrateEgress.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
-|`frontendPolicies.substrateEgress.policies`|object|Validates an actor's identity before accepting a CONNECT tunnel.<br>Backend policies used when connecting to the service.|
-|`frontendPolicies.substrateEgress.policies.requestHeaderModifier`|object|Modify request headers before forwarding to this backend.|
-|`frontendPolicies.substrateEgress.policies.requestHeaderModifier.add`|object|Headers to append without replacing existing values.|
-|`frontendPolicies.substrateEgress.policies.requestHeaderModifier.set`|object|Headers to set, replacing any existing values.|
-|`frontendPolicies.substrateEgress.policies.requestHeaderModifier.remove`|[]string|Header names to remove.|
-|`frontendPolicies.substrateEgress.policies.transformations`|object|Modify request and response data for this backend.|
-|`frontendPolicies.substrateEgress.policies.transformations.request`|object|Transform the request before it is forwarded.|
-|`frontendPolicies.substrateEgress.policies.transformations.request.add`|object|Headers to append using CEL expressions for values.|
-|`frontendPolicies.substrateEgress.policies.transformations.request.set`|object|Headers to set using CEL expressions for values.|
-|`frontendPolicies.substrateEgress.policies.transformations.request.remove`|[]string|Header names to remove.|
-|`frontendPolicies.substrateEgress.policies.transformations.request.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
-|`frontendPolicies.substrateEgress.policies.transformations.request.body`|string|CEL expression that computes a replacement body.|
-|`frontendPolicies.substrateEgress.policies.transformations.request.metadata`|object|Metadata values to add using CEL expressions.|
-|`frontendPolicies.substrateEgress.policies.transformations.response`|object|Transform the response before it is returned.|
-|`frontendPolicies.substrateEgress.policies.transformations.response.add`|object|Headers to append using CEL expressions for values.|
-|`frontendPolicies.substrateEgress.policies.transformations.response.set`|object|Headers to set using CEL expressions for values.|
-|`frontendPolicies.substrateEgress.policies.transformations.response.remove`|[]string|Header names to remove.|
-|`frontendPolicies.substrateEgress.policies.transformations.response.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
-|`frontendPolicies.substrateEgress.policies.transformations.response.body`|string|CEL expression that computes a replacement body.|
-|`frontendPolicies.substrateEgress.policies.transformations.response.metadata`|object|Metadata values to add using CEL expressions.|
-|`frontendPolicies.substrateEgress.policies.backendTLS`|object|TLS settings used when connecting to this backend.|
-|`frontendPolicies.substrateEgress.policies.backendTLS.cert`|string|Client certificate file to present to the backend.|
-|`frontendPolicies.substrateEgress.policies.backendTLS.key`|string|Private key file for the client certificate.|
-|`frontendPolicies.substrateEgress.policies.backendTLS.root`|string|Root certificate bundle used to verify the backend certificate.|
-|`frontendPolicies.substrateEgress.policies.backendTLS.hostname`|string|Server name to use for TLS verification and SNI.|
-|`frontendPolicies.substrateEgress.policies.backendTLS.insecure`|boolean|Skip certificate trust verification for the backend connection.|
-|`frontendPolicies.substrateEgress.policies.backendTLS.insecureHost`|boolean|Skip hostname verification for the backend certificate.|
-|`frontendPolicies.substrateEgress.policies.backendTLS.alpn`|[]string|ALPN protocols to offer to the backend.|
-|`frontendPolicies.substrateEgress.policies.backendTLS.subjectAltNames`|[]string|Additional subject alternative names accepted for the backend certificate.|
-|`frontendPolicies.substrateEgress.policies.backendTLS.keyExchangeGroups`|[]enum|Key exchange groups allowed for negotiating TLS.<br>Possible values: `X25519`, `P-256`, `P-384`, `X25519_MLKEM768`.|
-|`frontendPolicies.substrateEgress.policies.backendTLS.spiffe`|object|Get the gateway's client identity and trust roots from the SPIFFE Workload API.<br>Mutually exclusive with `cert`/`key`/`root`/`insecure`/`insecureHost`.<br>Pin specific upstream SPIFFE IDs via `subjectAltNames` (e.g. `spiffe://td/ns/foo/sa/bar`);<br>If `subjectAltNames` is omitted, any SVID chaining to the SPIFFE trust bundle is accepted|
-|`frontendPolicies.substrateEgress.policies.backendAuth`|object|Authentication credentials sent to this backend.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.key`|object||
-|`frontendPolicies.substrateEgress.policies.backendAuth.key.file`|string|Path to a file on disk to load the value from.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.passthrough`|object|Forward the validated incoming JWT to the backend.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.passthrough.location`|object|Where to place the forwarded credential in the backend request.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.passthrough.location.header`|object|Read the credential from an HTTP header.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.passthrough.location.header.name`|string|Header name containing the credential.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.passthrough.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.passthrough.location.queryParameter`|object|Read the credential from a URL query parameter.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.passthrough.location.queryParameter.name`|string|Query parameter name containing the credential.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.passthrough.location.cookie`|object|Read the credential from a request cookie.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.passthrough.location.cookie.name`|string|Cookie name containing the credential.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.passthrough.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.key`|object|Send a configured secret value to the backend.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.key.value`|object|Secret value to send to the backend. File references are watched, so<br>rotating the file reloads it without a restart.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.key.value.file`|string|Path to a file on disk to load the value from.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.key.location`|object|Where to place the secret in the backend request.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.key.location.header`|object|Read the credential from an HTTP header.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.key.location.header.name`|string|Header name containing the credential.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.key.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.key.location.queryParameter`|object|Read the credential from a URL query parameter.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.key.location.queryParameter.name`|string|Query parameter name containing the credential.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.key.location.cookie`|object|Read the credential from a request cookie.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.key.location.cookie.name`|string|Cookie name containing the credential.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.key.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.gcp`|object|Authenticate to Google Cloud services.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.gcp.type`|enum|Possible values: `idToken`.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.gcp.audience`|string|Audience for the token. If not set, the destination host will be used.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.gcp.credential`|object|ADC-compatible Google credential JSON. If not set, ambient credentials are used.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.gcp.credential.file`|string|Path to a file on disk to load the value from.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.gcp.type`|enum|Possible values: `accessToken`, `null`.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.aws`|object|Sign backend requests with AWS credentials.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.aws.accessKeyId`|string||
-|`frontendPolicies.substrateEgress.policies.backendAuth.aws.secretAccessKey`|string||
-|`frontendPolicies.substrateEgress.policies.backendAuth.aws.region`|string||
-|`frontendPolicies.substrateEgress.policies.backendAuth.aws.sessionToken`|string||
-|`frontendPolicies.substrateEgress.policies.backendAuth.aws.serviceName`|string|AWS SigV4 signing service name (for example, "bedrock", "bedrock-agentcore", or "execute-api").|
-|`frontendPolicies.substrateEgress.policies.backendAuth.aws.region`|string|AWS SigV4 signing region (for example, "us-east-1"). If unset, typed AWS<br>backends may provide this automatically; otherwise the ambient AWS region<br>is used.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.aws.assumeRole`|object|Optional AWS STS role to assume before signing requests.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.aws.assumeRole.roleArn`|string|AWS IAM role ARN to assume.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.aws.assumeRole.sessionName`|string|Custom session name (RoleSessionName) for CloudTrail and Cost & Usage Report<br>attribution. Either a static string or `{expression: ...}` with a CEL<br>expression evaluated against each request. Max 64 chars, matching<br>`[\w+=,.@-]`. If unset, the AWS SDK generates a random session name.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.aws.assumeRole.sessionName.expression`|string|CEL expression evaluated against each request to produce the session<br>name, for example `jwt.sub` or `request.headers["x-team"]`. If the<br>expression does not produce a valid session name at request time, the<br>request is rejected.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.aws.assumeRole.tags`|[]object|Session tags passed to STS AssumeRole for cost attribution. Once activated as<br>cost allocation tags, each tag surfaces in the AWS Cost & Usage Report under<br>`resourceTags/user:TagKey`. A tag value is either static (`value`) or a CEL<br>expression evaluated against each request (`expression`).|
-|`frontendPolicies.substrateEgress.policies.backendAuth.aws.assumeRole.tags[].key`|string|Tag key.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.aws.assumeRole.tags[].value`|string|Static tag value.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.aws.assumeRole.tags[].expression`|string|CEL expression evaluated against each request to produce the tag value, for<br>example `jwt.sub` or `request.headers["x-app"]`. If the expression does not<br>produce a valid tag value at request time, the request is rejected.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.azure`|object|Authenticate to Azure services.<br>Exactly one of explicitConfig, developerImplicit, or implicit may be set.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.azure.explicitConfig`|object|Use explicit Azure credentials<br>Exactly one of clientSecret, managedIdentity, or workloadIdentity may be set.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.azure.explicitConfig.clientSecret`|object||
-|`frontendPolicies.substrateEgress.policies.backendAuth.azure.explicitConfig.clientSecret.tenant_id`|string||
-|`frontendPolicies.substrateEgress.policies.backendAuth.azure.explicitConfig.clientSecret.client_id`|string||
-|`frontendPolicies.substrateEgress.policies.backendAuth.azure.explicitConfig.clientSecret.client_secret`|string||
-|`frontendPolicies.substrateEgress.policies.backendAuth.azure.explicitConfig.managedIdentity`|object||
-|`frontendPolicies.substrateEgress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity`|object||
-|`frontendPolicies.substrateEgress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.clientId`|string||
-|`frontendPolicies.substrateEgress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.objectId`|string||
-|`frontendPolicies.substrateEgress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.resourceId`|string||
-|`frontendPolicies.substrateEgress.policies.backendAuth.azure.explicitConfig.workloadIdentity`|object||
-|`frontendPolicies.substrateEgress.policies.backendAuth.azure.developerImplicit`|object|Use implicit Azure auth. Note that this is for developer use-cases only!|
-|`frontendPolicies.substrateEgress.policies.backendAuth.azure.implicit`|object|Automatically detect authentication method based on environment.<br>Uses Workload Identity on K8s, Managed Identity on Azure VMs, or Developer Tools locally.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.azure.scopes`|[]string|Scopes requested for the Azure access token. When unset, the scope is<br>inferred from the backend hostname.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.jwtSign`|object|Sign a short-lived JWT with a private key on each request.<br>Signs a short-lived JWT with a private key on each request and sends it to<br>the backend. For upstreams that require per-request keypair JWTs (e.g. the<br>Snowflake SQL API) rather than a static credential.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.jwtSign.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
-|`frontendPolicies.substrateEgress.policies.backendAuth.jwtSign.signingKey.file`|string|Path to a file on disk to load the value from.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.jwtSign.alg`|enum|JWS signing algorithm. Defaults to RS256.<br>Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.jwtSign.kid`|string|Optional JWS key ID header.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.jwtSign.claims`|object|Static claims added to every token (e.g. iss, sub, aud). Values may be<br>any JSON value (e.g. a string, number, bool, or array). `iat`, `exp`,<br>and `nbf` are reserved for the signer and cannot be configured here.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.jwtSign.claims.*`|any||
-|`frontendPolicies.substrateEgress.policies.backendAuth.jwtSign.ttl`|string|Token lifetime used for `exp`. Defaults to 300s.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.jwtSign.location`|object|Where the signed token is written. Defaults to the Authorization<br>header with a `Bearer ` prefix.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.jwtSign.location.header`|object|Read the credential from an HTTP header.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.jwtSign.location.header.name`|string|Header name containing the credential.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.jwtSign.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.jwtSign.location.queryParameter`|object|Read the credential from a URL query parameter.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.jwtSign.location.queryParameter.name`|string|Query parameter name containing the credential.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.jwtSign.location.cookie`|object|Read the credential from a request cookie.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.jwtSign.location.cookie.name`|string|Cookie name containing the credential.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.jwtSign.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange`|object|Use OAuth token exchange flows to obtain a backend access token.<br>Exactly one of service, host, or backend may be set.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.service`|object|Service reference. Service must be defined in the top level services list.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.service.port`|integer|Port on the target Service to route to.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.host`|string|Hostname or IP address|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.policies`|any|Backend policies used when connecting to the service.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.path`|string|Token endpoint path on the backend; defaults to "/".|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.grantType`|enum|Selects which RFC the request follows; defaults to token exchange (RFC 8693).<br>Possible values: `tokenExchange`, `jwtBearer`.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.subjectToken`|object|Where the subject token is read from, and its token type. Defaults to the<br>Authorization Bearer header with token type access_token.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source`|object|Where the token is read from in the incoming request. The CEL `expression`<br>source is permitted (extraction only).<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header`|object|Read the credential from an HTTP header.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header.name`|string|Header name containing the credential.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.subjectToken.tokenType`|string|RFC 8693 token type URN; when omitted defaults to access_token|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.actorToken`|object|RFC 8693 delegation actor token. Token-exchange grant only.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.actorToken.source`|object|Where the actor token is read from in the incoming request. The CEL<br>`expression` source is permitted (extraction only). Unlike subject tokens,<br>actor tokens have no default source.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.header`|object|Read the credential from an HTTP header.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.header.name`|string|Header name containing the credential.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.cookie`|object|Read the credential from a request cookie.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.cookie.name`|string|Cookie name containing the credential.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.actorToken.tokenType`|string|RFC 8693 actor token type URN; when omitted defaults to access_token and is still sent|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.actorToken.enforceMayAct`|boolean|Enforce that the subject's `may_act` claim authorizes the actor before exchanging.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.audiences`|[]string|`audience` parameters naming the target services at the authorization server.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.scopes`|[]string|`scope` values for the requested token, sent space-delimited.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.resources`|[]string|`resource` parameters with the target service URIs.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.requestedTokenType`|string|`requested_token_type` parameter. When unset it is omitted from the request<br>(RFC 8693 makes it optional). Some providers (e.g. Auth0 custom token exchange)<br>reject an explicit access_token value paired with a custom `subject_token_type`.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth`|object|Client authentication used when calling the token endpoint.<br>When unset, no client authentication fields are sent.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object||
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.kid`|string||
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.assertionAudience`|string||
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.additionalParams`|object|Extra form parameters appended to the token request.<br>Values are CEL expressions evaluated against the incoming request.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation`|object|Where to place the exchanged token in the backend request. Defaults to the<br>Authorization header with a "Bearer " prefix. The CEL `expression` source is<br>not valid here (it cannot insert).<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header`|object|Read the credential from an HTTP header.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header.name`|string|Header name containing the credential.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.queryParameter`|object|Read the credential from a URL query parameter.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.queryParameter.name`|string|Query parameter name containing the credential.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.cookie`|object|Read the credential from a request cookie.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.cookie.name`|string|Cookie name containing the credential.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.oauthTokenExchange.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess`|object|Use Cross App Access (Identity Assertion / ID-JAG) to obtain a backend access token.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider`|object|The user's IdP authorization server, used for the RFC 8693 token exchange.<br>Exactly one of service, host, or backend may be set.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.service`|object|Service reference. Service must be defined in the top level services list.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.service.port`|integer|Port on the target Service to route to.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.host`|string|Hostname or IP address|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.policies`|any|Backend policies used when connecting to the service.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.path`|string|Token endpoint path on the backend; defaults to "/".|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth`|object|Client authentication used when calling the token endpoint.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret`|object||
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.kid`|string||
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.assertionAudience`|string||
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer`|object|The resource authorization server, which exchanges the ID-JAG for an access token.<br>Exactly one of service, host, or backend may be set.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service`|object|Service reference. Service must be defined in the top level services list.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service.port`|integer|Port on the target Service to route to.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.host`|string|Hostname or IP address|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.policies`|any|Backend policies used when connecting to the service.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.path`|string|Token endpoint path on the backend; defaults to "/".|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth`|object|Client authentication used when calling the token endpoint.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object||
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.kid`|string||
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.assertionAudience`|string||
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.audience`|string|Identifier of the resource authorization server. The issued ID-JAG is bound to this audience.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.resources`|[]string|`resource` parameters naming the protected resource APIs.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.scopes`|[]string|`scope` values requested when obtaining the ID-JAG from the identity provider, sent<br>space-delimited.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.accessTokenScopes`|[]string|`scope` values requested when exchanging the ID-JAG for an access token. When unset,<br>inherits `scopes`. When empty, omits `scope`.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken`|object|Subject token sent to the identity provider. Defaults to an OpenID Connect ID token read<br>from the Authorization Bearer header.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source`|object|Where to read the subject token. Defaults to the Authorization Bearer header.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header`|object|Read the credential from an HTTP header.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header.name`|string|Header name containing the credential.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.subjectToken.tokenType`|string|RFC 8693 subject token type URI. Defaults to an OpenID Connect ID token.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.crossAppAccess.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.credentials`|[]object||
-|`frontendPolicies.substrateEgress.policies.backendAuth.credentials[].location`|object|Where the credential is inserted on the backend request.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.credentials[].location.header`|object|Read the credential from an HTTP header.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.credentials[].location.header.name`|string|Header name containing the credential.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.credentials[].location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.credentials[].location.queryParameter`|object|Read the credential from a URL query parameter.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.credentials[].location.queryParameter.name`|string|Query parameter name containing the credential.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.credentials[].location.cookie`|object|Read the credential from a request cookie.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.credentials[].location.cookie.name`|string|Cookie name containing the credential.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.credentials[].location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.credentials[].key`|object|Credential value.|
-|`frontendPolicies.substrateEgress.policies.backendAuth.credentials[].key.file`|string|Path to a file on disk to load the value from.|
-|`frontendPolicies.substrateEgress.policies.http`|object|HTTP protocol settings for this backend.|
-|`frontendPolicies.substrateEgress.policies.http.version`|string|HTTP version to use when connecting to the backend.|
-|`frontendPolicies.substrateEgress.policies.http.requestTimeout`|string|Maximum time allowed for a backend HTTP request.|
-|`frontendPolicies.substrateEgress.policies.http.maxConnectionDuration`|string|Maximum time a connection to the backend may stay open. A connection past this duration is<br>not reused for new requests; a fresh connection is established instead, while in-flight<br>requests are not interrupted.|
-|`frontendPolicies.substrateEgress.policies.tcp`|object|TCP protocol settings for this backend.|
-|`frontendPolicies.substrateEgress.policies.tcp.keepalives`|object|TCP keepalive settings for backend connections.|
-|`frontendPolicies.substrateEgress.policies.tcp.keepalives.enabled`|boolean|Enable TCP keepalive probes on backend connections. Defaults to true.|
-|`frontendPolicies.substrateEgress.policies.tcp.keepalives.time`|string|Idle time before the first keepalive probe is sent.|
-|`frontendPolicies.substrateEgress.policies.tcp.keepalives.interval`|string|Time between successive keepalive probes.|
-|`frontendPolicies.substrateEgress.policies.tcp.keepalives.retries`|integer|Number of unacknowledged probes before the connection is considered dead.|
-|`frontendPolicies.substrateEgress.policies.tcp.connectTimeout`|string|Maximum time allowed to establish a backend TCP connection.|
-|`frontendPolicies.substrateEgress.policies.backendTunnel`|object|Tunnel settings used when connecting to this backend.|
-|`frontendPolicies.substrateEgress.policies.backendTunnel.proxy`|object|Proxy backend used to tunnel the connection.<br>Exactly one of service, host, or backend may be set.|
-|`frontendPolicies.substrateEgress.policies.backendTunnel.proxy.service`|object|Service reference. Service must be defined in the top level services list.|
-|`frontendPolicies.substrateEgress.policies.backendTunnel.proxy.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
-|`frontendPolicies.substrateEgress.policies.backendTunnel.proxy.service.port`|integer|Port on the target Service to route to.|
-|`frontendPolicies.substrateEgress.policies.backendTunnel.proxy.host`|string|Hostname or IP address|
-|`frontendPolicies.substrateEgress.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
-|`frontendPolicies.substrateEgress.policies.backendTunnel.mode`|enum|How requests are sent through the proxy.<br>Possible values: `auto`, `connect`.|
-|`frontendPolicies.substrateEgress.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
+|`frontendPolicies.substrateEgressActorResolution`|object|Validate the originating actor before accepting a CONNECT tunnel.|
+|`frontendPolicies.substrateEgressActorResolution.service`|object|Service reference. Service must be defined in the top level services list.|
+|`frontendPolicies.substrateEgressActorResolution.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`frontendPolicies.substrateEgressActorResolution.service.port`|integer|Port on the target Service to route to.|
+|`frontendPolicies.substrateEgressActorResolution.host`|string|Hostname or IP address|
+|`frontendPolicies.substrateEgressActorResolution.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`frontendPolicies.substrateEgressActorResolution.policies`|object|Validates an actor's identity before accepting a CONNECT tunnel.<br>Backend policies used when connecting to the service.|
+|`frontendPolicies.substrateEgressActorResolution.policies.requestHeaderModifier`|object|Modify request headers before forwarding to this backend.|
+|`frontendPolicies.substrateEgressActorResolution.policies.requestHeaderModifier.add`|object|Headers to append without replacing existing values.|
+|`frontendPolicies.substrateEgressActorResolution.policies.requestHeaderModifier.set`|object|Headers to set, replacing any existing values.|
+|`frontendPolicies.substrateEgressActorResolution.policies.requestHeaderModifier.remove`|[]string|Header names to remove.|
+|`frontendPolicies.substrateEgressActorResolution.policies.transformations`|object|Modify request and response data for this backend.|
+|`frontendPolicies.substrateEgressActorResolution.policies.transformations.request`|object|Transform the request before it is forwarded.|
+|`frontendPolicies.substrateEgressActorResolution.policies.transformations.request.add`|object|Headers to append using CEL expressions for values.|
+|`frontendPolicies.substrateEgressActorResolution.policies.transformations.request.set`|object|Headers to set using CEL expressions for values.|
+|`frontendPolicies.substrateEgressActorResolution.policies.transformations.request.remove`|[]string|Header names to remove.|
+|`frontendPolicies.substrateEgressActorResolution.policies.transformations.request.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
+|`frontendPolicies.substrateEgressActorResolution.policies.transformations.request.body`|string|CEL expression that computes a replacement body.|
+|`frontendPolicies.substrateEgressActorResolution.policies.transformations.request.metadata`|object|Metadata values to add using CEL expressions.|
+|`frontendPolicies.substrateEgressActorResolution.policies.transformations.response`|object|Transform the response before it is returned.|
+|`frontendPolicies.substrateEgressActorResolution.policies.transformations.response.add`|object|Headers to append using CEL expressions for values.|
+|`frontendPolicies.substrateEgressActorResolution.policies.transformations.response.set`|object|Headers to set using CEL expressions for values.|
+|`frontendPolicies.substrateEgressActorResolution.policies.transformations.response.remove`|[]string|Header names to remove.|
+|`frontendPolicies.substrateEgressActorResolution.policies.transformations.response.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
+|`frontendPolicies.substrateEgressActorResolution.policies.transformations.response.body`|string|CEL expression that computes a replacement body.|
+|`frontendPolicies.substrateEgressActorResolution.policies.transformations.response.metadata`|object|Metadata values to add using CEL expressions.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendTLS`|object|TLS settings used when connecting to this backend.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendTLS.cert`|string|Client certificate file to present to the backend.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendTLS.key`|string|Private key file for the client certificate.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendTLS.root`|string|Root certificate bundle used to verify the backend certificate.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendTLS.hostname`|string|Server name to use for TLS verification and SNI.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendTLS.insecure`|boolean|Skip certificate trust verification for the backend connection.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendTLS.insecureHost`|boolean|Skip hostname verification for the backend certificate.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendTLS.alpn`|[]string|ALPN protocols to offer to the backend.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendTLS.subjectAltNames`|[]string|Additional subject alternative names accepted for the backend certificate.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendTLS.keyExchangeGroups`|[]enum|Key exchange groups allowed for negotiating TLS.<br>Possible values: `X25519`, `P-256`, `P-384`, `X25519_MLKEM768`.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendTLS.spiffe`|object|Get the gateway's client identity and trust roots from the SPIFFE Workload API.<br>Mutually exclusive with `cert`/`key`/`root`/`insecure`/`insecureHost`.<br>Pin specific upstream SPIFFE IDs via `subjectAltNames` (e.g. `spiffe://td/ns/foo/sa/bar`);<br>If `subjectAltNames` is omitted, any SVID chaining to the SPIFFE trust bundle is accepted|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth`|object|Authentication credentials sent to this backend.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.key`|object||
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.key.file`|string|Path to a file on disk to load the value from.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.passthrough`|object|Forward the validated incoming JWT to the backend.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.passthrough.location`|object|Where to place the forwarded credential in the backend request.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.passthrough.location.header`|object|Read the credential from an HTTP header.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.passthrough.location.header.name`|string|Header name containing the credential.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.passthrough.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.passthrough.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.passthrough.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.passthrough.location.cookie`|object|Read the credential from a request cookie.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.passthrough.location.cookie.name`|string|Cookie name containing the credential.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.passthrough.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.key`|object|Send a configured secret value to the backend.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.key.value`|object|Secret value to send to the backend. File references are watched, so<br>rotating the file reloads it without a restart.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.key.value.file`|string|Path to a file on disk to load the value from.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.key.location`|object|Where to place the secret in the backend request.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.key.location.header`|object|Read the credential from an HTTP header.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.key.location.header.name`|string|Header name containing the credential.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.key.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.key.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.key.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.key.location.cookie`|object|Read the credential from a request cookie.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.key.location.cookie.name`|string|Cookie name containing the credential.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.key.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.gcp`|object|Authenticate to Google Cloud services.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.gcp.type`|enum|Possible values: `idToken`.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.gcp.audience`|string|Audience for the token. If not set, the destination host will be used.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.gcp.credential`|object|ADC-compatible Google credential JSON. If not set, ambient credentials are used.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.gcp.credential.file`|string|Path to a file on disk to load the value from.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.gcp.type`|enum|Possible values: `accessToken`, `null`.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.aws`|object|Sign backend requests with AWS credentials.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.aws.accessKeyId`|string||
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.aws.secretAccessKey`|string||
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.aws.region`|string||
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.aws.sessionToken`|string||
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.aws.serviceName`|string|AWS SigV4 signing service name (for example, "bedrock", "bedrock-agentcore", or "execute-api").|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.aws.region`|string|AWS SigV4 signing region (for example, "us-east-1"). If unset, typed AWS<br>backends may provide this automatically; otherwise the ambient AWS region<br>is used.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.aws.assumeRole`|object|Optional AWS STS role to assume before signing requests.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.aws.assumeRole.roleArn`|string|AWS IAM role ARN to assume.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.aws.assumeRole.sessionName`|string|Custom session name (RoleSessionName) for CloudTrail and Cost & Usage Report<br>attribution. Either a static string or `{expression: ...}` with a CEL<br>expression evaluated against each request. Max 64 chars, matching<br>`[\w+=,.@-]`. If unset, the AWS SDK generates a random session name.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.aws.assumeRole.sessionName.expression`|string|CEL expression evaluated against each request to produce the session<br>name, for example `jwt.sub` or `request.headers["x-team"]`. If the<br>expression does not produce a valid session name at request time, the<br>request is rejected.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.aws.assumeRole.tags`|[]object|Session tags passed to STS AssumeRole for cost attribution. Once activated as<br>cost allocation tags, each tag surfaces in the AWS Cost & Usage Report under<br>`resourceTags/user:TagKey`. A tag value is either static (`value`) or a CEL<br>expression evaluated against each request (`expression`).|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.aws.assumeRole.tags[].key`|string|Tag key.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.aws.assumeRole.tags[].value`|string|Static tag value.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.aws.assumeRole.tags[].expression`|string|CEL expression evaluated against each request to produce the tag value, for<br>example `jwt.sub` or `request.headers["x-app"]`. If the expression does not<br>produce a valid tag value at request time, the request is rejected.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.azure`|object|Authenticate to Azure services.<br>Exactly one of explicitConfig, developerImplicit, or implicit may be set.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.azure.explicitConfig`|object|Use explicit Azure credentials<br>Exactly one of clientSecret, managedIdentity, or workloadIdentity may be set.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.azure.explicitConfig.clientSecret`|object||
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.azure.explicitConfig.clientSecret.tenant_id`|string||
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.azure.explicitConfig.clientSecret.client_id`|string||
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.azure.explicitConfig.clientSecret.client_secret`|string||
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.azure.explicitConfig.managedIdentity`|object||
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity`|object||
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.clientId`|string||
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.objectId`|string||
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.resourceId`|string||
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.azure.explicitConfig.workloadIdentity`|object||
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.azure.developerImplicit`|object|Use implicit Azure auth. Note that this is for developer use-cases only!|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.azure.implicit`|object|Automatically detect authentication method based on environment.<br>Uses Workload Identity on K8s, Managed Identity on Azure VMs, or Developer Tools locally.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.azure.scopes`|[]string|Scopes requested for the Azure access token. When unset, the scope is<br>inferred from the backend hostname.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.jwtSign`|object|Sign a short-lived JWT with a private key on each request.<br>Signs a short-lived JWT with a private key on each request and sends it to<br>the backend. For upstreams that require per-request keypair JWTs (e.g. the<br>Snowflake SQL API) rather than a static credential.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.jwtSign.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.jwtSign.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.jwtSign.alg`|enum|JWS signing algorithm. Defaults to RS256.<br>Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.jwtSign.kid`|string|Optional JWS key ID header.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.jwtSign.claims`|object|Static claims added to every token (e.g. iss, sub, aud). Values may be<br>any JSON value (e.g. a string, number, bool, or array). `iat`, `exp`,<br>and `nbf` are reserved for the signer and cannot be configured here.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.jwtSign.claims.*`|any||
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.jwtSign.ttl`|string|Token lifetime used for `exp`. Defaults to 300s.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.jwtSign.location`|object|Where the signed token is written. Defaults to the Authorization<br>header with a `Bearer ` prefix.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.jwtSign.location.header`|object|Read the credential from an HTTP header.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.jwtSign.location.header.name`|string|Header name containing the credential.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.jwtSign.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.jwtSign.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.jwtSign.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.jwtSign.location.cookie`|object|Read the credential from a request cookie.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.jwtSign.location.cookie.name`|string|Cookie name containing the credential.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.jwtSign.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange`|object|Use OAuth token exchange flows to obtain a backend access token.<br>Exactly one of service, host, or backend may be set.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.service`|object|Service reference. Service must be defined in the top level services list.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.service.port`|integer|Port on the target Service to route to.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.host`|string|Hostname or IP address|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.policies`|any|Backend policies used when connecting to the service.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.grantType`|enum|Selects which RFC the request follows; defaults to token exchange (RFC 8693).<br>Possible values: `tokenExchange`, `jwtBearer`.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.subjectToken`|object|Where the subject token is read from, and its token type. Defaults to the<br>Authorization Bearer header with token type access_token.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.subjectToken.source`|object|Where the token is read from in the incoming request. The CEL `expression`<br>source is permitted (extraction only).<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.subjectToken.tokenType`|string|RFC 8693 token type URN; when omitted defaults to access_token|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.actorToken`|object|RFC 8693 delegation actor token. Token-exchange grant only.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.actorToken.source`|object|Where the actor token is read from in the incoming request. The CEL<br>`expression` source is permitted (extraction only). Unlike subject tokens,<br>actor tokens have no default source.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.actorToken.source.header`|object|Read the credential from an HTTP header.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.actorToken.source.header.name`|string|Header name containing the credential.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.actorToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.actorToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.actorToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.actorToken.source.cookie`|object|Read the credential from a request cookie.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.actorToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.actorToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.actorToken.tokenType`|string|RFC 8693 actor token type URN; when omitted defaults to access_token and is still sent|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.actorToken.enforceMayAct`|boolean|Enforce that the subject's `may_act` claim authorizes the actor before exchanging.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.audiences`|[]string|`audience` parameters naming the target services at the authorization server.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.scopes`|[]string|`scope` values for the requested token, sent space-delimited.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.resources`|[]string|`resource` parameters with the target service URIs.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.requestedTokenType`|string|`requested_token_type` parameter. When unset it is omitted from the request<br>(RFC 8693 makes it optional). Some providers (e.g. Auth0 custom token exchange)<br>reject an explicit access_token value paired with a custom `subject_token_type`.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.clientAuth`|object|Client authentication used when calling the token endpoint.<br>When unset, no client authentication fields are sent.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object||
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.clientAuth.kid`|string||
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.clientAuth.assertionAudience`|string||
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.additionalParams`|object|Extra form parameters appended to the token request.<br>Values are CEL expressions evaluated against the incoming request.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.authorizationLocation`|object|Where to place the exchanged token in the backend request. Defaults to the<br>Authorization header with a "Bearer " prefix. The CEL `expression` source is<br>not valid here (it cannot insert).<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.authorizationLocation.header`|object|Read the credential from an HTTP header.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.authorizationLocation.header.name`|string|Header name containing the credential.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.authorizationLocation.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.authorizationLocation.queryParameter`|object|Read the credential from a URL query parameter.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.authorizationLocation.queryParameter.name`|string|Query parameter name containing the credential.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.authorizationLocation.cookie`|object|Read the credential from a request cookie.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.authorizationLocation.cookie.name`|string|Cookie name containing the credential.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.authorizationLocation.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.oauthTokenExchange.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess`|object|Use Cross App Access (Identity Assertion / ID-JAG) to obtain a backend access token.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.identityProvider`|object|The user's IdP authorization server, used for the RFC 8693 token exchange.<br>Exactly one of service, host, or backend may be set.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.identityProvider.service`|object|Service reference. Service must be defined in the top level services list.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.identityProvider.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.identityProvider.service.port`|integer|Port on the target Service to route to.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.identityProvider.host`|string|Hostname or IP address|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.identityProvider.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.identityProvider.policies`|any|Backend policies used when connecting to the service.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.identityProvider.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.identityProvider.clientAuth`|object|Client authentication used when calling the token endpoint.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret`|object||
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.kid`|string||
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.assertionAudience`|string||
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.resourceAuthorizationServer`|object|The resource authorization server, which exchanges the ID-JAG for an access token.<br>Exactly one of service, host, or backend may be set.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service`|object|Service reference. Service must be defined in the top level services list.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service.port`|integer|Port on the target Service to route to.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.host`|string|Hostname or IP address|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.policies`|any|Backend policies used when connecting to the service.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth`|object|Client authentication used when calling the token endpoint.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object||
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.kid`|string||
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.assertionAudience`|string||
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.audience`|string|Identifier of the resource authorization server. The issued ID-JAG is bound to this audience.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.resources`|[]string|`resource` parameters naming the protected resource APIs.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.scopes`|[]string|`scope` values requested when obtaining the ID-JAG from the identity provider, sent<br>space-delimited.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.accessTokenScopes`|[]string|`scope` values requested when exchanging the ID-JAG for an access token. When unset,<br>inherits `scopes`. When empty, omits `scope`.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.subjectToken`|object|Subject token sent to the identity provider. Defaults to an OpenID Connect ID token read<br>from the Authorization Bearer header.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.subjectToken.source`|object|Where to read the subject token. Defaults to the Authorization Bearer header.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.subjectToken.tokenType`|string|RFC 8693 subject token type URI. Defaults to an OpenID Connect ID token.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.crossAppAccess.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.credentials`|[]object||
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.credentials[].location`|object|Where the credential is inserted on the backend request.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.credentials[].location.header`|object|Read the credential from an HTTP header.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.credentials[].location.header.name`|string|Header name containing the credential.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.credentials[].location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.credentials[].location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.credentials[].location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.credentials[].location.cookie`|object|Read the credential from a request cookie.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.credentials[].location.cookie.name`|string|Cookie name containing the credential.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.credentials[].location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.credentials[].key`|object|Credential value.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendAuth.credentials[].key.file`|string|Path to a file on disk to load the value from.|
+|`frontendPolicies.substrateEgressActorResolution.policies.http`|object|HTTP protocol settings for this backend.|
+|`frontendPolicies.substrateEgressActorResolution.policies.http.version`|string|HTTP version to use when connecting to the backend.|
+|`frontendPolicies.substrateEgressActorResolution.policies.http.requestTimeout`|string|Maximum time allowed for a backend HTTP request.|
+|`frontendPolicies.substrateEgressActorResolution.policies.http.maxConnectionDuration`|string|Maximum time a connection to the backend may stay open. A connection past this duration is<br>not reused for new requests; a fresh connection is established instead, while in-flight<br>requests are not interrupted.|
+|`frontendPolicies.substrateEgressActorResolution.policies.tcp`|object|TCP protocol settings for this backend.|
+|`frontendPolicies.substrateEgressActorResolution.policies.tcp.keepalives`|object|TCP keepalive settings for backend connections.|
+|`frontendPolicies.substrateEgressActorResolution.policies.tcp.keepalives.enabled`|boolean|Enable TCP keepalive probes on backend connections. Defaults to true.|
+|`frontendPolicies.substrateEgressActorResolution.policies.tcp.keepalives.time`|string|Idle time before the first keepalive probe is sent.|
+|`frontendPolicies.substrateEgressActorResolution.policies.tcp.keepalives.interval`|string|Time between successive keepalive probes.|
+|`frontendPolicies.substrateEgressActorResolution.policies.tcp.keepalives.retries`|integer|Number of unacknowledged probes before the connection is considered dead.|
+|`frontendPolicies.substrateEgressActorResolution.policies.tcp.connectTimeout`|string|Maximum time allowed to establish a backend TCP connection.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendTunnel`|object|Tunnel settings used when connecting to this backend.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendTunnel.proxy`|object|Proxy backend used to tunnel the connection.<br>Exactly one of service, host, or backend may be set.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendTunnel.proxy.service`|object|Service reference. Service must be defined in the top level services list.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendTunnel.proxy.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendTunnel.proxy.service.port`|integer|Port on the target Service to route to.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendTunnel.proxy.host`|string|Hostname or IP address|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendTunnel.mode`|enum|How requests are sent through the proxy.<br>Possible values: `auto`, `connect`.|
+|`frontendPolicies.substrateEgressActorResolution.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
 |`frontendPolicies.proxy`|object|Enable downstream PROXY protocol handling on this gateway or port, including<br>version matching and whether PROXY headers are required or optional.|
 |`frontendPolicies.proxy.version`|enum|PROXY protocol versions accepted from downstream clients.<br>Possible values: `v1`, `v2`, `all`.|
 |`frontendPolicies.proxy.mode`|enum|Whether downstream connections must include a PROXY protocol header.<br>Possible values: `strict`, `optional`.|
@@ -24630,6 +24631,7 @@
 |`policies[].policy.substrateEgress.policies.backendAuth.azure.explicitConfig.workloadIdentity`|object||
 |`policies[].policy.substrateEgress.policies.backendAuth.azure.developerImplicit`|object|Use implicit Azure auth. Note that this is for developer use-cases only!|
 |`policies[].policy.substrateEgress.policies.backendAuth.azure.implicit`|object|Automatically detect authentication method based on environment.<br>Uses Workload Identity on K8s, Managed Identity on Azure VMs, or Developer Tools locally.|
+|`policies[].policy.substrateEgress.policies.backendAuth.azure.scopes`|[]string|Scopes requested for the Azure access token. When unset, the scope is<br>inferred from the backend hostname.|
 |`policies[].policy.substrateEgress.policies.backendAuth.jwtSign`|object|Sign a short-lived JWT with a private key on each request.<br>Signs a short-lived JWT with a private key on each request and sends it to<br>the backend. For upstreams that require per-request keypair JWTs (e.g. the<br>Snowflake SQL API) rather than a static credential.|
 |`policies[].policy.substrateEgress.policies.backendAuth.jwtSign.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
 |`policies[].policy.substrateEgress.policies.backendAuth.jwtSign.signingKey.file`|string|Path to a file on disk to load the value from.|
@@ -40671,6 +40673,7 @@
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.azure.explicitConfig.workloadIdentity`|object||
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.azure.developerImplicit`|object|Use implicit Azure auth. Note that this is for developer use-cases only!|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.azure.implicit`|object|Automatically detect authentication method based on environment.<br>Uses Workload Identity on K8s, Managed Identity on Azure VMs, or Developer Tools locally.|
+|`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.azure.scopes`|[]string|Scopes requested for the Azure access token. When unset, the scope is<br>inferred from the backend hostname.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.jwtSign`|object|Sign a short-lived JWT with a private key on each request.<br>Signs a short-lived JWT with a private key on each request and sends it to<br>the backend. For upstreams that require per-request keypair JWTs (e.g. the<br>Snowflake SQL API) rather than a static credential.|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.jwtSign.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
 |`routeGroups[].routes[].policies.substrateEgress.policies.backendAuth.jwtSign.signingKey.file`|string|Path to a file on disk to load the value from.|
@@ -59362,6 +59365,7 @@
 |`routes[].policies.substrateEgress.policies.backendAuth.azure.explicitConfig.workloadIdentity`|object||
 |`routes[].policies.substrateEgress.policies.backendAuth.azure.developerImplicit`|object|Use implicit Azure auth. Note that this is for developer use-cases only!|
 |`routes[].policies.substrateEgress.policies.backendAuth.azure.implicit`|object|Automatically detect authentication method based on environment.<br>Uses Workload Identity on K8s, Managed Identity on Azure VMs, or Developer Tools locally.|
+|`routes[].policies.substrateEgress.policies.backendAuth.azure.scopes`|[]string|Scopes requested for the Azure access token. When unset, the scope is<br>inferred from the backend hostname.|
 |`routes[].policies.substrateEgress.policies.backendAuth.jwtSign`|object|Sign a short-lived JWT with a private key on each request.<br>Signs a short-lived JWT with a private key on each request and sends it to<br>the backend. For upstreams that require per-request keypair JWTs (e.g. the<br>Snowflake SQL API) rather than a static credential.|
 |`routes[].policies.substrateEgress.policies.backendAuth.jwtSign.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
 |`routes[].policies.substrateEgress.policies.backendAuth.jwtSign.signingKey.file`|string|Path to a file on disk to load the value from.|
@@ -83124,6 +83128,7 @@
 |`mcp.policies.substrateEgress.policies.backendAuth.azure.explicitConfig.workloadIdentity`|object||
 |`mcp.policies.substrateEgress.policies.backendAuth.azure.developerImplicit`|object|Use implicit Azure auth. Note that this is for developer use-cases only!|
 |`mcp.policies.substrateEgress.policies.backendAuth.azure.implicit`|object|Automatically detect authentication method based on environment.<br>Uses Workload Identity on K8s, Managed Identity on Azure VMs, or Developer Tools locally.|
+|`mcp.policies.substrateEgress.policies.backendAuth.azure.scopes`|[]string|Scopes requested for the Azure access token. When unset, the scope is<br>inferred from the backend hostname.|
 |`mcp.policies.substrateEgress.policies.backendAuth.jwtSign`|object|Sign a short-lived JWT with a private key on each request.<br>Signs a short-lived JWT with a private key on each request and sends it to<br>the backend. For upstreams that require per-request keypair JWTs (e.g. the<br>Snowflake SQL API) rather than a static credential.|
 |`mcp.policies.substrateEgress.policies.backendAuth.jwtSign.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
 |`mcp.policies.substrateEgress.policies.backendAuth.jwtSign.signingKey.file`|string|Path to a file on disk to load the value from.|
