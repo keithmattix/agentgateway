@@ -5,8 +5,6 @@ use super::{ActorRef, TRACE_POLICY_KIND, valid_resource_name};
 use crate::http::Request;
 use crate::proxy::httpproxy::PolicyClient;
 use crate::proxy::{ProxyError, ProxyResponse};
-use crate::telemetry::log;
-use crate::telemetry::log::RequestLog;
 use crate::telemetry::metrics::{OutboundCallKind, OutboundCallSubtype};
 use crate::transport::stream::{Extension, TCPConnectionInfo, TLSConnectionInfo};
 use crate::types::agent::SimpleBackendReferenceWithPolicies;
@@ -81,41 +79,30 @@ impl EgressActorResolution {
 		connection: &Extension,
 		req: &mut Request,
 	) -> Result<ActorIdentity, ProxyResponse> {
-		let tcp = connection
+		connection
 			.copy::<TCPConnectionInfo>(req.extensions_mut())
-			.expect("tcp connection must be set")
-			.clone();
+			.expect("tcp connection must be set");
 		connection.copy::<TLSConnectionInfo>(req.extensions_mut());
-		let mut log = RequestLog::new(
-			log::CelLogging::new(inputs.cfg.logging.clone(), inputs.cfg.metrics.clone()),
-			inputs.metrics.clone(),
-			inputs.model_catalog.clone(),
-			agent_core::Timestamp::now(),
-			tcp,
-		);
 		let identity = Self::identity(req)?;
 		self
 			.authorize(
 				&PolicyClient::new(inputs.clone()).with_parent(req),
-				&mut log,
 				&identity,
 			)
 			.await?;
+
 		Ok(identity)
 	}
 
 	async fn authorize(
 		&self,
 		client: &PolicyClient,
-		log: &mut RequestLog,
 		identity: &ActorIdentity,
 	) -> Result<(), ProxyResponse> {
 		let actor = ActorRef {
 			atespace: identity.atespace.clone(),
 			name: identity.actor_name.clone(),
 		};
-		log.ate_actor_name = Some(actor.name.clone());
-		log.ate_atespace = Some(actor.atespace.clone());
 		let channel = self
 			.target
 			.grpc_channel(client.with_outbound(OutboundCallKind::Policy, OutboundCallSubtype::Substrate));
