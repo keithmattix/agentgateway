@@ -114,7 +114,7 @@ impl EgressActorResolution {
 			atespace: identity.atespace.clone(),
 			name: identity.actor_name.clone(),
 		};
-		log.ate_actor_id = Some(actor.name.clone());
+		log.ate_actor_name = Some(actor.name.clone());
 		log.ate_atespace = Some(actor.atespace.clone());
 		let channel = self
 			.target
