@@ -167,6 +167,12 @@ pub struct AdmissionLabels {
 	pub bind: DefaultedUnknown<RichStrng>,
 }
 
+#[derive(Clone, Hash, Default, Debug, PartialEq, Eq, EncodeLabelSet)]
+pub struct SubstrateRouteLabels {
+	pub ate_router_outcome: DefaultedUnknown<RichStrng>,
+	pub ate_router_resume: DefaultedUnknown<RichStrng>,
+}
+
 #[derive(
 	Copy, Clone, Hash, Debug, PartialEq, Eq, prometheus_client::encoding::EncodeLabelValue, Default,
 )]
@@ -265,6 +271,7 @@ pub struct Metrics {
 	pub requests: Counter,
 	pub request_duration: Histogram<HTTPLabels>,
 	pub request_processing_duration: Histogram<MinimalHTTPLabels>,
+	pub substrate_route_duration: Histogram<SubstrateRouteLabels>,
 	pub response_processing_duration: Histogram<MinimalHTTPLabels>,
 	pub response_bytes: Family<HTTPLabels, counter::Counter>,
 
@@ -509,6 +516,16 @@ impl Metrics {
 				);
 				m
 			},
+			substrate_route_duration: {
+				let m = histogram_family(histogram_mode, &SUBSTRATE_ROUTE_DURATION_BUCKETS);
+				registry.register_with_unit(
+					"atenet_router_route_duration",
+					"Time from receiving a Substrate request to resolving its worker endpoint",
+					Unit::Seconds,
+					m.clone(),
+				);
+				m
+			},
 			response_processing_duration: {
 				let m = histogram_family(histogram_mode, &PROCESSING_DURATION_BUCKETS);
 				registry.register_with_unit(
@@ -622,6 +639,10 @@ const CONNECT_DURATION_BUCKET: [f64; 10] = [
 // Covers 1ms to ~80 seconds with exponential growth
 const HTTP_REQUEST_DURATION_BUCKET: [f64; 14] = [
 	0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 80.0,
+];
+const SUBSTRATE_ROUTE_DURATION_BUCKETS: [f64; 18] = [
+	0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0,
+	15.0, 30.0,
 ];
 // Internal processing time
 // Covers 50us to 250ms with growth.
