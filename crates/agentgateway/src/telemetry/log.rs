@@ -1111,9 +1111,11 @@ impl RequestLog {
 			a2a_method: None,
 			a2a_response: None,
 			inference_pool: None,
-			ate_actor_id: None,
+			ate_actor_name: None,
+			ate_actor_uid: None,
 			ate_atespace: None,
 			ate_router_resume: None,
+			ate_router_route_duration: None,
 			request_handle: None,
 			request_snapshot: None,
 			response_snapshot: None,
@@ -1289,9 +1291,11 @@ pub struct RequestLog {
 
 	pub inference_pool: Option<SocketAddr>,
 
-	pub ate_actor_id: Option<String>,
+	pub ate_actor_name: Option<String>,
+	pub ate_actor_uid: Option<String>,
 	pub ate_atespace: Option<String>,
 	pub ate_router_resume: Option<&'static str>,
+	pub ate_router_route_duration: Option<Duration>,
 
 	pub request_handle: Option<ActiveHandle>,
 	pub request_snapshot: Option<Arc<cel::RequestSnapshot>>,
@@ -1510,6 +1514,9 @@ impl Drop for DropOnLog {
 			}
 
 			let dur = format!("{}ms", duration.as_millis());
+			let route_duration = log
+				.ate_router_route_duration
+				.map(|duration| duration.as_secs_f64());
 			let grpc = log.grpc_status.load();
 
 			let input_tokens = llm_response.as_ref().and_then(|l| l.input_tokens);
@@ -1709,9 +1716,14 @@ impl Drop for DropOnLog {
 					"inferencepool.selected_endpoint",
 					log.inference_pool.display(),
 				),
-				("ate.actor.id", log.ate_actor_id.display()),
+				(ateattr::ATE_ACTOR_NAME, log.ate_actor_name.display()),
+				(ateattr::ATE_ACTOR_UID, log.ate_actor_uid.display()),
 				(ateattr::ATE_ATESPACE, log.ate_atespace.display()),
 				(ateattr::ATE_ROUTER_RESUME, log.ate_router_resume.display()),
+				(
+					ateattr::ATE_ROUTER_ROUTE_DURATION,
+					route_duration.map(Into::into),
+				),
 				// OpenTelemetry Gen AI Semantic Conventions v1.40.0
 				(
 					"gen_ai.operation.name",

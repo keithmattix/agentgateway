@@ -92,6 +92,7 @@ struct CachedAssignment {
 	expires_at: Instant,
 	generation: u64,
 	resumed: bool,
+	uid: Option<String>,
 }
 
 #[derive(Clone, Copy)]
@@ -151,6 +152,7 @@ pub(crate) struct SubstrateRequestState {
 	client: PolicyClient,
 	current: Arc<Mutex<Option<CachedAssignment>>>,
 	resume: Arc<Mutex<ResumeDisposition>>,
+	route_duration: Arc<Mutex<Duration>>,
 }
 
 fn default_cache_ttl() -> Duration {
@@ -272,7 +274,7 @@ impl SubstrateIngress {
 		&self,
 		client: &PolicyClient,
 		actor: &ActorRef,
-	) -> Result<(SocketAddr, bool), ResumeError> {
+	) -> Result<(SocketAddr, bool, Option<String>), ResumeError> {
 		let budget = self.request_parking.budget();
 		let deadline = tokio::time::Instant::now() + budget;
 		let result = async {
@@ -310,6 +312,10 @@ impl SubstrateIngress {
 								"ResumeActor response did not include an actor".to_owned(),
 							)
 						})?;
+						let uid = actor
+							.metadata
+							.map(|metadata| metadata.uid)
+							.filter(|uid| !uid.is_empty());
 						let assignment = actor
 							.status
 							.and_then(|status| status.worker_assignment)
@@ -327,7 +333,11 @@ impl SubstrateIngress {
 									assignment.worker_pod_ip
 								))
 							})?;
-						return Ok((SocketAddr::new(ip, self.connect_target_port.get()), resumed));
+						return Ok((
+							SocketAddr::new(ip, self.connect_target_port.get()),
+							resumed,
+							uid,
+						));
 					},
 					Ok(Err(status)) if self.retryable_while_parked(status.code()) => {
 						let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
@@ -418,11 +428,12 @@ impl SubstrateIngress {
 					let result = self
 						.resume_actor(client, &actor)
 						.await
-						.map(|(target, resumed)| CachedAssignment {
+						.map(|(target, resumed, uid)| CachedAssignment {
 							target,
 							expires_at: Instant::now() + self.cache_ttl,
 							generation: self.cache.next_generation.fetch_add(1, Ordering::Relaxed),
 							resumed,
+							uid,
 						});
 					let _ = guard.insert(result.clone());
 					match &result {
@@ -462,11 +473,29 @@ impl SubstrateRequestState {
 		*self.resume.lock().unwrap()
 	}
 
+	pub(crate) fn actor_uid(&self) -> Option<String> {
+		self
+			.current
+			.lock()
+			.unwrap()
+			.as_ref()
+			.and_then(|current| current.uid.clone())
+	}
+
+	pub(crate) fn route_duration(&self) -> Duration {
+		*self.route_duration.lock().unwrap()
+	}
+
 	/// Policy events describe a single resolution attempt; this describes the request. A
 	/// stale-assignment retry can therefore log `triggered` while its last event says `none`.
 	fn record_resume(&self, observed: ResumeDisposition) {
 		let mut resume = self.resume.lock().unwrap();
 		*resume = (*resume).max(observed);
+	}
+
+	fn record_route_duration(&self, observed: Duration) {
+		let mut duration = self.route_duration.lock().unwrap();
+		*duration = duration.saturating_add(observed);
 	}
 
 	pub(crate) async fn resolve_target(&self) -> Result<Target, crate::proxy::ProxyResponse> {
@@ -487,7 +516,10 @@ impl SubstrateRequestState {
 			);
 			return Ok(Target::Address(current.target));
 		}
-		match self.ingress.resolve(&self.client, self.actor.clone()).await {
+		let started = tokio::time::Instant::now();
+		let resolution = self.ingress.resolve(&self.client, self.actor.clone()).await;
+		self.record_route_duration(started.elapsed());
+		match resolution {
 			Ok(Resolved {
 				assignment,
 				source,
@@ -635,7 +667,7 @@ impl RequestPolicyTrait for SubstrateIngress {
 			atespace: atespace.to_owned(),
 			name: name.to_owned(),
 		};
-		log.ate_actor_id = Some(actor.name.clone());
+		log.ate_actor_name = Some(actor.name.clone());
 		log.ate_atespace = Some(actor.atespace.clone());
 		// Ordinary atunnel ingress uses this header to select the actor port and
 		// strips it before forwarding. Raw CONNECT carries the port in its
@@ -653,6 +685,7 @@ impl RequestPolicyTrait for SubstrateIngress {
 			client: client.clone(),
 			current: Arc::new(Mutex::new(None)),
 			resume: Arc::new(Mutex::new(ResumeDisposition::None)),
+			route_duration: Arc::new(Mutex::new(Duration::ZERO)),
 		});
 		Ok(PolicyResponse::default())
 	}
