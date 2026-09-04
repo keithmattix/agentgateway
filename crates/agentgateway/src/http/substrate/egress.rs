@@ -49,14 +49,26 @@ impl RequestPolicyTrait for SubstrateEgress {
 				}),
 			}),
 		)
-		.await
-		.map_err(|status| match status.code() {
-			Code::Unavailable | Code::DeadlineExceeded => {
-				ProxyError::SubstrateEgressUnavailable(format!("actor egress policy unavailable: {status}"))
+		.await;
+		let policy = match policy {
+			Ok(response) => response.into_inner(),
+			// An Actor without an EgressPolicy has no actor-specific restrictions.
+			// CONNECT authentication already established that this is a running Actor.
+			Err(status) if status.code() == Code::NotFound => return Ok(PolicyResponse::default()),
+			Err(status) if matches!(status.code(), Code::Unavailable | Code::DeadlineExceeded) => {
+				return Err(
+					ProxyError::SubstrateEgressUnavailable(format!(
+						"actor egress policy unavailable: {status}"
+					))
+					.into(),
+				);
 			},
-			_ => ProxyError::SubstrateEgressDenied(format!("actor egress policy denied: {status}")),
-		})?
-		.into_inner();
+			Err(status) => {
+				return Err(
+					ProxyError::SubstrateEgressDenied(format!("actor egress policy denied: {status}")).into(),
+				);
+			},
+		};
 		let _matched_rule = matching_rule(&policy, req)?;
 		// TODO: After Substrate defines a credential-provider data-plane contract, apply the
 		// matched hostname rule's `inject_static_headers` effects here.
