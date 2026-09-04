@@ -148,7 +148,7 @@ pub struct FrontendPolices {
 	pub tcp: Option<frontend::TCP>,
 	pub network_authorization: Option<NetworkAuthorizationSet>,
 	pub network_ext_authz: Option<Arc<ext_authz::ExtAuthz>>,
-	pub substrate_egress: Option<substrate::EgressActorResolution>,
+	pub substrate_egress_actor_resolution: Option<substrate::EgressActorResolution>,
 	pub proxy: Option<frontend::Proxy>,
 	pub connect: Option<frontend::Connect>,
 	pub access_log: Option<frontend::LoggingPolicy>,
@@ -180,7 +180,9 @@ impl FrontendPolices {
 				self.network_ext_authz.get_or_insert_with(|| p.clone());
 			},
 			FrontendPolicy::SubstrateEgressActorResolution(p) => {
-				self.substrate_egress.get_or_insert_with(|| p.clone());
+				self
+					.substrate_egress_actor_resolution
+					.get_or_insert_with(|| p.clone());
 			},
 			FrontendPolicy::Proxy(p) => {
 				self.proxy.get_or_insert_with(|| p.clone());

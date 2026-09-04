@@ -9833,7 +9833,7 @@
           ],
           "default": null
         },
-        "substrateEgress": {
+        "substrateEgressActorResolution": {
           "description": "Validate the originating actor before accepting a CONNECT tunnel.",
           "anyOf": [
             {
