@@ -191,7 +191,6 @@ mod tests {
 								credential_uri: "substrate-secret://example/first/token".to_owned(),
 							}],
 						}),
-						..Default::default()
 					}),
 					..Default::default()
 				},
@@ -205,7 +204,6 @@ mod tests {
 								credential_uri: "substrate-secret://example/second/token".to_owned(),
 							}],
 						}),
-						..Default::default()
 					}),
 					..Default::default()
 				},
