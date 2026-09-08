@@ -531,8 +531,8 @@ impl SubstrateRequestState {
 			Ok(Resolved {
 				assignment,
 				source,
-			resume,
-		}) => {
+				resume,
+			}) => {
 				self.route_outcome = Some("ok");
 				let target = assignment.target;
 				pol_event!(
