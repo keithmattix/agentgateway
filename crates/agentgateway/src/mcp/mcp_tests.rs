@@ -7963,3 +7963,46 @@ async fn mcp_guardrails_mutated_resource_read_reaches_upstream() {
 		.expect("resource should return text");
 	assert!(text.contains("Business Intelligence Memo"));
 }
+
+// Regression for https://github.com/agentgateway/agentgateway/issues/3357.
+#[tokio::test]
+async fn modern_multi_target_resolve_propagates_meta() {
+	let (mock, capture) = mock_mrtr_streamable_http_server().await;
+	let other = mock_modern_streamable_http_server().await;
+	let t = never_prefix_proxy(
+		vec![("a", mock.addr, false), ("b", other.addr, false)],
+		false,
+	);
+	let io = t.serve_real_listener(strng::new("bind")).await;
+	let meta = modern_meta();
+	let body = serde_json::json!({
+		"jsonrpc": "2.0",
+		"id": 1,
+		"method": "tools/call",
+		"params": {
+			"name": "guarded_echo",
+			"arguments": {},
+			"_meta": meta
+		}
+	});
+	let resp = mcp_json_post(&reqwest::Client::new(), &format!("http://{io}/mcp"), &body)
+		.header("mcp-protocol-version", "2026-07-28")
+		.header("mcp-method", "tools/call")
+		.header("mcp-name", "guarded_echo")
+		.send()
+		.await
+		.unwrap();
+	assert_eq!(resp.status(), reqwest::StatusCode::OK);
+	let result = terminal_result(&resp.text().await.unwrap(), 1);
+	assert_eq!(result["content"][0]["text"], "no-elicitation-capability");
+
+	// Check the gateway-generated list probe, not just the forwarded tool call.
+	let requests = capture.lock().unwrap();
+	let probe = requests
+		.iter()
+		.find(|r| r["method"] == "tools/list")
+		.unwrap();
+	for (key, value) in meta.as_object().unwrap() {
+		assert_eq!(&probe["params"]["_meta"][key], value, "{key}");
+	}
+}
