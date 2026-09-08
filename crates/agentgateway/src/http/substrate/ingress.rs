@@ -10,7 +10,7 @@ use quick_cache::sync::Cache;
 use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 use tonic::Code;
 
-use super::ateattr::ResumeDisposition;
+use super::ateattr::{ResumeDisposition, RouteOutcome};
 use super::{ActorRef, CACHE_CAPACITY, TRACE_POLICY_KIND, valid_resource_name};
 use crate::http::{PolicyResponse, Request, Response};
 use crate::proxy::dtrace::{Severity, pol_event};
@@ -154,7 +154,7 @@ pub(crate) struct SubstrateRequestState {
 	current: Option<CachedAssignment>,
 	resume: ResumeDisposition,
 	route_duration: Duration,
-	route_outcome: Option<&'static str>,
+	route_outcome: Option<RouteOutcome>,
 }
 
 fn default_cache_ttl() -> Duration {
@@ -484,7 +484,7 @@ impl SubstrateRequestState {
 		self.route_duration
 	}
 
-	pub(crate) fn route_outcome(&self) -> Option<&'static str> {
+	pub(crate) fn route_outcome(&self) -> Option<RouteOutcome> {
 		self.route_outcome
 	}
 
@@ -507,7 +507,7 @@ impl SubstrateRequestState {
 
 	pub(crate) async fn resolve_target(&mut self) -> Result<Target, crate::proxy::ProxyResponse> {
 		if let Some(current) = self.current.as_ref() {
-			self.route_outcome = Some("ok");
+			self.route_outcome = Some(RouteOutcome::Ok);
 			pol_event!(
 				TRACE_POLICY_KIND,
 				Severity::Info,
@@ -533,7 +533,7 @@ impl SubstrateRequestState {
 				source,
 				resume,
 			}) => {
-				self.route_outcome = Some("ok");
+				self.route_outcome = Some(RouteOutcome::Ok);
 				let target = assignment.target;
 				pol_event!(
 					TRACE_POLICY_KIND,
@@ -556,7 +556,7 @@ impl SubstrateRequestState {
 				Ok(Target::Address(target))
 			},
 			Err((error, source)) => {
-				self.route_outcome = Some("resume_error");
+				self.route_outcome = Some(RouteOutcome::ResumeError);
 				pol_event!(
 					TRACE_POLICY_KIND,
 					Severity::Error,

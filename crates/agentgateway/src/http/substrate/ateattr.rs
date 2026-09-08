@@ -4,7 +4,9 @@
 //! agent-substrate/substrate, which are the source of truth. Strings agentgateway chose for itself
 //! do not belong here; see `telemetry/semconv.rs` for the OpenTelemetry conventions.
 
-use std::fmt::{Display, Formatter};
+use std::fmt::{Display, Formatter, Write};
+
+use prometheus_client::encoding::{EncodeLabelValue, LabelValueEncoder};
 
 /// The atespace-scoped addressable name, mirroring `k8s.pod.name`. Upstream has deliberately no
 /// `ate.actor.id`: it is ambiguous once an actor has both a name and a uid.
@@ -18,8 +20,8 @@ pub(crate) const ATE_ROUTER_ROUTE_DURATION: &str = "ate.router.route.duration";
 ///
 /// Ordered weakest to strongest so `max` keeps the strongest disposition a request observed across
 /// stale-assignment retries.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default)]
-pub(crate) enum ResumeDisposition {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+pub enum ResumeDisposition {
 	#[default]
 	None,
 	Joined,
@@ -47,6 +49,40 @@ impl ResumeDisposition {
 impl Display for ResumeDisposition {
 	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
 		f.write_str(self.as_str())
+	}
+}
+
+impl EncodeLabelValue for ResumeDisposition {
+	fn encode(&self, encoder: &mut LabelValueEncoder) -> Result<(), std::fmt::Error> {
+		encoder.write_str(self.as_str())
+	}
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum RouteOutcome {
+	#[default]
+	Ok,
+	ResumeError,
+}
+
+impl RouteOutcome {
+	pub(crate) const fn as_str(self) -> &'static str {
+		match self {
+			Self::Ok => "ok",
+			Self::ResumeError => "resume_error",
+		}
+	}
+}
+
+impl Display for RouteOutcome {
+	fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+		f.write_str(self.as_str())
+	}
+}
+
+impl EncodeLabelValue for RouteOutcome {
+	fn encode(&self, encoder: &mut LabelValueEncoder) -> Result<(), std::fmt::Error> {
+		encoder.write_str(self.as_str())
 	}
 }
 

@@ -35,6 +35,7 @@ use value_bag::visit::Visit;
 
 use crate::cel::{ContextBuilder, Expression, LLMContext};
 use crate::http::substrate::ateattr;
+use crate::http::substrate::ateattr::{ResumeDisposition, RouteOutcome};
 use crate::http::{Request, health};
 use crate::llm::InputFormat;
 use crate::llm::catalog::{CostLookupStatus, ModelCatalog};
@@ -1300,9 +1301,9 @@ pub struct RequestLog {
 	pub ate_actor_name: Option<String>,
 	pub ate_actor_uid: Option<String>,
 	pub ate_atespace: Option<String>,
-	pub ate_router_resume: Option<&'static str>,
+	pub ate_router_resume: Option<ResumeDisposition>,
 	pub ate_router_route_duration: Option<Duration>,
-	pub ate_router_outcome: Option<&'static str>,
+	pub ate_router_outcome: Option<RouteOutcome>,
 
 	pub request_handle: Option<ActiveHandle>,
 	pub request_snapshot: Option<Arc<cel::RequestSnapshot>>,
@@ -1456,8 +1457,8 @@ impl Drop for DropOnLog {
 					.metrics
 					.substrate_route_duration
 					.get_or_create(&SubstrateRouteLabels {
-						ate_router_outcome: RichStrng::from(outcome).into(),
-						ate_router_resume: log.ate_router_resume.map(RichStrng::from).into(),
+						ate_router_outcome: outcome,
+						ate_router_resume: log.ate_router_resume.unwrap_or_default(),
 					})
 					.observe(route_duration.as_secs_f64());
 			}
@@ -2818,9 +2819,9 @@ mod tests {
 	fn substrate_route_metric_uses_resolution_outcome_not_application_status() {
 		let (mut log, registry) = test_request_log_with_registry();
 		log.status = Some(crate::http::StatusCode::NOT_FOUND);
-		log.ate_router_resume = Some("triggered");
+		log.ate_router_resume = Some(ateattr::ResumeDisposition::Triggered);
 		log.ate_router_route_duration = Some(Duration::from_millis(10));
-		log.ate_router_outcome = Some("ok");
+		log.ate_router_outcome = Some(ateattr::RouteOutcome::Ok);
 		drop(DropOnLog::from(log));
 
 		let mut encoded = String::new();

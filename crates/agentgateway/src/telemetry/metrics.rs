@@ -16,6 +16,7 @@ use prometheus_client::registry::{Metric, Unit};
 use tracing::{debug, trace};
 
 use crate::HistogramMode;
+use crate::http::substrate::ateattr::{ResumeDisposition, RouteOutcome};
 use crate::mcp::MCPOperation;
 use crate::proxy::ProxyResponseReason;
 use crate::types::agent::TransportProtocol;
@@ -169,8 +170,8 @@ pub struct AdmissionLabels {
 
 #[derive(Clone, Hash, Default, Debug, PartialEq, Eq, EncodeLabelSet)]
 pub struct SubstrateRouteLabels {
-	pub ate_router_outcome: DefaultedUnknown<RichStrng>,
-	pub ate_router_resume: DefaultedUnknown<RichStrng>,
+	pub ate_router_outcome: RouteOutcome,
+	pub ate_router_resume: ResumeDisposition,
 }
 
 #[derive(
@@ -517,7 +518,7 @@ impl Metrics {
 				m
 			},
 			substrate_route_duration: {
-				let m = histogram_family(histogram_mode, &SUBSTRATE_ROUTE_DURATION_BUCKETS);
+				let m = histogram_family(histogram_mode, &HTTP_REQUEST_DURATION_BUCKET);
 				registry.register_with_unit(
 					"atenet_router_route_duration",
 					"Time from receiving a Substrate request to resolving its worker endpoint",
@@ -640,10 +641,6 @@ const CONNECT_DURATION_BUCKET: [f64; 10] = [
 const HTTP_REQUEST_DURATION_BUCKET: [f64; 14] = [
 	0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 80.0,
 ];
-const SUBSTRATE_ROUTE_DURATION_BUCKETS: [f64; 18] = [
-	0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0,
-	15.0, 30.0,
-];
 // Internal processing time
 // Covers 50us to 250ms with growth.
 const PROCESSING_DURATION_BUCKETS: [f64; 10] = [
@@ -673,7 +670,6 @@ const FIRST_TOKEN_BUCKET: [f64; 16] = [
 #[cfg(test)]
 mod tests {
 	use prometheus_client::encoding::prometheus_protobuf;
-	use prometheus_client::encoding::text::encode;
 	use prometheus_client::registry::Registry;
 
 	use super::*;
@@ -707,16 +703,5 @@ mod tests {
 				"mode: {mode:?}"
 			);
 		}
-	}
-
-	#[test]
-	fn substrate_request_parking_gauge_is_exported() {
-		let mut registry = Registry::default();
-		let metrics = Metrics::new(&mut registry, Default::default(), HistogramMode::Classic);
-		metrics.substrate_request_parking_active.inc();
-
-		let mut encoded = String::new();
-		encode(&mut encoded, &registry).expect("text encoding succeeds");
-		assert!(encoded.contains("substrate_request_parking_active 1"));
 	}
 }

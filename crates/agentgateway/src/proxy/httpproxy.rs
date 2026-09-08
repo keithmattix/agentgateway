@@ -2394,7 +2394,7 @@ async fn make_backend_call(
 		.get::<http::substrate::SubstrateRequestState>()
 	{
 		*substrate_state = Some(state.clone());
-		let resume = state.resume().as_str();
+		let resume = state.resume();
 		let actor_uid = state.actor_uid();
 		let route_duration = state.route_duration();
 		let route_outcome = state.route_outcome();
