@@ -1241,7 +1241,40 @@ type JWTProvider struct {
 	// JWT.
 	// +required
 	JWKS JWKS `json:"jwks"`
+	// Additional JWT claim presence requirements. Defaults to requiring `exp`.
+	// Issuer validation always requires `iss`; a non-empty audiences list also
+	// requires `aud`, regardless of these options. An empty `requiredClaims`
+	// list removes only the additional presence requirements. Expiration is
+	// still checked whenever `exp` is present.
+	// +optional
+	Validation *JWTValidationOptions `json:"validation,omitempty"`
 }
+
+// JWTValidationOptions controls claim presence requirements in addition to
+// those imposed by issuer and audience validation.
+type JWTValidationOptions struct {
+	// Additional claims that must be present in the token payload.
+	// Recognized values: `exp`, `nbf`, `aud`, `sub`.
+	// Defaults to `["exp"]` when omitted. An empty list adds no requirements
+	// beyond `iss`, which is always required, and `aud`, which is required
+	// when a non-empty audiences list is configured. Expiration is still
+	// checked whenever `exp` is present.
+	// +optional
+	// +listType=atomic
+	// +kubebuilder:validation:MaxItems=4
+	RequiredClaims *[]JWTClaim `json:"requiredClaims,omitempty"`
+}
+
+// JWTClaim is a JWT claim whose presence can be required during validation.
+// +k8s:enum
+type JWTClaim string
+
+const (
+	JWTClaimExpiration JWTClaim = "exp"
+	JWTClaimNotBefore  JWTClaim = "nbf"
+	JWTClaimAudience   JWTClaim = "aud"
+	JWTClaimSubject    JWTClaim = "sub"
+)
 
 // MCP-specific extensions for JWT authentication.
 type JWTMCPConfig struct {
@@ -2502,6 +2535,14 @@ type MCPAuthentication struct {
 	// +kubebuilder:default=Strict
 	// +optional
 	Mode JWTAuthenticationMode `json:"mode,omitempty"`
+
+	// Additional JWT claim presence requirements. Defaults to requiring `exp`.
+	// Issuer validation always requires `iss`; a non-empty audiences list also
+	// requires `aud`, regardless of these options. An empty `requiredClaims`
+	// list removes only the additional presence requirements. Expiration is
+	// still checked whenever `exp` is present.
+	// +optional
+	Validation *JWTValidationOptions `json:"validation,omitempty"`
 
 	// Client ID to use for short-circuiting Dynamic Client Registration.
 	// If set, the gateway will not proxy registration requests to the IDP and instead return this client ID.
