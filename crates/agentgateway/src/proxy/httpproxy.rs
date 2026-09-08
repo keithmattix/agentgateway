@@ -276,12 +276,12 @@ async fn apply_request_policies(
 
 	rp.llm_request_policies.local_rate_limit = pol
 		.local_rate_limit
-		.apply_selected("local rate limit", c, l, req, rp.headers())
+		.apply_selected("local rate limit", c, l, req, &mut rp.rate_limit_headers)
 		.await?;
 
 	rp.llm_request_policies.remote_rate_limit = pol
 		.remote_rate_limit
-		.apply_selected("remote rate limit", c, l, req, rp.headers())
+		.apply_selected("remote rate limit", c, l, req, &mut rp.rate_limit_headers)
 		.await?;
 
 	rp.buffer = pol.buffer.apply("buffer", c, l, req, rp.headers()).await?;
@@ -2834,7 +2834,7 @@ async fn make_backend_call(
 								policy_client.clone(),
 								&mut req,
 								&llm_request,
-								&mut response_policies.response_headers,
+								&mut response_policies.rate_limit_headers,
 							)
 							.assert_size::<{ 3 * 1024 }>(),
 						)
@@ -4569,6 +4569,8 @@ struct ResponsePolicies {
 	backend_transformation: ResponsePolicy<Transformation>,
 	gateway_transformation: ResponsePolicy<Transformation>,
 	response_headers: HeaderMap,
+	// Headers from allowed rate-limit checks, skipped when a later check denies.
+	rate_limit_headers: HeaderMap,
 	ext_proc: Option<ExtProcRequest>,
 	gateway_ext_proc: Option<ExtProcRequest>,
 	// Populated by the standard request-policy flow after conditional rate-limit policies are
@@ -4600,6 +4602,13 @@ impl ResponsePolicies {
 		l: &mut RequestLog,
 		is_upstream_response: bool,
 	) -> Result<(), ProxyResponse> {
+		// A denying policy already supplied its own rate-limit headers. Otherwise,
+		// include the allowed checks' headers even on direct responses. Apply these
+		// before response policies so explicit header modifiers can still override them.
+		if resp.extensions().get::<super::RateLimitDenied>().is_none() {
+			merge_in_headers(Some(self.rate_limit_headers.clone()), resp.headers_mut());
+		}
+
 		let rh = &mut self.response_headers;
 
 		self

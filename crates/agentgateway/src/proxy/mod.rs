@@ -169,6 +169,10 @@ impl Display for ProxyResponseReason {
 	}
 }
 
+/// Marks responses whose rate-limit headers come from a denying policy.
+#[derive(Clone, Copy, Debug)]
+pub(crate) struct RateLimitDenied;
+
 #[derive(thiserror::Error, Debug)]
 pub enum ProxyError {
 	#[error("bind not found")]
@@ -451,7 +455,9 @@ impl ProxyError {
 				raw_body,
 				..
 			} => {
-				let mut rb = ::http::Response::builder().status(StatusCode::TOO_MANY_REQUESTS);
+				let mut rb = ::http::Response::builder()
+					.status(StatusCode::TOO_MANY_REQUESTS)
+					.extension(RateLimitDenied);
 				if let Some(hm) = rb.headers_mut() {
 					*hm = *response_headers;
 				}
@@ -503,6 +509,12 @@ impl ProxyError {
 		};
 		let grpc_status = is_grpc_request.then(|| proxy_error_to_grpc_status(&self, code));
 		let mut rb = ::http::Response::builder().status(code);
+		if matches!(
+			&self,
+			ProxyError::RateLimitExceeded { .. } | ProxyError::MCP(mcp::Error::RateLimited { .. })
+		) {
+			rb = rb.extension(RateLimitDenied);
+		}
 
 		// Apply per-error headers
 		if let ProxyError::RateLimitExceeded {
@@ -513,6 +525,7 @@ impl ProxyError {
 			&& let Some(hm) = rb.headers_mut()
 		{
 			http::x_headers::set_ratelimit_headers(hm, limit, remaining, reset_seconds);
+			hm.insert(::http::header::RETRY_AFTER, reset_seconds.max(1).into());
 		}
 		if let ProxyError::MCP(mcp::Error::RateLimited { headers, .. }) = &self
 			&& let Some(hm) = rb.headers_mut()
