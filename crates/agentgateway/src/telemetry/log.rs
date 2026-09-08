@@ -1121,6 +1121,7 @@ impl RequestLog {
 			ate_atespace: None,
 			ate_router_resume: None,
 			ate_router_route_duration: None,
+			ate_router_outcome: None,
 			request_handle: None,
 			request_snapshot: None,
 			response_snapshot: None,
@@ -1301,6 +1302,7 @@ pub struct RequestLog {
 	pub ate_atespace: Option<String>,
 	pub ate_router_resume: Option<&'static str>,
 	pub ate_router_route_duration: Option<Duration>,
+	pub ate_router_outcome: Option<&'static str>,
 
 	pub request_handle: Option<ActiveHandle>,
 	pub request_snapshot: Option<Arc<cel::RequestSnapshot>>,
@@ -1447,12 +1449,9 @@ impl Drop for DropOnLog {
 				.request_duration
 				.get_or_create(&http_labels)
 				.observe(duration.as_secs_f64());
-			if let Some(route_duration) = log.ate_router_route_duration {
-				let outcome = if log.status.is_some_and(|status| status.is_success()) {
-					"ok"
-				} else {
-					"resume_error"
-				};
+			if let (Some(route_duration), Some(outcome)) =
+				(log.ate_router_route_duration, log.ate_router_outcome)
+			{
 				log
 					.metrics
 					.substrate_route_duration
@@ -2781,6 +2780,10 @@ mod tests {
 	}
 
 	fn test_request_log() -> RequestLog {
+		test_request_log_with_registry().0
+	}
+
+	fn test_request_log_with_registry() -> (RequestLog, Registry) {
 		let cel = CelLogging {
 			cel_context: crate::cel::ContextBuilder::new(),
 			filter: None,
@@ -2796,7 +2799,7 @@ mod tests {
 			Default::default(),
 			Default::default(),
 		));
-		RequestLog::new(
+		let log = RequestLog::new(
 			cel,
 			metrics,
 			ModelCatalog::empty(),
@@ -2807,7 +2810,28 @@ mod tests {
 				start: Instant::now(),
 				raw_peer_addr: None,
 			},
-		)
+		);
+		(log, registry)
+	}
+
+	#[test]
+	fn substrate_route_metric_uses_resolution_outcome_not_application_status() {
+		let (mut log, registry) = test_request_log_with_registry();
+		log.status = Some(crate::http::StatusCode::NOT_FOUND);
+		log.ate_router_resume = Some("triggered");
+		log.ate_router_route_duration = Some(Duration::from_millis(10));
+		log.ate_router_outcome = Some("ok");
+		drop(DropOnLog::from(log));
+
+		let mut encoded = String::new();
+		prometheus_client::encoding::text::encode(&mut encoded, &registry).unwrap();
+		assert!(
+			encoded.contains("atenet_router_route_duration_seconds_bucket")
+				&& encoded.contains("ate_router_outcome=\"ok\"")
+				&& encoded.contains("ate_router_resume=\"triggered\""),
+			"{encoded}"
+		);
+		assert!(!encoded.contains("ate_router_outcome=\"resume_error\""));
 	}
 
 	fn sampler_request() -> crate::http::Request {

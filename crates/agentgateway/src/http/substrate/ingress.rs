@@ -154,6 +154,7 @@ pub(crate) struct SubstrateRequestState {
 	current: Option<CachedAssignment>,
 	resume: ResumeDisposition,
 	route_duration: Duration,
+	route_outcome: Option<&'static str>,
 }
 
 fn default_cache_ttl() -> Duration {
@@ -483,6 +484,10 @@ impl SubstrateRequestState {
 		self.route_duration
 	}
 
+	pub(crate) fn route_outcome(&self) -> Option<&'static str> {
+		self.route_outcome
+	}
+
 	/// The authority sent to atunnel when proxying a raw CONNECT tunnel. atunnel
 	/// authenticates the router connection and uses this stable actor DNS name
 	/// plus port to select the currently active actor process.
@@ -502,6 +507,7 @@ impl SubstrateRequestState {
 
 	pub(crate) async fn resolve_target(&mut self) -> Result<Target, crate::proxy::ProxyResponse> {
 		if let Some(current) = self.current.as_ref() {
+			self.route_outcome = Some("ok");
 			pol_event!(
 				TRACE_POLICY_KIND,
 				Severity::Info,
@@ -525,8 +531,9 @@ impl SubstrateRequestState {
 			Ok(Resolved {
 				assignment,
 				source,
-				resume,
-			}) => {
+			resume,
+		}) => {
+				self.route_outcome = Some("ok");
 				let target = assignment.target;
 				pol_event!(
 					TRACE_POLICY_KIND,
@@ -549,6 +556,7 @@ impl SubstrateRequestState {
 				Ok(Target::Address(target))
 			},
 			Err((error, source)) => {
+				self.route_outcome = Some("resume_error");
 				pol_event!(
 					TRACE_POLICY_KIND,
 					Severity::Error,
@@ -690,6 +698,7 @@ impl RequestPolicyTrait for SubstrateIngress {
 			current: None,
 			resume: ResumeDisposition::None,
 			route_duration: Duration::ZERO,
+			route_outcome: None,
 		});
 		Ok(PolicyResponse::default())
 	}

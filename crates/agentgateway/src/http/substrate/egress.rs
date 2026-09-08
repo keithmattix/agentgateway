@@ -52,9 +52,6 @@ impl RequestPolicyTrait for SubstrateEgress {
 		.await;
 		let policy = match policy {
 			Ok(response) => response.into_inner(),
-			// An Actor without an EgressPolicy has no actor-specific restrictions.
-			// CONNECT authentication already established that this is a running Actor.
-			Err(status) if status.code() == Code::NotFound => return Ok(PolicyResponse::default()),
 			Err(status) if matches!(status.code(), Code::Unavailable | Code::DeadlineExceeded) => {
 				return Err(
 					ProxyError::SubstrateEgressUnavailable(format!(

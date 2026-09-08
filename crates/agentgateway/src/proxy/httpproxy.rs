@@ -2397,10 +2397,12 @@ async fn make_backend_call(
 		let resume = state.resume().as_str();
 		let actor_uid = state.actor_uid();
 		let route_duration = state.route_duration();
+		let route_outcome = state.route_outcome();
 		log.add(|l| {
 			l.ate_router_resume = Some(resume);
 			l.ate_actor_uid = actor_uid;
 			l.ate_router_route_duration = Some(route_duration);
+			l.ate_router_outcome = route_outcome;
 		});
 	}
 	substrate_selection?;
