@@ -5564,6 +5564,11 @@ func (in *Tracing) DeepCopyInto(out *Tracing) {
 		*out = new(CELExpression)
 		**out = **in
 	}
+	if in.ParentNotSampled != nil {
+		in, out := &in.ParentNotSampled, &out.ParentNotSampled
+		*out = new(CELExpression)
+		**out = **in
+	}
 	if in.Filter != nil {
 		in, out := &in.Filter, &out.Filter
 		*out = new(CELExpression)
