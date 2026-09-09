@@ -9,6 +9,28 @@ use crate::common::prelude::*;
 
 const ACTOR_UID: &str = "6f1c2d3e-4a5b-6c7d-8e9f-0a1b2c3d4e5f";
 
+async fn send_request(io: MemoryClient, method: Method, url: &str) -> Response {
+	let authority = url
+		.strip_prefix("http://")
+		.and_then(|url| url.split('/').next())
+		.expect("Substrate ingress test URL has an HTTP authority");
+	let mut labels = authority.split('.');
+	let actor = labels
+		.next()
+		.expect("Substrate ingress test URL has an actor");
+	let atespace = labels
+		.next()
+		.expect("Substrate ingress test URL has an atespace");
+	let target_actor = format!("{atespace}/{actor}");
+	send_request_headers(
+		io,
+		method,
+		url,
+		&[("ate-target-actor", target_actor.as_str())],
+	)
+	.await
+}
+
 #[derive(Clone)]
 struct IngressHandler {
 	pod_ip: String,
@@ -1001,7 +1023,7 @@ async fn actor_ingress_reports_no_resume_when_the_resume_fails() {
 }
 
 #[tokio::test]
-async fn actor_ingress_uses_the_original_connect_authority() {
+async fn actor_ingress_uses_the_original_connect_target_actor() {
 	let actor = simple_mock().await;
 	let calls = Arc::new(AtomicUsize::new(0));
 	let api = ateapimock::AteApiMock::new({
@@ -1041,9 +1063,12 @@ async fn actor_ingress_uses_the_original_connect_authority() {
 		.await;
 
 	let mut io = gateway.serve_tunnel(strng::literal!("outer"));
-	let connect_target = "my-actor.demo.actors.resources.substrate.ate.dev:9090";
+	let connect_target = "application.example:9090";
 	io.write_all(
-		format!("CONNECT {connect_target} HTTP/1.1\r\nHost: {connect_target}\r\n\r\n").as_bytes(),
+	format!(
+		"CONNECT {connect_target} HTTP/1.1\r\nHost: {connect_target}\r\nate-target-actor: demo/my-actor\r\n\r\n"
+	)
+	.as_bytes(),
 	)
 	.await
 	.unwrap();
@@ -1064,7 +1089,7 @@ async fn actor_ingress_uses_the_original_connect_authority() {
 	);
 
 	// The re-entered request's Host is unrelated to the actor. Native ingress
-	// must use the original CONNECT authority retained in SourceContext.
+	// must use the original CONNECT routing header retained in SourceContext.
 	io.write_all(b"GET / HTTP/1.1\r\nHost: irrelevant.example\r\nConnection: close\r\n\r\n")
 		.await
 		.unwrap();
@@ -1106,8 +1131,7 @@ async fn actor_ingress_uses_backend_tunnel_for_connect() {
 		}
 		let request = String::from_utf8(request).unwrap();
 		assert!(
-			request
-				.starts_with("CONNECT my-actor.demo.actors.resources.substrate.ate.dev:9090 HTTP/1.1\r\n"),
+			request.starts_with("CONNECT application.example:9090 HTTP/1.1\r\n"),
 			"unexpected tunnel request: {request:?}"
 		);
 		downstream
@@ -1163,10 +1187,15 @@ async fn actor_ingress_uses_backend_tunnel_for_connect() {
 		}))
 		.await;
 	let mut io = gateway.serve_tunnel(strng::literal!("outer"));
-	let authority = "my-actor.demo.actors.resources.substrate.ate.dev:9090";
-	io.write_all(format!("CONNECT {authority} HTTP/1.1\r\nHost: {authority}\r\n\r\n").as_bytes())
-		.await
-		.unwrap();
+	let authority = "application.example:9090";
+	io.write_all(
+		format!(
+			"CONNECT {authority} HTTP/1.1\r\nHost: {authority}\r\nate-target-actor: demo/my-actor\r\n\r\n"
+		)
+		.as_bytes(),
+	)
+	.await
+	.unwrap();
 	let mut response = [0; 128];
 	let response_len = io.read(&mut response).await.unwrap();
 	assert!(String::from_utf8_lossy(&response[..response_len]).starts_with("HTTP/1.1 200 OK\r\n"));
