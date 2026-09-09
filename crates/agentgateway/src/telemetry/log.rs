@@ -1457,8 +1457,8 @@ impl Drop for DropOnLog {
 					.metrics
 					.substrate_route_duration
 					.get_or_create(&SubstrateRouteLabels {
-						ate_router_outcome: outcome,
-						ate_router_resume: log.ate_router_resume.unwrap_or_default(),
+						ate_router_outcome: outcome.into(),
+						ate_router_resume: log.ate_router_resume.unwrap_or_default().into(),
 					})
 					.observe(route_duration.as_secs_f64());
 			}

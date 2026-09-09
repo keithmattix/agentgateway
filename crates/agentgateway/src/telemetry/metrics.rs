@@ -168,10 +168,10 @@ pub struct AdmissionLabels {
 	pub bind: DefaultedUnknown<RichStrng>,
 }
 
-#[derive(Clone, Hash, Default, Debug, PartialEq, Eq, EncodeLabelSet)]
+#[derive(Clone, Hash, Debug, PartialEq, Eq, EncodeLabelSet)]
 pub struct SubstrateRouteLabels {
-	pub ate_router_outcome: RouteOutcome,
-	pub ate_router_resume: ResumeDisposition,
+	pub ate_router_outcome: EncodeDisplay<RouteOutcome>,
+	pub ate_router_resume: EncodeDisplay<ResumeDisposition>,
 }
 
 #[derive(
