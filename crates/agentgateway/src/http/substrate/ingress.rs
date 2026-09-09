@@ -633,11 +633,8 @@ impl RequestPolicyTrait for SubstrateIngress {
 				let authority = values.next()?.to_str().ok()?;
 				(values.next().is_none()).then_some(authority)
 			});
-		// CONNECT re-entry retains the outer authority in SourceContext. A direct
-		// CONNECT routed by AgentGateway has no such re-entry, so its request URI
-		// is the authoritative source (and preserves its non-default port). The
-		// authority identifies only the target port; actor selection comes from
-		// `ate-target-actor` below.
+		// N.B: we only use the authority to determine the target port.
+		// We forward it unchanged to the actor.
 		let authority = connect_authority
 			.map(ToOwned::to_owned)
 			.or_else(|| {
