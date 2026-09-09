@@ -939,6 +939,10 @@ pub struct LocalLLMParams {
 	/// For Azure: the Foundry project name (required for foundry resource type)
 	azure_project_name: Option<Strng>,
 	/// Base URL for the upstream provider. Expands to hostOverride, pathPrefix, and tls for https URLs.
+	/// The URL path is the upstream base path and defaults to / when omitted.
+	/// Provider-specific endpoint paths are appended to this base path.
+	/// For example, https://api.openai.com/v1 sends completions to /v1/chat/completions,
+	/// while https://api.openai.com sends them to /chat/completions.
 	#[serde(default)]
 	base_url: Option<Strng>,
 	/// Override the upstream host for this provider.
@@ -1065,11 +1069,11 @@ impl LocalLLMModels {
 			.host_override
 			.get_or_insert_with(|| (host, port).into());
 		let path = url.path().trim_end_matches('/');
-		if !path.is_empty() && self.params.path_override.is_none() {
+		if self.params.path_override.is_none() {
 			self
 				.params
 				.path_prefix
-				.get_or_insert_with(|| strng::new(path));
+				.get_or_insert_with(|| strng::new(if path.is_empty() { "/" } else { path }));
 		}
 		if url.scheme() == "https" && self.backend_tls.is_none() {
 			self.backend_tls = Some(http::backendtls::LocalBackendTLS::default());

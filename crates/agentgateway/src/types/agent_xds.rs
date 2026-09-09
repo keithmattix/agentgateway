@@ -226,7 +226,7 @@ fn provider_connection_from_url(
 		host_override: Some(Target::from((host, port))),
 		path_prefix: {
 			let path = url.path().trim_end_matches('/');
-			(!path.is_empty()).then(|| strng::new(path))
+			Some(strng::new(if path.is_empty() { "/" } else { path }))
 		},
 		use_tls: url.scheme() == "https",
 	})
@@ -5756,6 +5756,11 @@ mod tests {
 
 	#[test]
 	fn test_provider_connection_precedence() -> Result<(), ProtoError> {
+		for base_url in ["http://override.example", "http://override.example/"] {
+			let connection = provider_connection_from_url(base_url, 0)?;
+			assert_eq!(connection.path_prefix.as_deref(), Some("/"));
+		}
+
 		let explicit = resolve_provider_connection(
 			Some(llm::custom::ProviderPreset::Ollama),
 			Some("https://override.example/v2/"),

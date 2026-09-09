@@ -1038,6 +1038,7 @@ llm:
 		panic!("expected custom provider");
 	};
 	assert_eq!(custom_provider.model.as_deref(), Some("upstream-custom"));
+	assert_eq!(provider.path_prefix.as_deref(), Some("/"));
 	assert!(custom_provider.formats.iter().any(|format| format.format
 		== crate::llm::custom::ProviderFormat::Messages
 		&& format.path.as_deref() == Some("/api/messages")));
