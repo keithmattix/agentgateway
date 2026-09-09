@@ -9,12 +9,14 @@ use frozen_collections::FzHashSet;
 use prometheus_client::encoding::EncodeLabelSet;
 use prometheus_client::metrics::counter;
 use prometheus_client::metrics::family::{Family, MetricConstructor};
+use prometheus_client::metrics::gauge::Gauge;
 use prometheus_client::metrics::histogram::{Histogram as PromHistogram, NativeHistogramConfig};
 use prometheus_client::metrics::info::Info;
 use prometheus_client::registry::{Metric, Unit};
 use tracing::{debug, trace};
 
 use crate::HistogramMode;
+use crate::http::substrate::ateattr::{ResumeDisposition, RouteOutcome};
 use crate::mcp::MCPOperation;
 use crate::proxy::ProxyResponseReason;
 use crate::types::agent::TransportProtocol;
@@ -166,6 +168,12 @@ pub struct AdmissionLabels {
 	pub bind: DefaultedUnknown<RichStrng>,
 }
 
+#[derive(Clone, Hash, Debug, PartialEq, Eq, EncodeLabelSet)]
+pub struct SubstrateRouteLabels {
+	pub ate_router_outcome: EncodeDisplay<RouteOutcome>,
+	pub ate_router_resume: EncodeDisplay<ResumeDisposition>,
+}
+
 #[derive(
 	Copy, Clone, Hash, Debug, PartialEq, Eq, prometheus_client::encoding::EncodeLabelValue, Default,
 )]
@@ -264,6 +272,7 @@ pub struct Metrics {
 	pub requests: Counter,
 	pub request_duration: Histogram<HTTPLabels>,
 	pub request_processing_duration: Histogram<MinimalHTTPLabels>,
+	pub substrate_route_duration: Histogram<SubstrateRouteLabels>,
 	pub response_processing_duration: Histogram<MinimalHTTPLabels>,
 	pub response_bytes: Family<HTTPLabels, counter::Counter>,
 
@@ -293,6 +302,9 @@ pub struct Metrics {
 
 	// metrics for request retries
 	pub retries: Counter,
+
+	// Number of requests currently waiting for a Substrate actor to become routable.
+	pub substrate_request_parking_active: Gauge,
 }
 
 // FilteredRegistry is a wrapper around Registry that allows to filter out certain metrics.
@@ -415,6 +427,15 @@ impl Metrics {
 		);
 
 		Metrics {
+			substrate_request_parking_active: {
+				let m = Gauge::default();
+				registry.register(
+					"substrate_request_parking_active",
+					"Number of requests waiting for a Substrate actor to become routable",
+					m.clone(),
+				);
+				m
+			},
 			requests: build(
 				&mut registry,
 				"requests",
@@ -491,6 +512,16 @@ impl Metrics {
 				registry.register_with_unit(
 					"request_processing",
 					"Duration from receiving an HTTP request to sending the primary outbound call (seconds)",
+					Unit::Seconds,
+					m.clone(),
+				);
+				m
+			},
+			substrate_route_duration: {
+				let m = histogram_family(histogram_mode, &HTTP_REQUEST_DURATION_BUCKET);
+				registry.register_with_unit(
+					"atenet_router_route_duration",
+					"Time from receiving a Substrate request to resolving its worker endpoint",
 					Unit::Seconds,
 					m.clone(),
 				);

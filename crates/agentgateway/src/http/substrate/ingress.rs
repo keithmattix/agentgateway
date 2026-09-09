@@ -5,11 +5,12 @@ use std::sync::{Arc, OnceLock};
 use std::time::{Duration, Instant};
 
 use ::http::StatusCode;
+use prometheus_client::metrics::gauge::Gauge;
 use quick_cache::sync::Cache;
 use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 use tonic::Code;
 
-use super::ateattr::ResumeDisposition;
+use super::ateattr::{ResumeDisposition, RouteOutcome};
 use super::{ActorRef, CACHE_CAPACITY, TRACE_POLICY_KIND, valid_resource_name};
 use crate::http::{PolicyResponse, Request, Response};
 use crate::proxy::dtrace::{Severity, pol_event};
@@ -153,6 +154,7 @@ pub(crate) struct SubstrateRequestState {
 	current: Option<CachedAssignment>,
 	resume: ResumeDisposition,
 	route_duration: Duration,
+	route_outcome: Option<RouteOutcome>,
 }
 
 fn default_cache_ttl() -> Duration {
@@ -269,6 +271,17 @@ pub struct SubstrateIngress {
 	parking_slots: Arc<OnceLock<Arc<Semaphore>>>,
 }
 
+struct ParkingPermit {
+	_permit: OwnedSemaphorePermit,
+	active: Gauge,
+}
+
+impl Drop for ParkingPermit {
+	fn drop(&mut self) {
+		self.active.dec();
+	}
+}
+
 impl SubstrateIngress {
 	async fn resume_actor(
 		&self,
@@ -362,18 +375,22 @@ impl SubstrateIngress {
 		result.await
 	}
 
-	fn acquire_parking_slot(&self) -> Result<Option<OwnedSemaphorePermit>, ResumeError> {
+	fn acquire_parking_slot(&self, active: &Gauge) -> Result<Option<ParkingPermit>, ResumeError> {
 		if !self.request_parking.enabled() {
 			return Ok(None);
 		}
 		let slots = self
 			.parking_slots
 			.get_or_init(|| Arc::new(Semaphore::new(self.request_parking.max)));
-		slots
+		let permit = slots
 			.clone()
 			.try_acquire_owned()
-			.map(Some)
-			.map_err(|_| ResumeError::ParkingFull)
+			.map_err(|_| ResumeError::ParkingFull)?;
+		active.inc();
+		Ok(Some(ParkingPermit {
+			_permit: permit,
+			active: active.clone(),
+		}))
 	}
 
 	fn retryable_while_parked(&self, code: Code) -> bool {
@@ -405,7 +422,7 @@ impl SubstrateIngress {
 			}
 		}
 		let _parking_permit = self
-			.acquire_parking_slot()
+			.acquire_parking_slot(&client.inputs.metrics.substrate_request_parking_active)
 			.map_err(|error| (error, ResolutionSource::Request))?;
 		loop {
 			match self.cache.entries.get_value_or_guard_async(&actor).await {
@@ -467,6 +484,10 @@ impl SubstrateRequestState {
 		self.route_duration
 	}
 
+	pub(crate) fn route_outcome(&self) -> Option<RouteOutcome> {
+		self.route_outcome
+	}
+
 	/// The authority sent to atunnel when proxying a raw CONNECT tunnel. atunnel
 	/// authenticates the router connection and uses this stable actor DNS name
 	/// plus port to select the currently active actor process.
@@ -486,6 +507,7 @@ impl SubstrateRequestState {
 
 	pub(crate) async fn resolve_target(&mut self) -> Result<Target, crate::proxy::ProxyResponse> {
 		if let Some(current) = self.current.as_ref() {
+			self.route_outcome = Some(RouteOutcome::Ok);
 			pol_event!(
 				TRACE_POLICY_KIND,
 				Severity::Info,
@@ -511,6 +533,7 @@ impl SubstrateRequestState {
 				source,
 				resume,
 			}) => {
+				self.route_outcome = Some(RouteOutcome::Ok);
 				let target = assignment.target;
 				pol_event!(
 					TRACE_POLICY_KIND,
@@ -533,6 +556,7 @@ impl SubstrateRequestState {
 				Ok(Target::Address(target))
 			},
 			Err((error, source)) => {
+				self.route_outcome = Some(RouteOutcome::ResumeError);
 				pol_event!(
 					TRACE_POLICY_KIND,
 					Severity::Error,
@@ -674,6 +698,7 @@ impl RequestPolicyTrait for SubstrateIngress {
 			current: None,
 			resume: ResumeDisposition::None,
 			route_duration: Duration::ZERO,
+			route_outcome: None,
 		});
 		Ok(PolicyResponse::default())
 	}
@@ -688,7 +713,8 @@ mod tests {
 	use ::http::Method;
 	use protos::ateapi::control_server::{Control, ControlServer};
 	use protos::ateapi::{
-		Actor, ActorStatus, GetActorRequest, ResumeActorRequest, ResumeActorResponse,
+		Actor, ActorStatus, EgressPolicy, GetActorEgressPolicyRequest, GetActorRequest,
+		ResumeActorRequest, ResumeActorResponse,
 	};
 	use tonic::{Request as GrpcRequest, Response as GrpcResponse, Status};
 	use wiremock::matchers::{header, method};
@@ -743,6 +769,13 @@ mod tests {
 				}),
 				resumed: self.resumed,
 			}))
+		}
+
+		async fn get_actor_egress_policy(
+			&self,
+			_request: GrpcRequest<GetActorEgressPolicyRequest>,
+		) -> Result<GrpcResponse<EgressPolicy>, Status> {
+			Err(Status::unimplemented("not used"))
 		}
 	}
 
