@@ -322,6 +322,8 @@ fn parse_deprecated_tracing_endpoint(endpoint: &str) -> anyhow::Result<(Target, 
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct NormalizedLocalConfig {
 	#[serde(skip)]
+	pub(crate) standard_attributes: Arc<crate::telemetry::log::LoggingFields>,
+	#[serde(skip)]
 	pub(crate) budget_registration: crate::http::budget::BudgetRegistration,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub model_catalog: Option<Vec<crate::ModelCatalogSource>>,
@@ -340,8 +342,8 @@ pub struct NormalizedLocalConfig {
 #[apply(schema_de!)]
 pub struct LocalConfig {
 	/// config defines top-level settings for DNS, admin, networking, observability, and session
-	/// management. Unlike other sections, these are applied only at startup, except modelCatalog,
-	/// which is dynamically reloaded.
+	/// management. Unlike other sections, these are applied only at startup, except modelCatalog and
+	/// standardAttributes, which are dynamically reloaded.
 	#[serde(default)]
 	#[cfg_attr(feature = "schema", schemars(with = "Option<RawConfig>"))]
 	#[allow(unused)]
@@ -3069,6 +3071,18 @@ async fn convert(
 		.cloned()
 		.map(serde_json::from_value)
 		.transpose()?;
+	let raw_attributes = local_runtime_config
+		.as_ref()
+		.as_ref()
+		.and_then(|config| config.get("standardAttributes"))
+		.filter(|value| !value.is_null())
+		.cloned()
+		.map(serde_json::from_value::<crate::RawStandardAttributes>)
+		.transpose()?;
+	let standard_attributes = Arc::new(
+		crate::config::standard_attributes(raw_attributes.as_ref())
+			.context("invalid config.standardAttributes")?,
+	);
 	merge_deprecated_frontend_policies(config, &mut frontend_policies)?;
 	let mut all_policies = vec![];
 	let mut all_backends = vec![];
@@ -3349,6 +3363,7 @@ async fn convert(
 	// Add frontend policies targeted to this listener
 	all_policies.extend_from_slice(&split_frontend_policies(gateway, frontend_policies).await?);
 	let normalized = NormalizedLocalConfig {
+		standard_attributes,
 		budget_registration: Default::default(),
 		model_catalog,
 		binds: all_binds,

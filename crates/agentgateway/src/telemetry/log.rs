@@ -394,8 +394,9 @@ pub struct Config {
 	pub filter: Option<Arc<cel::Expression>>,
 	/// Deprecated: use frontendPolicies.accessLog
 	pub fields: LoggingFields,
-	/// Database-only request log fields.
-	pub database_fields: LoggingFields,
+	/// Compiled standard attributes, replaced on config reload and snapshotted per request.
+	#[serde(skip)]
+	pub database_fields: Arc<arc_swap::ArcSwap<LoggingFields>>,
 	/// Level sets the level for logs
 	pub level: String,
 	/// Format sets the logging format (text or json)
@@ -723,6 +724,11 @@ impl<'a> CelLoggingExecutor<'a> {
 
 impl CelLogging {
 	pub fn new(cfg: Config, metrics: MetricsConfig) -> Self {
+		let database_fields = if cfg.database.is_some() {
+			cfg.database_fields.load().as_ref().clone()
+		} else {
+			LoggingFields::default()
+		};
 		let mut cel_context = cel::ContextBuilder::new();
 		if let Some(f) = &cfg.filter {
 			cel_context.register_log_expression(f.as_ref());
@@ -730,7 +736,7 @@ impl CelLogging {
 		for v in cfg.fields.add.values_unordered() {
 			cel_context.register_log_expression(v.as_ref());
 		}
-		for v in cfg.database_fields.add.values_unordered() {
+		for v in database_fields.add.values_unordered() {
 			cel_context.register_log_expression(v.as_ref());
 		}
 		for v in metrics.metric_fields.add.values_unordered() {
@@ -746,7 +752,7 @@ impl CelLogging {
 			fields: cfg.fields,
 			otlp_filter: None,
 			otlp_fields: LoggingFields::default(),
-			database_fields: cfg.database_fields,
+			database_fields,
 			metric_fields: metrics.metric_fields,
 		}
 	}

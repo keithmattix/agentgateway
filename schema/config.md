@@ -2,7 +2,7 @@
 
 |Field|Type|Description|
 |-|-|-|
-|`config`|object|config defines top-level settings for DNS, admin, networking, observability, and session<br>management. Unlike other sections, these are applied only at startup, except modelCatalog,<br>which is dynamically reloaded.|
+|`config`|object|config defines top-level settings for DNS, admin, networking, observability, and session<br>management. Unlike other sections, these are applied only at startup, except modelCatalog and<br>standardAttributes, which are dynamically reloaded.|
 |`config.enableIpv6`|boolean|Enable IPv6 address resolution and binding. Defaults to true.|
 |`config.dns`|object|DNS resolver settings.|
 |`config.dns.lookupFamily`|enum|Controls which IP address families the DNS resolver will query for<br>upstream connections.<br>Accepted values: All, Auto, V4Preferred, V4Only, V6Only.<br>Defaults to Auto (IPv4-only when enableIpv6 is false, both when true).|

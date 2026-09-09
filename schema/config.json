@@ -4,7 +4,7 @@
   "type": "object",
   "properties": {
     "config": {
-      "description": "config defines top-level settings for DNS, admin, networking, observability, and session\nmanagement. Unlike other sections, these are applied only at startup, except modelCatalog,\nwhich is dynamically reloaded.",
+      "description": "config defines top-level settings for DNS, admin, networking, observability, and session\nmanagement. Unlike other sections, these are applied only at startup, except modelCatalog and\nstandardAttributes, which are dynamically reloaded.",
       "anyOf": [
         {
           "$ref": "#/$defs/RawConfig"
