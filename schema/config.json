@@ -7578,7 +7578,7 @@
       ]
     },
     "SubstrateIngress": {
-      "description": "Resolves Substrate actor hostnames through the ate-api for dynamic route backends.",
+      "description": "Resolves Substrate actors through the ate-api for dynamic route backends.",
       "type": "object",
       "properties": {
         "policies": {
