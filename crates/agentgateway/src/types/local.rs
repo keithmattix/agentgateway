@@ -3192,6 +3192,7 @@ async fn convert(
 			}),
 			key: p.name.to_string().into(),
 			target: p.target,
+			creation_timestamp: 0,
 			inheritance: Default::default(),
 			policy: tp,
 		};
@@ -3758,6 +3759,7 @@ async fn convert_gateway_listener(
 				key: strng::format!("gateway/{reference}/{idx}"),
 				name: None,
 				target: target.clone(),
+				creation_timestamp: 0,
 				inheritance: Default::default(),
 				policy: (pol, PolicyPhase::Gateway).into(),
 			});
@@ -4757,6 +4759,7 @@ async fn convert_llm_config(
 				key,
 				name: None,
 				target: target.clone(),
+				creation_timestamp: 0,
 				inheritance: Default::default(),
 				policy: (pol, PolicyPhase::Gateway).into(),
 			});
@@ -4767,6 +4770,7 @@ async fn convert_llm_config(
 				key,
 				name: None,
 				target: target.clone(),
+				creation_timestamp: 0,
 				inheritance: Default::default(),
 				policy: (pol, PolicyPhase::Route).into(),
 			});
@@ -5043,6 +5047,7 @@ async fn convert_listener(
 				key,
 				name: None,
 				target: target.clone(),
+				creation_timestamp: 0,
 				inheritance: Default::default(),
 				policy: (pol, PolicyPhase::Gateway).into(),
 			});
@@ -5182,6 +5187,7 @@ async fn split_frontend_policies(
 			key: key.clone(),
 			name: None,
 			target: PolicyTarget::Gateway(gateway.clone()),
+			creation_timestamp: 0,
 			inheritance: Default::default(),
 			policy: p.into(),
 		});
