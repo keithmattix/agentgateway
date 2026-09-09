@@ -3348,10 +3348,7 @@ fn frontend_policy_from_proto(
 
 	Ok(match &spec.kind {
 		Some(fps::Kind::Http(h)) => FrontendPolicy::HTTP(frontend::HTTP {
-			max_buffer_size: h
-				.max_buffer_size
-				.map(|v| v as usize)
-				.unwrap_or_else(crate::defaults::max_buffer_size),
+			max_buffer_size: h.max_buffer_size.map(|v| v as usize),
 			http1_max_headers: h.http1_max_headers.map(|v| v as usize),
 			http1_idle_timeout: h
 				.http1_idle_timeout

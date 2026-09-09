@@ -33,6 +33,9 @@ use crate::*;
 pub mod model_router;
 pub use agent_llm::{azure, bedrock, vertex};
 
+/// Default body buffer limit once a request enters LLM processing.
+pub const DEFAULT_BUFFER_LIMIT: usize = 32 * 1024 * 1024;
+
 pub mod catalog;
 pub mod policy;
 

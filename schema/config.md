@@ -17800,7 +17800,7 @@
 |`binds[].mode`|enum|Whether the bind opens an OS listener socket. Defaults to `standard` (binds the port).<br>Set to `internal` to create a routing-only bind that does not bind a socket.<br>Possible values: `standard`, `internal`.|
 |`frontendPolicies`|object|frontendPolicies defines top level policies applying to all traffic.|
 |`frontendPolicies.http`|object|Settings for handling incoming HTTP requests.|
-|`frontendPolicies.http.maxBufferSize`|integer|Maximum request or response body size buffered by the frontend.|
+|`frontendPolicies.http.maxBufferSize`|integer|Maximum request or response body size buffered by the frontend.<br>Defaults to 2 MiB, or 32 MiB once the request enters LLM processing.|
 |`frontendPolicies.http.http1MaxHeaders`|integer|Maximum number of headers allowed in an HTTP/1 request. Changing this value causes a<br>performance degradation, even when set lower than the default of 100.|
 |`frontendPolicies.http.http1IdleTimeout`|string|How long an idle HTTP/1 connection may stay open.|
 |`frontendPolicies.http.http1HeaderCase`|enum|Header casing behavior for HTTP/1 responses.<br>Possible values: `lowercase`, `preserve`.|

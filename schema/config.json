@@ -9939,11 +9939,14 @@
       "type": "object",
       "properties": {
         "maxBufferSize": {
-          "description": "Maximum request or response body size buffered by the frontend.",
-          "type": "integer",
+          "description": "Maximum request or response body size buffered by the frontend.\nDefaults to 2 MiB, or 32 MiB once the request enters LLM processing.",
+          "type": [
+            "integer",
+            "null"
+          ],
           "format": "uint",
           "minimum": 0,
-          "default": 2097152
+          "default": null
         },
         "http1MaxHeaders": {
           "description": "Maximum number of headers allowed in an HTTP/1 request. Changing this value causes a\nperformance degradation, even when set lower than the default of 100.",

@@ -2335,6 +2335,10 @@ async fn make_backend_call(
 ) -> Result<Response, ProxyResponse> {
 	let resolved_backend;
 	let backend = if let Backend::LLMRouter(_, router) = backend {
+		// Model routing parses the LLM body before provider request processing.
+		req
+			.extensions_mut()
+			.get_or_insert_with(|| crate::transport::BufferLimit::new(llm::DEFAULT_BUFFER_LIMIT));
 		let resolved = match router.resolve(&mut req).await {
 			model_router::ResolveResult::DirectResponse(resp) => return Ok(resp),
 			model_router::ResolveResult::Backend(resolved) => resolved,
@@ -2660,6 +2664,9 @@ async fn make_backend_call(
 
 	let (mut req, llm_response_policies, llm_request) =
 		if let Some(llm) = &backend_call.backend_policies.llm_provider {
+			req
+				.extensions_mut()
+				.get_or_insert_with(|| crate::transport::BufferLimit::new(llm::DEFAULT_BUFFER_LIMIT));
 			// LLM requires CEL execution after the snapshot so we do not clear extensions
 			let mut req = req.take_and_snapshot_without_clearing_extensions(log.as_mut())?;
 			let route_type = llm_request_policies
