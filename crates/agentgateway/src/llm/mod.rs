@@ -1504,10 +1504,14 @@ impl AIProvider {
 
 						// The native endpoints authenticate API keys via x-goog-api-key;
 						// `Authorization: Bearer` is reserved for OAuth access tokens there.
-						// Google API keys are uniformly "AIza"-prefixed, so relocate exactly
+						// Google API keys use "AIza" or "AQ." prefixes, so relocate exactly
 						// those, keeping OAuth tokens (ya29., JWTs, ...) and explicitly
 						// configured Authorization intact.
-						if !explicit_authorization && authz.token().starts_with(gemini::API_KEY_PREFIX) {
+						if !explicit_authorization
+							&& gemini::API_KEY_PREFIXES
+								.iter()
+								.any(|prefix| authz.token().starts_with(prefix))
+						{
 							req.headers.remove(http::header::AUTHORIZATION);
 							let mut api_key = HeaderValue::from_str(authz.token())?;
 							api_key.set_sensitive(true);
