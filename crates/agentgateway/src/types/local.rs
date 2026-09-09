@@ -438,6 +438,7 @@ pub struct LocalLLMConfig {
 	/// models defines the set of models that can be served by this gateway. The model name refers to the
 	/// model in the users request that is matched; the model sent to the actual LLM can be overridden
 	/// on a per-model basis.
+	#[serde(default)]
 	models: Vec<LocalLLMModels>,
 	/// virtualModels defines a set of models that can be served from the gateway. The model name refers to the
 	/// model in the users request that is matched. However, unlike the `models` field, virtual models will
@@ -1850,6 +1851,7 @@ pub enum McpStatefulMode {
 #[apply(schema_de!)]
 pub struct LocalMcpBackend {
 	/// MCP server targets to multiplex together.
+	#[serde(default)]
 	pub targets: Vec<Arc<LocalMcpTarget>>,
 	#[serde(default)]
 	pub stateful_mode: McpStatefulMode,

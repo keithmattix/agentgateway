@@ -8236,10 +8236,7 @@
           "type": "boolean"
         }
       },
-      "additionalProperties": false,
-      "required": [
-        "targets"
-      ]
+      "additionalProperties": false
     },
     "LocalMcpTarget": {
       "type": "object",
@@ -11622,10 +11619,7 @@
           ]
         }
       },
-      "additionalProperties": false,
-      "required": [
-        "models"
-      ]
+      "additionalProperties": false
     },
     "LocalLLMProvider": {
       "type": "object",
@@ -12621,10 +12615,7 @@
           ]
         }
       },
-      "additionalProperties": false,
-      "required": [
-        "targets"
-      ]
+      "additionalProperties": false
     },
     "LocalUIConfig": {
       "type": "object",
