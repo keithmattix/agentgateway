@@ -1646,7 +1646,14 @@ impl ModelRoute {
 		let llm_policy = s
 			.ai_policy
 			.as_ref()
-			.map(|policy| convert_backend_ai_policy(policy, diagnostics).map(Arc::new))
+			.map(|policy| {
+				let mut policy = convert_backend_ai_policy(policy, diagnostics)?;
+				// Preserve default model endpoint formats when the policy does not specify routes.
+				if policy.routes.is_empty() {
+					policy.routes = llm::model_router::default_route_types().routes.clone();
+				}
+				Ok::<_, ProtoError>(Arc::new(policy))
+			})
 			.transpose()?
 			.unwrap_or_else(llm::model_router::default_route_types);
 		let authorization = s
@@ -5245,7 +5252,10 @@ mod tests {
 				}),
 				backend_policies: vec![],
 			})),
-			ai_policy: None,
+			ai_policy: Some(proto::agent::backend_policy_spec::Ai {
+				transformations: [("model".to_string(), "\"gpt-5-mini\"".to_string())].into(),
+				..Default::default()
+			}),
 			authorization: Some(proto::agent::traffic_policy_spec::Rbac {
 				allow: vec!["request.headers['x-model-access'] == 'allowed'".to_string()],
 				deny: vec![],
@@ -5274,6 +5284,11 @@ mod tests {
 				.contains_key("/v1/chat/completions")
 		);
 		assert!(model.policies.authorization.is_some());
+		assert!(model.policies.llm.transformations.is_some());
+		assert_eq!(
+			model.policies.llm.resolve_route("/v1/messages"),
+			llm::RouteType::Messages
+		);
 		assert_eq!(model.backend.weight, 1);
 		match model.backend.target {
 			RouteBackendTarget::Backend(key) => {
