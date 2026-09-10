@@ -36,6 +36,8 @@ on:
         type: string
 
 env:
+  # Disable the Go cache program injected by Blacksmith runners.
+  GOCACHEPROG: ""
   CARGO_TERM_COLOR: always
   CI: true
   RUST_VERSION: "1.98.0"
