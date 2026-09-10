@@ -188,6 +188,16 @@ fn default_connect_target_port() -> NonZeroU16 {
 	DEFAULT_CONNECT_TARGET_PORT
 }
 
+// Regular HTTP requests have no actor-port contract, so their frontend
+// authority must not leak a proxy or port-forward port into actor selection.
+fn actor_port(authority: &::http::uri::Authority, method: &::http::Method) -> u16 {
+	if *method == ::http::Method::CONNECT {
+		authority.port_u16().unwrap_or(DEFAULT_ACTOR_PORT)
+	} else {
+		DEFAULT_ACTOR_PORT
+	}
+}
+
 /// Bounds requests held while an actor is waiting for capacity to resume.
 #[apply(schema!)]
 pub struct RequestParking {
@@ -495,6 +505,11 @@ impl SubstrateRequestState {
 		self.connect_authority.clone()
 	}
 
+	pub(crate) fn target_actor_header(&self) -> ::http::HeaderValue {
+		::http::HeaderValue::try_from(format!("{}/{}", self.actor.atespace, self.actor.name))
+			.expect("validated actor reference is a valid header value")
+	}
+
 	pub(crate) fn actor_uid(&self) -> Option<String> {
 		self
 			.current
@@ -633,8 +648,8 @@ impl RequestPolicyTrait for SubstrateIngress {
 				let authority = values.next()?.to_str().ok()?;
 				(values.next().is_none()).then_some(authority)
 			});
-		// N.B: we only use the authority to determine the target port.
-		// We forward it unchanged to the actor.
+		// The application request authority is forwarded unchanged. Its port only
+		// selects an actor port for raw CONNECT; regular HTTP addresses port 80.
 		let authority = connect_authority
 			.map(ToOwned::to_owned)
 			.or_else(|| {
@@ -652,8 +667,8 @@ impl RequestPolicyTrait for SubstrateIngress {
 					format!("invalid actor authority {authority:?}: {error}"),
 				)
 			})?;
-		let connect_authority = authority.to_string();
-		let actor_port = authority.port_u16().unwrap_or(DEFAULT_ACTOR_PORT);
+		let actor_port = actor_port(&authority, req.method());
+		let connect_authority = format!("{}:{actor_port}", authority.host());
 		let target_actor = if let Some(source) = req
 			.extensions()
 			.get::<crate::cel::SourceContext>()
@@ -733,6 +748,16 @@ mod tests {
 	#[test]
 	fn default_connect_target_port_matches_atunnel_connect_ingress() {
 		assert_eq!(super::default_connect_target_port().get(), 8443);
+	}
+
+	#[test]
+	fn actor_port_uses_default_port_for_http_and_connect_port_for_tunnels() {
+		let authority = "application.example:43123"
+			.parse::<::http::uri::Authority>()
+			.unwrap();
+
+		assert_eq!(super::actor_port(&authority, &Method::GET), 80);
+		assert_eq!(super::actor_port(&authority, &Method::CONNECT), 43123);
 	}
 
 	#[derive(Clone)]

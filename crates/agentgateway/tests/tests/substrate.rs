@@ -1107,7 +1107,7 @@ async fn actor_ingress_uses_the_original_connect_target_actor() {
 	let actor_requests = actor.received_requests().await.unwrap();
 	assert_eq!(
 		actor_requests[0].headers.get("x-ate-target-port").unwrap(),
-		"9090"
+		"80"
 	);
 }
 
@@ -1131,8 +1131,12 @@ async fn actor_ingress_uses_backend_tunnel_for_connect() {
 		}
 		let request = String::from_utf8(request).unwrap();
 		assert!(
-			request.starts_with("CONNECT application.example:9090 HTTP/1.1\r\n"),
+			request.starts_with("CONNECT application.example:80 HTTP/1.1\r\n"),
 			"unexpected tunnel request: {request:?}"
+		);
+		assert!(
+			request.contains("ate-target-actor: demo/my-actor\r\n"),
+			"tunnel request is missing the actor header: {request:?}"
 		);
 		downstream
 			.write_all(b"HTTP/1.1 200 Connection Established\r\n\r\n")
@@ -1210,7 +1214,12 @@ async fn actor_ingress_uses_backend_tunnel_for_connect() {
 		.unwrap();
 	assert!(String::from_utf8_lossy(&response).starts_with("HTTP/1.1 200 OK\r\n"));
 	assert_eq!(calls.load(Ordering::Relaxed), 1);
-	assert_eq!(actor.received_requests().await.unwrap().len(), 1);
+	let actor_requests = actor.received_requests().await.unwrap();
+	assert_eq!(actor_requests.len(), 1);
+	assert_eq!(
+		actor_requests[0].headers.get("x-ate-target-port").unwrap(),
+		"80"
+	);
 	drop(io);
 	atunnel.abort();
 }
