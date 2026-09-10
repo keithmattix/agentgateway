@@ -1134,6 +1134,10 @@ async fn actor_ingress_uses_backend_tunnel_for_connect() {
 			request.starts_with("CONNECT application.example:80 HTTP/1.1\r\n"),
 			"unexpected tunnel request: {request:?}"
 		);
+		assert!(
+			request.contains("ate-target-actor: demo/my-actor\r\n"),
+			"tunnel request is missing the actor header: {request:?}"
+		);
 		downstream
 			.write_all(b"HTTP/1.1 200 Connection Established\r\n\r\n")
 			.await

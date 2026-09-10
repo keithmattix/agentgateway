@@ -1895,6 +1895,7 @@ pub async fn build_transport(
 			}),
 			target: call.target.clone(),
 			token,
+			connect_headers: backend_call.connect_headers.clone(),
 			connect: tun.mode == backend::TunnelMode::Connect,
 		};
 		return Ok(Transport::Tunnel(app_transport, tc));
@@ -2179,6 +2180,15 @@ fn configure_tunnel_backend_call(
 			Target::try_from(state.connect_authority().as_str()).map_err(|error| {
 				ProxyError::ProcessingString(format!("invalid Substrate CONNECT authority: {error}"))
 			})?;
+	}
+	if let Some(state) = req
+		.extensions()
+		.get::<http::substrate::SubstrateRequestState>()
+	{
+		backend_call.connect_headers = vec![(
+			HeaderName::from_static("ate-target-actor"),
+			state.target_actor_header(),
+		)];
 	}
 	backend_call.set_tunnel_proxy(resolve_tunnel_backend_call(inputs, &tunnel, req)?);
 	Ok(())
@@ -3260,6 +3270,7 @@ pub fn build_service_call(
 			http_version_override,
 			transport_override: None,
 			hbone_port: agent_hbone::DEFAULT_HBONE_PORT,
+			connect_headers: vec![],
 			advanced_routing: None,
 			backend_policies,
 			tunnel_proxy: None,
@@ -3432,6 +3443,7 @@ pub fn build_service_call(
 		http_version_override,
 		transport_override,
 		hbone_port,
+		connect_headers: vec![],
 		advanced_routing: BackendCallAdvancedRouting::new(network_gateway, waypoint),
 		backend_policies,
 		tunnel_proxy: None,
@@ -4543,6 +4555,7 @@ pub struct BackendCall {
 	pub http_version_override: Option<::http::Version>,
 	pub transport_override: Option<(InboundProtocol, Vec<Identity>)>,
 	pub hbone_port: u16,
+	connect_headers: Vec<(HeaderName, HeaderValue)>,
 	advanced_routing: Option<Box<BackendCallAdvancedRouting>>,
 	pub backend_policies: Arc<BackendPolicies>,
 	tunnel_proxy: Option<Box<BackendCall>>,
@@ -4564,6 +4577,7 @@ impl BackendCall {
 			http_version_override: None,
 			transport_override: None,
 			hbone_port: agent_hbone::DEFAULT_HBONE_PORT,
+			connect_headers: vec![],
 			advanced_routing: None,
 			backend_policies,
 			tunnel_proxy: None,

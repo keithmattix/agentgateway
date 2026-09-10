@@ -505,6 +505,11 @@ impl SubstrateRequestState {
 		self.connect_authority.clone()
 	}
 
+	pub(crate) fn target_actor_header(&self) -> ::http::HeaderValue {
+		::http::HeaderValue::try_from(format!("{}/{}", self.actor.atespace, self.actor.name))
+			.expect("validated actor reference is a valid header value")
+	}
+
 	pub(crate) fn actor_uid(&self) -> Option<String> {
 		self
 			.current
