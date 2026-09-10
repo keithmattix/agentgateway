@@ -1107,7 +1107,7 @@ async fn actor_ingress_uses_the_original_connect_target_actor() {
 	let actor_requests = actor.received_requests().await.unwrap();
 	assert_eq!(
 		actor_requests[0].headers.get("x-ate-target-port").unwrap(),
-		"9090"
+		"80"
 	);
 }
 
