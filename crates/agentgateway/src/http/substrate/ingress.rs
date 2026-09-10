@@ -190,8 +190,8 @@ fn default_connect_target_port() -> NonZeroU16 {
 
 // Regular HTTP requests have no actor-port contract, so their frontend
 // authority must not leak a proxy or port-forward port into actor selection.
-fn actor_port(authority: &::http::uri::Authority, method: &::http::Method) -> u16 {
-	if *method == ::http::Method::CONNECT {
+fn actor_port(authority: &::http::uri::Authority, from_connect_tunnel: bool) -> u16 {
+	if from_connect_tunnel {
 		authority.port_u16().unwrap_or(DEFAULT_ACTOR_PORT)
 	} else {
 		DEFAULT_ACTOR_PORT
@@ -648,8 +648,11 @@ impl RequestPolicyTrait for SubstrateIngress {
 				let authority = values.next()?.to_str().ok()?;
 				(values.next().is_none()).then_some(authority)
 			});
+		// We detect whether this was from the connect tunnel based on whether there's
+		// a CONNECT authority in source context.
+		let from_connect_tunnel = connect_authority.is_some();
 		// The application request authority is forwarded unchanged. Its port only
-		// selects an actor port for raw CONNECT; regular HTTP addresses port 80.
+		// selects an actor port for CONNECT traffic; regular HTTP addresses port 80.
 		let authority = connect_authority
 			.map(ToOwned::to_owned)
 			.or_else(|| {
@@ -667,7 +670,7 @@ impl RequestPolicyTrait for SubstrateIngress {
 					format!("invalid actor authority {authority:?}: {error}"),
 				)
 			})?;
-		let actor_port = actor_port(&authority, req.method());
+		let actor_port = actor_port(&authority, from_connect_tunnel);
 		let connect_authority = format!("{}:{actor_port}", authority.host());
 		let target_actor = if let Some(source) = req
 			.extensions()
@@ -756,8 +759,8 @@ mod tests {
 			.parse::<::http::uri::Authority>()
 			.unwrap();
 
-		assert_eq!(super::actor_port(&authority, &Method::GET), 80);
-		assert_eq!(super::actor_port(&authority, &Method::CONNECT), 43123);
+		assert_eq!(super::actor_port(&authority, false), 80);
+		assert_eq!(super::actor_port(&authority, true), 43123);
 	}
 
 	#[derive(Clone)]
