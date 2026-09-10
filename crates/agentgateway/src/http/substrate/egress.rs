@@ -1,7 +1,10 @@
 use std::str::FromStr;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use ::http::{HeaderName, HeaderValue};
 use ipnet::IpNet;
+use quick_cache::sync::Cache;
 use tonic::Code;
 
 use super::{ActorIdentity, ActorRef, TRACE_POLICY_KIND};
@@ -19,6 +22,9 @@ use crate::{cel, *};
 const ACTOR_SPIFFE_URI_FORMAT: &str =
 	"spiffe://substrate-actor.local/atespace/{atespace}/actor/{actor_name}";
 
+const DEFAULT_CREDENTIAL_CACHE_CAPACITY: usize = 8192;
+const DEFAULT_CREDENTIAL_CACHE_TTL: Duration = Duration::from_secs(300);
+
 /// Retrieves and enforces the current Substrate egress policy for each request.
 #[apply(schema!)]
 pub struct SubstrateEgress {
@@ -29,6 +35,9 @@ pub struct SubstrateEgress {
 	/// the authority in a `substrate-secret://` URI.
 	#[serde(default, skip_serializing_if = "Vec::is_empty")]
 	pub credential_providers: Vec<CredentialProvider>,
+	#[serde(skip, default = "default_credential_cache")]
+	#[cfg_attr(feature = "schema", schemars(skip))]
+	credential_cache: CredentialCache,
 }
 
 /// An inline credential-provider backend selected by credential URI authority.
@@ -41,6 +50,57 @@ pub struct CredentialProvider {
 	pub uri_authority: String,
 	/// Backend that resolves credentials and policies used when connecting to it.
 	pub target: SimpleBackendReferenceWithPolicies,
+}
+
+#[derive(Debug, Clone)]
+struct CredentialCache {
+	entries: Arc<Cache<CredentialCacheKey, CachedCredential>>,
+}
+
+#[derive(Clone, Hash, PartialEq, Eq)]
+struct CredentialCacheKey {
+	actor_identity: String,
+	uri: String,
+}
+
+#[derive(Clone)]
+struct CachedCredential {
+	secret: Vec<u8>,
+	fetched_at: Instant,
+}
+
+impl CredentialCache {
+	fn new(capacity: usize) -> Self {
+		Self {
+			entries: Arc::new(Cache::new(capacity)),
+		}
+	}
+
+	fn get(&self, key: &CredentialCacheKey, now: Instant, ttl: Duration) -> Option<Vec<u8>> {
+		if let Some(entry) = self.entries.get(key) {
+			if now.duration_since(entry.fetched_at) <= ttl {
+				return Some(entry.secret);
+			}
+			self
+				.entries
+				.remove_if(key, |entry| now.duration_since(entry.fetched_at) > ttl);
+		}
+		None
+	}
+
+	fn insert(&self, key: CredentialCacheKey, secret: Vec<u8>, now: Instant) {
+		self.entries.insert(
+			key,
+			CachedCredential {
+				secret,
+				fetched_at: now,
+			},
+		);
+	}
+}
+
+fn default_credential_cache() -> CredentialCache {
+	CredentialCache::new(DEFAULT_CREDENTIAL_CACHE_CAPACITY)
 }
 
 impl RequestPolicyTrait for SubstrateEgress {
@@ -119,30 +179,58 @@ impl SubstrateEgress {
 		};
 		for injection in &effects.inject_static_headers {
 			let provider = self.provider_for_uri(&injection.credential_uri)?;
-			let channel = provider.target.grpc_channel(
-				client.with_outbound(OutboundCallKind::Policy, OutboundCallSubtype::Substrate),
-			);
-			let mut provider =
-				protos::credprovider::credential_provider_client::CredentialProviderClient::new(channel);
-			let response = provider
-				.request_secret(protos::credprovider::RequestSecretRequest {
-					uri: injection.credential_uri.clone(),
-					context: Some(protos::credprovider::SecretRequestContext {
-						actor_identity: actor_spiffe_uri(&identity.atespace, &identity.actor_name),
-					}),
-				})
-				.await
-				.map_err(|status| {
-					ProxyError::SubstrateEgressUnavailable(format!(
-						"credential provider {} unavailable: {status}",
-						provider_name(&injection.credential_uri).unwrap_or("unknown")
-					))
-				})?
-				.into_inner();
-			let (name, value) = credential_header(injection, response.secret)?;
+			let secret = self
+				.credential(client, identity, provider, &injection.credential_uri)
+				.await?;
+			let (name, value) = credential_header(injection, secret)?;
 			req.headers_mut().insert(name, value);
 		}
 		Ok(())
+	}
+
+	async fn credential(
+		&self,
+		client: &PolicyClient,
+		identity: &ActorIdentity,
+		provider: &CredentialProvider,
+		uri: &str,
+	) -> Result<Vec<u8>, ProxyResponse> {
+		let actor_identity = actor_spiffe_uri(&identity.atespace, &identity.actor_name);
+		let key = CredentialCacheKey {
+			actor_identity: actor_identity.clone(),
+			uri: uri.to_owned(),
+		};
+		if let Some(secret) =
+			self
+				.credential_cache
+				.get(&key, Instant::now(), DEFAULT_CREDENTIAL_CACHE_TTL)
+		{
+			return Ok(secret);
+		}
+
+		let channel = provider
+			.target
+			.grpc_channel(client.with_outbound(OutboundCallKind::Policy, OutboundCallSubtype::Substrate));
+		let mut provider =
+			protos::credprovider::credential_provider_client::CredentialProviderClient::new(channel);
+		let response = provider
+			.request_secret(protos::credprovider::RequestSecretRequest {
+				uri: uri.to_owned(),
+				context: Some(protos::credprovider::SecretRequestContext { actor_identity }),
+			})
+			.await
+			.map_err(|status| {
+				ProxyError::SubstrateEgressUnavailable(format!(
+					"credential provider {} unavailable: {status}",
+					provider_name(uri).unwrap_or("unknown")
+				))
+			})?
+			.into_inner();
+		let secret = credential_secret(response.secret)?;
+		self
+			.credential_cache
+			.insert(key, secret.clone(), Instant::now());
+		Ok(secret)
 	}
 
 	fn provider_for_uri(&self, uri: &str) -> Result<&CredentialProvider, ProxyResponse> {
@@ -182,6 +270,17 @@ fn credential_header(
 			ProxyError::SubstrateEgressDenied("credential effects cannot modify Host".to_owned()).into(),
 		);
 	}
+	let secret = credential_secret(secret)?;
+	let mut value = injection.prefix.as_bytes().to_vec();
+	value.extend(&secret);
+	let mut value = HeaderValue::from_bytes(&value).map_err(|error| {
+		ProxyError::SubstrateEgressUnavailable(format!("credential header value is invalid: {error}"))
+	})?;
+	value.set_sensitive(true);
+	Ok((name, value))
+}
+
+fn credential_secret(secret: Vec<u8>) -> Result<Vec<u8>, ProxyResponse> {
 	let secret = secret.strip_suffix(b"\n").unwrap_or(&secret);
 	let secret = secret.strip_suffix(b"\r").unwrap_or(secret);
 	if secret.is_empty() || secret.iter().any(|byte| byte.is_ascii_control()) {
@@ -192,13 +291,7 @@ fn credential_header(
 			.into(),
 		);
 	}
-	let mut value = injection.prefix.as_bytes().to_vec();
-	value.extend(secret);
-	let mut value = HeaderValue::from_bytes(&value).map_err(|error| {
-		ProxyError::SubstrateEgressUnavailable(format!("credential header value is invalid: {error}"))
-	})?;
-	value.set_sensitive(true);
-	Ok((name, value))
+	Ok(secret.to_vec())
 }
 
 fn matching_rule<'a>(
@@ -478,6 +571,53 @@ mod tests {
 		};
 		assert!(credential_header(&injection, Vec::new()).is_err());
 		assert!(credential_header(&injection, b"bad\nsecret".to_vec()).is_err());
+	}
+
+	#[test]
+	fn credential_cache_reuses_fresh_entries_and_expires_stale_ones() {
+		let cache = CredentialCache::new(16);
+		let key = CredentialCacheKey {
+			actor_identity: "spiffe://substrate-actor.local/atespace/default/actor/example".to_owned(),
+			uri: "substrate-secret://kubernetes.io/default/token".to_owned(),
+		};
+		let now = Instant::now();
+		cache.insert(key.clone(), b"token".to_vec(), now);
+		assert_eq!(
+			cache.get(&key, now, DEFAULT_CREDENTIAL_CACHE_TTL),
+			Some(b"token".to_vec())
+		);
+
+		let stale_at = now - DEFAULT_CREDENTIAL_CACHE_TTL - Duration::from_secs(1);
+		cache.insert(key.clone(), b"stale".to_vec(), stale_at);
+		assert_eq!(cache.get(&key, now, DEFAULT_CREDENTIAL_CACHE_TTL), None);
+	}
+
+	#[test]
+	fn credential_cache_is_partitioned_by_actor_identity_and_uri() {
+		let cache = CredentialCache::new(16);
+		let now = Instant::now();
+		let key = CredentialCacheKey {
+			actor_identity: "spiffe://substrate-actor.local/atespace/default/actor/one".to_owned(),
+			uri: "substrate-secret://kubernetes.io/default/token".to_owned(),
+		};
+		cache.insert(key.clone(), b"one".to_vec(), now);
+
+		let another_actor = CredentialCacheKey {
+			actor_identity: "spiffe://substrate-actor.local/atespace/default/actor/two".to_owned(),
+			uri: key.uri.clone(),
+		};
+		let another_uri = CredentialCacheKey {
+			actor_identity: key.actor_identity.clone(),
+			uri: "substrate-secret://kubernetes.io/default/other".to_owned(),
+		};
+		assert_eq!(
+			cache.get(&another_actor, now, DEFAULT_CREDENTIAL_CACHE_TTL),
+			None
+		);
+		assert_eq!(
+			cache.get(&another_uri, now, DEFAULT_CREDENTIAL_CACHE_TTL),
+			None
+		);
 	}
 
 	#[test]
