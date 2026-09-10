@@ -4712,6 +4712,68 @@ mod tests {
 		Ok(())
 	}
 
+	#[tokio::test]
+	async fn mcp_empty_jwks_loads_and_rejects_authentication() -> Result<(), ProtoError> {
+		use proto::agent::traffic_policy_spec as tps;
+
+		use crate::http::jwt::TokenError;
+
+		let spec = proto::agent::TrafficPolicySpec {
+			kind: Some(tps::Kind::Jwt(tps::Jwt {
+				mode: tps::jwt::Mode::Strict as i32,
+				providers: vec![tps::JwtProvider {
+					issuer: "https://issuer.example.com".into(),
+					jwks_source: Some(tps::jwt_provider::JwksSource::Inline(
+						r#"{"keys":[]}"#.into(),
+					)),
+					..Default::default()
+				}],
+				mcp: Some(Default::default()),
+				..Default::default()
+			})),
+			..Default::default()
+		};
+		let mut diagnostics = Diagnostics::default();
+		let TrafficPolicy::JwtAuth(policy) = traffic_policy_from_proto(&spec, &mut diagnostics)? else {
+			panic!("expected JWT auth policy");
+		};
+		let jwt = &policy.iter().next().expect("expected JWT policy").pol;
+		let mcp = jwt.mcp.as_ref().expect("expected MCP extension");
+		let legacy = mcp_authentication_from_proto(
+			&proto::agent::backend_policy_spec::McpAuthentication {
+				issuer: "https://issuer.example.com".into(),
+				jwks_inline: r#"{"keys":[]}"#.into(),
+				mode: proto::agent::backend_policy_spec::mcp_authentication::Mode::Strict as i32,
+				..Default::default()
+			},
+			&mut diagnostics,
+		)?;
+		assert!(diagnostics.into_warnings().is_empty());
+
+		for validator in [
+			&jwt.jwt,
+			mcp.jwt_validator.as_ref(),
+			legacy.jwt_validator.as_ref(),
+		] {
+			let mut request = ::http::Request::new(crate::http::Body::empty());
+			assert!(matches!(
+				validator.apply(None, &mut request).await,
+				Err(TokenError::Missing)
+			));
+			request.headers_mut().insert(
+				::http::header::AUTHORIZATION,
+				format!("Bearer {}", build_unsigned_token("kid"))
+					.parse()
+					.unwrap(),
+			);
+			assert!(matches!(
+				validator.apply(None, &mut request).await,
+				Err(TokenError::UnknownKeyId(kid)) if kid == "kid"
+			));
+		}
+		Ok(())
+	}
+
 	#[test]
 	fn test_policy_spec_to_csrf_policy() -> Result<(), ProtoError> {
 		// Test CSRF policy conversion with deduplication

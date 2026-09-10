@@ -1,7 +1,19 @@
 apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayBackend
+metadata:
+  name: test-jwks
+  namespace: default
+spec:
+  static:
+    host: login.test.com
+    port: 443
+  policies:
+    tls: {}
+---
+apiVersion: agentgateway.dev/v1alpha1
 kind: AgentgatewayPolicy
 metadata:
-  name: jwt-remote-resolver-backend-missing
+  name: jwt-mcp-missing-persisted-keyset
   namespace: default
 spec:
   targetRefs:
@@ -23,6 +35,12 @@ spec:
               kind: AgentgatewayBackend
               group: agentgateway.dev
             jwksPath: test-path/discovery/v2.0/keys
+      mcp:
+        provider: Auth0
+        resourceMetadata:
+          oauthScopesSupported:
+          - read
+
 ---
 # Output
 output:
@@ -31,10 +49,10 @@ output:
     Namespace: default
   resource:
     policy:
-      key: traffic/default/jwt-remote-resolver-backend-missing:jwt:default/test
+      key: traffic/default/jwt-mcp-missing-persisted-keyset:jwt:default/test
       name:
         kind: AgentgatewayPolicy
-        name: jwt-remote-resolver-backend-missing
+        name: jwt-mcp-missing-persisted-keyset
         namespace: default
       target:
         gateway:
@@ -42,6 +60,12 @@ output:
           namespace: default
       traffic:
         jwt:
+          mcp:
+            provider: AUTH0
+            resourceMetadata:
+              extra:
+                oauthScopesSupported:
+                - read
           mode: STRICT
           providers:
           - audiences:
@@ -53,7 +77,7 @@ status:
 - apiVersion: agentgateway.dev/v1alpha1
   kind: AgentgatewayPolicy
   metadata:
-    name: jwt-remote-resolver-backend-missing
+    name: jwt-mcp-missing-persisted-keyset
     namespace: default
   spec: null
   status:
@@ -65,7 +89,8 @@ status:
         namespace: default
       conditions:
       - lastTransitionTime: fake
-        message: backend default/test-jwks not found, policy default/jwt-remote-resolver-backend-missing
+        message: jwks keyset for "https://login.test.com:443/test-path/discovery/v2.0/keys"
+          isn't available (not yet fetched or fetch failed)
         reason: PartiallyValid
         status: "True"
         type: Accepted
