@@ -1,5 +1,4 @@
-use agentgateway::test_helpers::ateapimock;
-use agentgateway::test_helpers::credprovidermock;
+use agentgateway::test_helpers::{ateapimock, credprovidermock};
 use agentgateway::transport::stream::TLSConnectionInfo;
 use agentgateway::transport::tls::TlsInfo;
 use agentgateway::types::agent::{Backend, BackendWithPolicies, BindMode, TunnelProtocol};

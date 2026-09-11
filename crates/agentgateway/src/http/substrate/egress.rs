@@ -17,11 +17,6 @@ use crate::telemetry::metrics::{OutboundCallKind, OutboundCallSubtype};
 use crate::types::agent::SimpleBackendReferenceWithPolicies;
 use crate::{cel, *};
 
-// Matches Substrate's actorspiffe.Parse contract in
-// internal/actorspiffe/actorspiffe.go.
-const ACTOR_SPIFFE_URI_FORMAT: &str =
-	"spiffe://substrate-actor.local/atespace/{atespace}/actor/{actor_name}";
-
 const DEFAULT_CREDENTIAL_CACHE_CAPACITY: usize = 8192;
 const DEFAULT_CREDENTIAL_CACHE_TTL: Duration = Duration::from_secs(300);
 
@@ -253,9 +248,9 @@ fn provider_name(uri: &str) -> Option<&str> {
 }
 
 fn actor_spiffe_uri(atespace: &str, actor_name: &str) -> String {
-	ACTOR_SPIFFE_URI_FORMAT
-		.replace("{atespace}", atespace)
-		.replace("{actor_name}", actor_name)
+	// Matches Substrate's actorspiffe.Parse contract in
+	// internal/actorspiffe/actorspiffe.go.
+	format!("spiffe://substrate-actor.local/atespace/{atespace}/actor/{actor_name}")
 }
 
 fn credential_header(
