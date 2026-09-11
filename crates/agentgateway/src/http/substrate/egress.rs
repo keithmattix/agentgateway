@@ -214,12 +214,7 @@ impl SubstrateEgress {
 				context: Some(protos::credprovider::SecretRequestContext { actor_identity }),
 			})
 			.await
-			.map_err(|status| {
-				ProxyError::SubstrateEgressUnavailable(format!(
-					"credential provider {} unavailable: {status}",
-					provider_name(uri).unwrap_or("unknown")
-				))
-			})?
+			.map_err(|status| credential_provider_error(uri, status))?
 			.into_inner();
 		let secret = credential_secret(response.secret)?;
 		self
@@ -260,9 +255,12 @@ fn credential_header(
 	let name = HeaderName::from_str(&injection.header).map_err(|error| {
 		ProxyError::SubstrateEgressDenied(format!("invalid credential header: {error}"))
 	})?;
-	if name == ::http::header::HOST {
+	if protected_credential_header(&name) {
 		return Err(
-			ProxyError::SubstrateEgressDenied("credential effects cannot modify Host".to_owned()).into(),
+			ProxyError::SubstrateEgressDenied(format!(
+				"credential effects cannot modify protected header {name}"
+			))
+			.into(),
 		);
 	}
 	let secret = credential_secret(secret)?;
@@ -273,6 +271,34 @@ fn credential_header(
 	})?;
 	value.set_sensitive(true);
 	Ok((name, value))
+}
+
+fn protected_credential_header(name: &HeaderName) -> bool {
+	matches!(
+		name.as_str(),
+		"host"
+			| "content-length"
+			| "connection"
+			| "keep-alive"
+			| "proxy-authenticate"
+			| "proxy-authorization"
+			| "te"
+			| "trailer"
+			| "transfer-encoding"
+			| "upgrade"
+	)
+}
+
+fn credential_provider_error(uri: &str, status: tonic::Status) -> ProxyError {
+	let provider = provider_name(uri).unwrap_or("unknown");
+	match status.code() {
+		Code::Unavailable | Code::DeadlineExceeded => ProxyError::SubstrateEgressUnavailable(format!(
+			"credential provider {provider} unavailable: {status}"
+		)),
+		_ => {
+			ProxyError::SubstrateEgressDenied(format!("credential provider {provider} denied: {status}"))
+		},
+	}
 }
 
 fn credential_secret(secret: Vec<u8>) -> Result<Vec<u8>, ProxyResponse> {
@@ -555,6 +581,48 @@ mod tests {
 		assert_eq!(name, ::http::header::AUTHORIZATION);
 		assert_eq!(value, "Bearer token");
 		assert!(value.is_sensitive());
+	}
+
+	#[test]
+	fn credential_headers_cannot_modify_routing_or_framing_headers() {
+		for header in [
+			"host",
+			"content-length",
+			"connection",
+			"keep-alive",
+			"proxy-authenticate",
+			"proxy-authorization",
+			"te",
+			"trailer",
+			"transfer-encoding",
+			"upgrade",
+		] {
+			let injection = protos::ateapi::CredentialHeaderInjection {
+				header: header.to_owned(),
+				prefix: String::new(),
+				credential_uri: "substrate-secret://kubernetes.io/default/token".to_owned(),
+			};
+			assert!(credential_header(&injection, b"token".to_vec()).is_err());
+		}
+	}
+
+	#[test]
+	fn credential_provider_errors_preserve_availability_semantics() {
+		for code in [Code::Unavailable, Code::DeadlineExceeded] {
+			let response = credential_provider_error(
+				"substrate-secret://kubernetes.io/default/token",
+				tonic::Status::new(code, "provider failed"),
+			)
+			.into_response_with_grpc(false);
+			assert_eq!(response.status(), ::http::StatusCode::SERVICE_UNAVAILABLE);
+		}
+
+		let response = credential_provider_error(
+			"substrate-secret://kubernetes.io/default/token",
+			tonic::Status::permission_denied("not allowed"),
+		)
+		.into_response_with_grpc(false);
+		assert_eq!(response.status(), ::http::StatusCode::FORBIDDEN);
 	}
 
 	#[test]
