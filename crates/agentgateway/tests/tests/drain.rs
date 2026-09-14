@@ -24,7 +24,9 @@ async fn holding_backend(hold: Duration) -> (SocketAddr, mpsc::UnboundedReceiver
 					async move {
 						let _ = in_flight.send(());
 						tokio::time::sleep(hold).await;
-						Ok::<_, Infallible>(http::Response::new(Body::from(BODY)))
+						Ok::<_, Infallible>(http::Response::new(Body::from(bytes::Bytes::from_static(
+							BODY,
+						))))
 					}
 				});
 				let _ = hyper_util::server::conn::auto::Builder::new(TokioExecutor::new())

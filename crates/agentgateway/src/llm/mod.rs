@@ -1889,12 +1889,18 @@ impl AIProvider {
 			.map(|v| v == headers::ContentType::json())
 			.unwrap_or_default();
 		let (parts, mut managed_body) = hreq.into_parts();
+		let cached = managed_body.remove_extension::<json::ParsedJson>();
 		let Ok(bytes) = http::read_body_with_limit(managed_body.take_content(), buffer).await else {
 			return Err(AIError::RequestTooLarge);
 		};
 
 		let req = if is_json {
-			if let Some(p) = policies
+			if let Some(json::ParsedJson(value)) = cached {
+				match policies {
+					Some(p) => p.unmarshal_request_value(value, log),
+					None => Ok(types::detect::Request::Json(value)),
+				}
+			} else if let Some(p) = policies
 				&& p.has_request_body_mutations()
 			{
 				p.unmarshal_request(&bytes, log)
@@ -2911,6 +2917,7 @@ impl AIProvider {
 	) -> Result<(Parts, Body, T), AIError> {
 		let buffer = http::buffer_limit(&hreq);
 		let (mut parts, mut managed_body) = hreq.into_parts();
+		let cached = managed_body.remove_extension::<json::ParsedJson>();
 		// Decode Content-Encoding (gzip/deflate/br/zstd) before parsing the body as
 		// JSON. Clients such as the Claude Code harness gzip-compress request bodies
 		// above a size threshold; without decoding, the reader would hand the
@@ -2940,7 +2947,11 @@ impl AIProvider {
 			&& types::detect::extract_model_from_path(parts.uri.path()).is_none()
 			&& !policies.is_some_and(Policy::has_request_body_mutations)
 		{
-			let mut req: T = serde_json::from_slice(bytes.as_ref()).map_err(AIError::RequestParsing)?;
+			let mut req: T = match cached {
+				Some(json::ParsedJson(value)) => serde_json::from_value(value),
+				None => serde_json::from_slice(&bytes),
+			}
+			.map_err(AIError::RequestParsing)?;
 			let model = req.model();
 			if model.as_deref().is_none() {
 				return Err(AIError::MissingField("model not specified".into()));
@@ -2948,8 +2959,10 @@ impl AIProvider {
 			return Ok((parts, managed_body, req));
 		}
 
-		let mut request: serde_json::Value =
-			serde_json::from_slice(bytes.as_ref()).map_err(AIError::RequestParsing)?;
+		let mut request = match cached {
+			Some(json::ParsedJson(value)) => value,
+			None => serde_json::from_slice(&bytes).map_err(AIError::RequestParsing)?,
+		};
 		self.set_provider_request_model(&parts, &mut request, path_model_wins)?;
 		let mut request = if let Some(p) = policies {
 			p.apply_request_body_mutations(request, log)?

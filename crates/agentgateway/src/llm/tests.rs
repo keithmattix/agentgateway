@@ -6,6 +6,7 @@ use http_body_util::BodyExt;
 use serde_json::{Value, json};
 
 use super::*;
+use crate::http::RequestBodyExt;
 use crate::http::x_headers::TRACEPARENT;
 
 #[tokio::test]
@@ -3613,26 +3614,79 @@ async fn read_body_decodes_gzip_request_before_json_parse() {
 }
 
 #[tokio::test]
-async fn read_body_still_parses_plaintext_request() {
-	// A plaintext (unencoded) request body must continue to parse unchanged — the
-	// decompression path is a no-op when no Content-Encoding is present.
+async fn read_body_cached_json_respects_mutations_and_limits() {
 	let provider = custom_provider(custom::ProviderFormat::Messages);
-
-	let req = ::http::Request::builder()
-		.uri("/v1/messages")
-		.header(::http::header::CONTENT_TYPE, "application/json")
-		.body(Body::from(
-			br#"{"model":"claude-sonnet-4-5","max_tokens":8,"messages":[{"role":"user","content":"hi"}]}"#
-				.to_vec(),
-		))
-		.unwrap();
-
-	let (_parts, _body, parsed) = provider
-		.read_body_and_default_model::<types::messages::Request>(None, req, &mut None)
-		.await
-		.expect("plaintext request body should parse as JSON");
-
-	assert_eq!(parsed.model.as_deref(), Some("claude-sonnet-4-5"));
+	let original = json!({
+		"model": "claude-sonnet-4-5",
+		"max_tokens": 8,
+		"messages": [{"role": "user", "content": "hi"}],
+	});
+	for case in [
+		"uncached",
+		"cached",
+		"policy",
+		"replacement",
+		"limit",
+		"encoding",
+	] {
+		let mut req = ::http::Request::builder()
+			.uri("/v1/messages")
+			.header(::http::header::CONTENT_TYPE, "application/json")
+			.body(Body::from(serde_json::to_vec(&original).unwrap()))
+			.unwrap();
+		if case != "uncached" {
+			req
+				.body_mut()
+				.insert_extension(json::ParsedJson(original.clone()));
+		}
+		let mut policy = None;
+		match case {
+			"policy" => {
+				policy = Some(Policy {
+					overrides: Some(HashMap::from([("model".to_string(), json!("overridden"))])),
+					..Default::default()
+				})
+			},
+			"replacement" => {
+				let mut replacement = original.clone();
+				replacement["model"] = json!("replaced");
+				req.replace_body_bytes(serde_json::to_vec(&replacement).unwrap().into());
+			},
+			"limit" => {
+				req.extensions_mut().insert(http::BufferLimit(1));
+			},
+			"encoding" => {
+				req
+					.headers_mut()
+					.insert(header::CONTENT_ENCODING, HeaderValue::from_static("gzip"));
+			},
+			_ => {},
+		}
+		let result = provider
+			.read_body_and_default_model::<types::messages::Request>(policy.as_ref(), req, &mut None)
+			.await;
+		if case == "limit" {
+			assert!(matches!(result, Err(AIError::RequestTooLarge)));
+			continue;
+		}
+		if case == "encoding" {
+			assert!(
+				result.is_err(),
+				"cached JSON must not bypass decoding errors"
+			);
+			continue;
+		}
+		let (_, body, parsed) = result.unwrap();
+		assert!(body.extension::<json::ParsedJson>().is_none());
+		assert_eq!(
+			parsed.model.as_deref(),
+			Some(match case {
+				"policy" => "overridden",
+				"replacement" => "replaced",
+				_ => "claude-sonnet-4-5",
+			})
+		);
+	}
 }
 
 #[test]

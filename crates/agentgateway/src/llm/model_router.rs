@@ -225,6 +225,11 @@ impl ModelRouter {
 			"unable to find declared virtual model; trying concrete model routes",
 		);
 
+		if let RequestedModelLocation::Body(body) = requested_model.location {
+			req
+				.body_mut()
+				.insert_extension(crate::json::ParsedJson(body));
+		}
 		match self.resolve_concrete_model(&requested_model.model, false, req) {
 			Ok(Some(route)) => ResolveResult::Backend(route),
 			Ok(None) => ResolveResult::DirectResponse(model_not_found_response()),
@@ -283,6 +288,11 @@ impl ModelRouter {
 				}
 			},
 			VirtualModelRouting::Failover { backend } => {
+				if let RequestedModelLocation::Body(body) = location {
+					req
+						.body_mut()
+						.insert_extension(crate::json::ParsedJson(body));
+				}
 				return ResolveResult::Backend(ResolvedBackend {
 					backend: backend.clone(),
 					llm_policy: virtual_model.llm_policy.clone(),
@@ -605,7 +615,7 @@ fn rewrite_body_model(req: &mut Request, mut body: Value, target: &str) -> Route
 		return Ok(());
 	};
 	obj.insert("model".to_string(), Value::String(target.to_string()));
-	let body = serde_json::to_vec(&body).map_err(|err| {
+	let bytes = serde_json::to_vec(&body).map_err(|err| {
 		tracing::debug!(%err, "failed to serialize rewritten LLM request body");
 		Box::new(llm_error_response(
 			::http::StatusCode::BAD_REQUEST,
@@ -613,7 +623,10 @@ fn rewrite_body_model(req: &mut Request, mut body: Value, target: &str) -> Route
 			"request_body_rewrite_failed",
 		))
 	})?;
-	req.replace_body_bytes(body.into());
+	req.replace_body_bytes(bytes.into());
+	req
+		.body_mut()
+		.insert_extension(crate::json::ParsedJson(body));
 	Ok(())
 }
 
@@ -972,11 +985,18 @@ mod tests {
 			router.resolve(&mut req).await,
 			ResolveResult::Backend(_)
 		));
+		let cached = req
+			.body()
+			.extension::<crate::json::ParsedJson>()
+			.unwrap()
+			.0
+			.clone();
 		let body = http::read_body_with_limit(req.into_body(), 1024)
 			.await
 			.expect("rewritten request body");
 		let body: Value = serde_json::from_slice(&body).expect("valid JSON request body");
 		assert_eq!(body["model"], "economy-model");
+		assert_eq!(cached, body);
 	}
 
 	#[tokio::test]

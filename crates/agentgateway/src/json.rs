@@ -4,6 +4,12 @@ use serde_json::Value;
 use crate::http::{Request, Response};
 use crate::*;
 
+/// Parsed JSON corresponding to the current body bytes.
+#[derive(Clone)]
+pub(crate) struct ParsedJson(pub Value);
+
+impl agent_http::BodyExtension for ParsedJson {}
+
 pub fn must_traverse<'a, T>(
 	value: &'a Value,
 	path: &[&str],
