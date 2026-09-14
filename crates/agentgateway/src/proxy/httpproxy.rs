@@ -4345,14 +4345,14 @@ async fn send_mirror(
 // RFC 2616, but is deliberately absent here. It is not stripped so
 // that request policies such as `basicAuth` can read it when the
 // gateway acts as an authenticated forward proxy.
-static HOP_HEADERS: [HeaderName; 8] = [
+// Preserve Trailer so Hyper's HTTP/1 encoder can forward the declared trailer fields.
+static HOP_HEADERS: [HeaderName; 7] = [
 	header::CONNECTION,
 	// non-standard but still sent by libcurl and rejected by e.g. google
 	HeaderName::from_static("proxy-connection"),
 	HeaderName::from_static("keep-alive"),
 	header::PROXY_AUTHENTICATE,
 	header::TE,
-	header::TRAILER,
 	header::TRANSFER_ENCODING,
 	header::UPGRADE,
 ];
