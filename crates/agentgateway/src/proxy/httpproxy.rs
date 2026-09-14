@@ -2459,6 +2459,7 @@ async fn make_backend_call(
 				.sub_backend_policies(sub_backend_name, Some(&provider.inline_policies));
 
 			let provider_defaults = BackendPolicies {
+				health: ai.default_health.clone(),
 				llm_provider: Some(provider.clone()),
 				..Default::default()
 			};
@@ -2493,7 +2494,7 @@ async fn make_backend_call(
 				let provider_defaults = match &provider.host_override {
 					Some(_) => provider_defaults,
 					None => {
-						let mut pol = provider
+						let pol = provider
 							.provider
 							.default_connector_policies()
 							.ok_or_else(|| {
@@ -2502,8 +2503,7 @@ async fn make_backend_call(
 										.to_string(),
 								)
 							})?;
-						pol.llm_provider = Some(provider.clone());
-						pol
+						pol.merge(provider_defaults)
 					},
 				};
 				// Defaults for the provider < Backend level policies < Sub Backend
@@ -4186,11 +4186,21 @@ mod tests {
 		);
 	}
 
+	#[rstest::rstest]
+	#[case::default_health(503, json!({}))]
+	#[case::custom_condition(429, json!({"health": {"unhealthyExpression": "response.code == 429"}}))]
+	#[case::explicit_eviction(429, json!({"health": {
+		"unhealthyExpression": "response.code == 429",
+		"eviction": {"duration": "1s"}
+	}}))]
 	#[tokio::test]
-	async fn llm_retry_evicts_failed_priority_group_before_next_attempt() {
+	async fn llm_retry_evicts_failed_priority_group_before_next_attempt(
+		#[case] status: u16,
+		#[case] policies: serde_json::Value,
+	) {
 		let primary = wiremock::MockServer::start().await;
 		Mock::given(wiremock::matchers::any())
-			.respond_with(ResponseTemplate::new(429))
+			.respond_with(ResponseTemplate::new(status))
 			.mount(&primary)
 			.await;
 
@@ -4215,14 +4225,7 @@ mod tests {
 								"model": null
 							}
 						},
-						"policies": {
-							"health": {
-								"unhealthyExpression": "response.code == 429",
-								"eviction": {
-									"duration": "1s"
-								}
-							}
-						}
+						"policies": policies
 					}]
 				},
 				{
@@ -4262,7 +4265,7 @@ mod tests {
 				"retry": {
 					"attempts": 1,
 					"backoff": "10ms",
-					"codes": [429]
+					"codes": [status]
 				},
 				"ai": {
 					"routes": {

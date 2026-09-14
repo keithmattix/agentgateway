@@ -2042,7 +2042,7 @@ pub(crate) fn backend_with_policies_from_proto(
 			}
 
 			let es = crate::types::loadbalancer::EndpointSet::new(provider_groups);
-			Backend::AI(name.into(), AIBackend { providers: es })
+			Backend::AI(name.into(), AIBackend::new(es))
 		},
 		Some(proto::agent::backend::Kind::Mcp(m)) => Backend::MCP(
 			name.into(),

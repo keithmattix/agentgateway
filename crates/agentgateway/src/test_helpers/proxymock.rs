@@ -241,7 +241,7 @@ pub fn custom_llm_backend_with_formats(
 	let providers = EndpointSet::new(vec![vec![(provider.name.clone(), provider)]]);
 	Backend::AI(
 		ResourceName::new(name.into(), "".into()),
-		AIBackend { providers },
+		AIBackend::new(providers),
 	)
 	.into()
 }

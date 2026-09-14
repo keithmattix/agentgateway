@@ -68,10 +68,24 @@ fn normalize_sse_response_headers(mut resp: Response) -> Response {
 #[derive(Debug, Clone, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AIBackend {
+	#[serde(skip_serializing)]
+	pub default_health: Option<http::health::Policy>,
 	pub providers: crate::types::loadbalancer::EndpointSet<NamedAIProvider>,
 }
 
 impl AIBackend {
+	pub fn new(providers: crate::types::loadbalancer::EndpointSet<NamedAIProvider>) -> Self {
+		// Multiple priority groups explicitly opt into failover.
+		let default_health = (providers.num_buckets() > 1).then(|| http::health::Policy {
+			eviction: Some(http::health::Eviction::default()),
+			..Default::default()
+		});
+		Self {
+			default_health,
+			providers,
+		}
+	}
+
 	pub fn select_provider(
 		&self,
 		affinity_key: Option<u64>,

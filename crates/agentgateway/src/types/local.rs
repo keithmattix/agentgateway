@@ -1624,7 +1624,7 @@ impl LocalAIBackend {
 			ep_groups.push(group);
 		}
 		let es = types::loadbalancer::EndpointSet::new(ep_groups);
-		Ok(AIBackend { providers: es })
+		Ok(AIBackend::new(es))
 	}
 }
 
@@ -4530,12 +4530,10 @@ async fn convert_llm_config(
 		};
 		let resolved_provider = named_provider.clone();
 
-		let ai_backend = AIBackend {
-			providers: crate::types::loadbalancer::EndpointSet::new(vec![vec![(
-				model_name.clone(),
-				named_provider,
-			)]]),
-		};
+		let ai_backend = AIBackend::new(crate::types::loadbalancer::EndpointSet::new(vec![vec![(
+			model_name.clone(),
+			named_provider,
+		)]]));
 
 		let mut pols = vec![];
 		if let Some(p) = model_config.backend_tls.clone() {
@@ -4683,9 +4681,9 @@ async fn convert_llm_config(
 				all_backends.push(BackendWithPolicies {
 					backend: Backend::AI(
 						local_name(backend_key.clone()),
-						AIBackend {
-							providers: crate::types::loadbalancer::EndpointSet::new(provider_groups),
-						},
+						AIBackend::new(crate::types::loadbalancer::EndpointSet::new(
+							provider_groups,
+						)),
 					),
 					inline_policies: vec![],
 				});
