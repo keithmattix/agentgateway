@@ -5,6 +5,43 @@ use http_body_util::BodyExt;
 use crate::Body;
 
 #[tokio::test]
+async fn content_cache_follows_content_and_invalidates_on_replacement() {
+	#[derive(Clone)]
+	struct Parsed(&'static str);
+	impl crate::BodyExtension for Parsed {}
+
+	let mut body = Body::from("original");
+	body.insert_extension(Parsed("parsed"));
+	let content = body.take_content();
+	assert!(body.extension::<Parsed>().is_none());
+	assert_eq!(content.extension::<Parsed>().unwrap().0, "parsed");
+	body.restore_content(content);
+	let (input, state) = body.into_replay_parts();
+	assert_eq!(input.extension::<Parsed>().unwrap().0, "parsed");
+	for streaming in [false, true] {
+		let mut body = state.wrap(crate::RawBody::from("original"));
+		assert_eq!(body.extension::<Parsed>().unwrap().0, "parsed");
+		let _ = body.inspect(100).await.unwrap();
+		assert_eq!(body.extension::<Parsed>().unwrap().0, "parsed");
+		if streaming {
+			body = body.transform_stream(|_| crate::RawBody::from("replacement"));
+		} else {
+			body.replace_bytes(Bytes::from_static(b"replacement"));
+		}
+		assert!(body.extension::<Parsed>().is_none());
+	}
+	let mut body = state.wrap(crate::RawBody::from("original"));
+	body
+		.try_modify(|content| async move {
+			assert_eq!(content.extension::<Parsed>().unwrap().0, "parsed");
+			Err::<crate::BodyContent, _>(())
+		})
+		.await
+		.unwrap_err();
+	assert!(body.extension::<Parsed>().is_none());
+}
+
+#[tokio::test]
 async fn inspection_intent_survives_replacement_and_replay() {
 	let mut body = Body::from("original");
 	assert!(!body.needs_inspection());

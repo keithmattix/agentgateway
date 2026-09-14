@@ -54,6 +54,12 @@ impl<F: FnOnce(Bytes)> Drop for TraceSnapshot<F> {
 	}
 }
 
+/// Explicit opt-in for state derived solely from body content.
+/// Implement this on application-owned cache types; content replacement invalidates them.
+/// Note: this is not really needed, its only adding a requirement that all types catalog themselves
+/// to make it more clear what extensions there are.
+pub trait BodyExtension: Clone + Send + Sync + 'static {}
+
 /// A request or response body together with state derived from that body.
 #[derive(Debug)]
 pub struct Body(Box<BodyInner>);
@@ -65,6 +71,7 @@ struct BodyInner {
 	// Sticky inspection intent, independent of whether content happens to be bytes.
 	needs_inspection: bool,
 	representation: Representation,
+	extensions: ::http::Extensions,
 	recorded: Option<RecordedBodyHandle>,
 	observers: BodyObservers,
 	idle_timeout: Option<IdleTimeout>,
@@ -75,6 +82,7 @@ struct BodyInner {
 pub struct ReplayBodyState {
 	needs_inspection: bool,
 	inspection: Option<BodyInspection>,
+	extensions: ::http::Extensions,
 	record_limit: Option<usize>,
 	observers: std::sync::Arc<parking_lot::Mutex<BodyObservers>>,
 	idle_timeout: Option<IdleTimeout>,
@@ -115,6 +123,7 @@ impl ReplayBodyState {
 		};
 		let mut body = Body(Box::new(BodyInner {
 			needs_inspection: self.needs_inspection,
+			extensions: self.extensions.clone(),
 			representation,
 			recorded: None,
 			observers: BodyObservers::default(),
@@ -194,6 +203,7 @@ impl Body {
 		let state = ReplayBodyState {
 			needs_inspection: self.0.needs_inspection,
 			inspection: self.inspection(),
+			extensions: self.0.extensions.clone(),
 			record_limit: self.0.recorded.as_ref().map(RecordedBodyHandle::limit),
 			observers: std::sync::Arc::new(parking_lot::Mutex::new(std::mem::take(
 				&mut self.0.observers,
@@ -211,6 +221,7 @@ impl Body {
 	{
 		Body(Box::new(BodyInner {
 			needs_inspection: false,
+			extensions: ::http::Extensions::new(),
 			representation: Representation::Streaming {
 				body: RawBody::new(body),
 				inspected_prefix: None,
@@ -367,6 +378,7 @@ impl Body {
 		}
 		Body(Box::new(BodyInner {
 			needs_inspection: self.0.needs_inspection,
+			extensions: std::mem::take(&mut self.0.extensions),
 			representation,
 			recorded: None,
 			observers: BodyObservers::default(),
@@ -403,6 +415,7 @@ impl Body {
 	pub fn restore_content(&mut self, mut content: Body) {
 		debug_assert!(content.0.recorded.is_none() && content.0.observers.0.is_empty());
 		self.0.representation = std::mem::take(&mut content.0.representation);
+		self.0.extensions = std::mem::take(&mut content.0.extensions);
 		if let Some(recorded) = &self.0.recorded {
 			recorded.reset();
 			if http_body::Body::is_end_stream(&self.0.representation) {
@@ -411,9 +424,10 @@ impl Body {
 		}
 	}
 
-	/// Install new content, invalidating inspection and recording while retaining
+	/// Install new content, invalidating inspection, extensions, and recording while retaining
 	/// lifecycle observers and the idle timeout.
 	pub fn replace_content(&mut self, replacement: BodyContent) {
+		self.0.extensions.clear();
 		// TODO: centralize fulfilling retained inspection requirements after streaming
 		// replacement; callers must currently re-inspect before body-dependent CEL.
 		self.0.representation = match replacement {
@@ -436,6 +450,22 @@ impl Body {
 				recorded.complete();
 			}
 		}
+	}
+
+	/// Cached state derived solely from this body's content. It follows extracted,
+	/// restored, and replayed content, and is cleared whenever content is replaced.
+	pub fn extension<T: BodyExtension>(&self) -> Option<&T> {
+		self.0.extensions.get::<T>()
+	}
+
+	/// Store content-derived state with the same invalidation rules as `extension`.
+	pub fn insert_extension<T: BodyExtension>(&mut self, value: T) -> Option<T> {
+		self.0.extensions.insert(value)
+	}
+
+	/// Remove and return cached content-derived state.
+	pub fn remove_extension<T: BodyExtension>(&mut self) -> Option<T> {
+		self.0.extensions.remove::<T>()
 	}
 
 	pub fn known_bytes(&self) -> Option<&Bytes> {
@@ -601,6 +631,7 @@ impl From<Bytes> for Body {
 	fn from(bytes: Bytes) -> Self {
 		Body(Box::new(BodyInner {
 			needs_inspection: false,
+			extensions: ::http::Extensions::new(),
 			representation: Representation::Buffered {
 				bytes,
 				emitted: false,

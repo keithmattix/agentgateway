@@ -127,13 +127,16 @@ impl StreamableHttpService {
 		}
 
 		let limit = http::buffer_limit(&request);
-		let (mut part, body) = request.into_parts();
+		let (mut part, mut body) = request.into_parts();
+		let cached = body.remove_extension::<mcp::CachedRequest>();
 		let bytes = match http::read_body_with_limit(body, limit).await {
 			Ok(b) => b,
 			Err(e) => return mcp::Error::Deserialize(e).into(),
 		};
-		let cached = part.extensions.remove::<mcp::CachedRequest>();
-		let message = match mcp::CachedRequest::parse_body(cached, &bytes) {
+		let message = match cached
+			.map(|cached| Ok(cached.0))
+			.unwrap_or_else(|| serde_json::from_slice(&bytes))
+		{
 			Ok(m) => m,
 			Err(e) => {
 				return match unknown_method_error(&part.headers, &bytes) {

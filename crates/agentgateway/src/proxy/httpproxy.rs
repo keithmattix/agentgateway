@@ -105,9 +105,7 @@ async fn set_mcp_cel_context(req: &mut Request, backend: &McpBackend) {
 	};
 	let info = mcp::MCPInfo::from_request(req.headers(), &message, backend);
 	req.extensions_mut().insert(info);
-	req
-		.extensions_mut()
-		.insert(mcp::CachedRequest::new(body, message));
+	req.body_mut().insert_extension(mcp::CachedRequest(message));
 }
 
 fn select_route_chain(

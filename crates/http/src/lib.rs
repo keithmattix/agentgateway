@@ -4,7 +4,7 @@ mod idle_timeout;
 mod peekbody;
 mod recordbody;
 
-pub use body::{Body, BodyContent, BodyObserver, BodyTimeoutError, ReplayBodyState};
+pub use body::{Body, BodyContent, BodyExtension, BodyObserver, BodyTimeoutError, ReplayBodyState};
 pub use buflist::BufList;
 pub use recordbody::{RecordedBody, RecordedBodyHandle};
 

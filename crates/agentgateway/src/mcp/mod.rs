@@ -53,33 +53,10 @@ pub enum FailureMode {
 
 pub(crate) const DEFAULT_SESSION_IDLE_TTL: Duration = Duration::from_mins(30);
 
-/// An early parse paired with the exact body bytes it represents.
 #[derive(Clone)]
-pub(crate) struct CachedRequest {
-	source_body: bytes::Bytes,
-	message: rmcp::model::ClientJsonRpcMessage,
-}
+pub(crate) struct CachedRequest(pub rmcp::model::ClientJsonRpcMessage);
 
-impl CachedRequest {
-	pub fn new(source_body: bytes::Bytes, message: rmcp::model::ClientJsonRpcMessage) -> Self {
-		Self {
-			source_body,
-			message,
-		}
-	}
-
-	pub fn parse_body(
-		cached: Option<Self>,
-		body: &[u8],
-	) -> serde_json::Result<rmcp::model::ClientJsonRpcMessage> {
-		// Policies may have replaced the body after the early CEL parse. Exact byte equality makes
-		// reuse safe without requiring every possible body mutation to invalidate the cache.
-		match cached {
-			Some(cached) if cached.source_body.as_ref() == body => Ok(cached.message),
-			_ => serde_json::from_slice(body),
-		}
-	}
-}
+impl agent_http::BodyExtension for CachedRequest {}
 
 /// Application-defined "over quota" code (MCP defines none); shared with the guardrail mapping.
 pub(crate) const RESOURCE_EXHAUSTED: ErrorCode = ErrorCode(-32003);
