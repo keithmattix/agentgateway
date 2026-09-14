@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 
 use agent_core::strng;
 use bytes::Bytes;
@@ -53,45 +53,48 @@ impl ModelVisibility {
 }
 
 pub fn default_route_types() -> Arc<llm::Policy> {
-	Arc::new(llm::Policy {
-		routes: [
-			(
-				strng::new("/v1/chat/completions"),
-				llm::RouteType::Completions,
-			),
-			(strng::new("/v1/messages"), llm::RouteType::Messages),
-			(
-				strng::new("/v1/messages/count_tokens"),
-				llm::RouteType::AnthropicTokenCount,
-			),
-			(strng::new(":rawPredict"), llm::RouteType::Messages),
-			(strng::new(":streamRawPredict"), llm::RouteType::Messages),
-			(
-				strng::new(":generateContent"),
-				llm::RouteType::GenerateContent,
-			),
-			(
-				strng::new(":streamGenerateContent"),
-				llm::RouteType::GenerateContent,
-			),
-			(
-				strng::new(":countTokens"),
-				llm::RouteType::GeminiCountTokens,
-			),
-			(strng::new("/v1/responses"), llm::RouteType::Responses),
-			(strng::new("/v1/images/generations"), llm::RouteType::Detect),
-			(strng::new("/v1/images/edits"), llm::RouteType::Detect),
-			(strng::new("/v1/images/variations"), llm::RouteType::Detect),
-			(strng::new("/v1/responses/compact"), llm::RouteType::Detect),
-			(strng::new("/v1/embeddings"), llm::RouteType::Embeddings),
-			(strng::new("/v1/rerank"), llm::RouteType::Rerank),
-			(strng::new("/v2/rerank"), llm::RouteType::Rerank),
-			(strng::new("*"), llm::RouteType::Passthrough),
-		]
-		.into_iter()
-		.collect(),
-		..Default::default()
-	})
+	static DEFAULT: LazyLock<Arc<llm::Policy>> = LazyLock::new(|| {
+		Arc::new(llm::Policy {
+			routes: [
+				(
+					strng::new("/v1/chat/completions"),
+					llm::RouteType::Completions,
+				),
+				(strng::new("/v1/messages"), llm::RouteType::Messages),
+				(
+					strng::new("/v1/messages/count_tokens"),
+					llm::RouteType::AnthropicTokenCount,
+				),
+				(strng::new(":rawPredict"), llm::RouteType::Messages),
+				(strng::new(":streamRawPredict"), llm::RouteType::Messages),
+				(
+					strng::new(":generateContent"),
+					llm::RouteType::GenerateContent,
+				),
+				(
+					strng::new(":streamGenerateContent"),
+					llm::RouteType::GenerateContent,
+				),
+				(
+					strng::new(":countTokens"),
+					llm::RouteType::GeminiCountTokens,
+				),
+				(strng::new("/v1/responses"), llm::RouteType::Responses),
+				(strng::new("/v1/images/generations"), llm::RouteType::Detect),
+				(strng::new("/v1/images/edits"), llm::RouteType::Detect),
+				(strng::new("/v1/images/variations"), llm::RouteType::Detect),
+				(strng::new("/v1/responses/compact"), llm::RouteType::Detect),
+				(strng::new("/v1/embeddings"), llm::RouteType::Embeddings),
+				(strng::new("/v1/rerank"), llm::RouteType::Rerank),
+				(strng::new("/v2/rerank"), llm::RouteType::Rerank),
+				(strng::new("*"), llm::RouteType::Passthrough),
+			]
+			.into_iter()
+			.collect(),
+			..Default::default()
+		})
+	});
+	DEFAULT.clone()
 }
 
 #[apply(schema_ser_schema!)]
@@ -177,6 +180,18 @@ impl ModelRouter {
 	}
 
 	pub async fn resolve(&self, req: &mut Request) -> ResolveResult {
+		if is_responses_websocket(req) {
+			let mut response = llm_error_response(
+				::http::StatusCode::METHOD_NOT_ALLOWED,
+				"Responses WebSocket transport is not supported. Use HTTP POST instead.",
+				"websocket_not_supported",
+			);
+			response.headers_mut().insert(
+				::http::header::ALLOW,
+				::http::HeaderValue::from_static("POST"),
+			);
+			return ResolveResult::DirectResponse(response);
+		}
 		if is_model_list_request(req) {
 			return ResolveResult::DirectResponse(self.model_list_response(req));
 		}
@@ -469,6 +484,25 @@ fn model_list_entry(id: &str, created: u64) -> serde_json::Value {
 		// TODO: this matches some other gateways but seems odd. Should we use the real provide here?
 		"owned_by": "openai",
 	})
+}
+
+fn is_responses_websocket(req: &Request) -> bool {
+	req.method() == ::http::Method::GET
+		&& req
+			.headers()
+			.typed_get::<headers::Connection>()
+			.is_some_and(|connection| connection.contains(::http::header::UPGRADE))
+		&& req
+			.headers()
+			.get_all(::http::header::UPGRADE)
+			.iter()
+			.filter_map(|value| value.to_str().ok())
+			.any(|value| {
+				value
+					.split(',')
+					.any(|protocol| protocol.trim().eq_ignore_ascii_case("websocket"))
+			})
+		&& default_route_types().resolve_route(req.uri().path()) == llm::RouteType::Responses
 }
 
 fn is_model_list_request(req: &Request) -> bool {
