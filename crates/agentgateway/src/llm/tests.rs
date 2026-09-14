@@ -423,6 +423,7 @@ fn streaming_amend_on_drop_updates_local_rate_limit() {
 			tokens_per_fill: 10,
 			fill_interval: std::time::Duration::from_secs(60),
 			limit_type: crate::http::localratelimit::RateLimitType::Tokens,
+			key: None,
 		})
 		.unwrap();
 	let log = AsyncLog::default();
@@ -438,7 +439,7 @@ fn streaming_amend_on_drop_updates_local_rate_limit() {
 	let mut amend = AmendOnDrop::new(
 		log,
 		LLMResponsePolicies {
-			local_rate_limit: vec![rate_limit.clone()],
+			local_rate_limit: vec![rate_limit.shared_bucket()],
 			..Default::default()
 		},
 		None,
@@ -446,16 +447,12 @@ fn streaming_amend_on_drop_updates_local_rate_limit() {
 	);
 	amend.report_usage();
 
-	assert!(
-		rate_limit
-			.check_llm_request(&llm_request_with_tokens(Some(7)))
-			.is_err()
-	);
-	assert!(
-		rate_limit
-			.check_llm_request(&llm_request_with_tokens(Some(6)))
-			.is_ok()
-	);
+	let plain = ::http::Request::builder()
+		.body(crate::http::Body::empty())
+		.unwrap();
+	let exec = cel::Executor::new_request(&plain);
+	assert!(rate_limit.charge_tokens(Some(7), &exec).is_err());
+	assert!(rate_limit.charge_tokens(Some(6), &exec).is_ok());
 }
 
 #[test]
@@ -466,6 +463,7 @@ fn streaming_amend_on_drop_uses_cache_inclusive_input_tokens() {
 			tokens_per_fill: 10,
 			fill_interval: std::time::Duration::from_secs(60),
 			limit_type: crate::http::localratelimit::RateLimitType::Tokens,
+			key: None,
 		})
 		.unwrap();
 	let mut request = llm_request_with_tokens(Some(5));
@@ -485,7 +483,7 @@ fn streaming_amend_on_drop_uses_cache_inclusive_input_tokens() {
 	let mut amend = AmendOnDrop::new(
 		log,
 		LLMResponsePolicies {
-			local_rate_limit: vec![rate_limit.clone()],
+			local_rate_limit: vec![rate_limit.shared_bucket()],
 			..Default::default()
 		},
 		None,
@@ -493,16 +491,12 @@ fn streaming_amend_on_drop_uses_cache_inclusive_input_tokens() {
 	);
 	amend.report_usage();
 
-	assert!(
-		rate_limit
-			.check_llm_request(&llm_request_with_tokens(Some(7)))
-			.is_err()
-	);
-	assert!(
-		rate_limit
-			.check_llm_request(&llm_request_with_tokens(Some(6)))
-			.is_ok()
-	);
+	let plain = ::http::Request::builder()
+		.body(crate::http::Body::empty())
+		.unwrap();
+	let exec = cel::Executor::new_request(&plain);
+	assert!(rate_limit.charge_tokens(Some(7), &exec).is_err());
+	assert!(rate_limit.charge_tokens(Some(6), &exec).is_ok());
 }
 
 fn test_root() -> &'static Path {
