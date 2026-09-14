@@ -784,18 +784,11 @@ impl Gateway {
 					};
 					// Snapshot the CONNECT request headers so they can be surfaced to CEL
 					// policies on the tunneled request via `source.connectHeaders`. Mark
-					// well-known sensitive headers so their values are redacted in debug logs
+					// configured and well-known sensitive headers so their values are redacted in debug logs
 					// (SourceContext derives Debug and is printed via DebugExtensions) and by
 					// the CEL `source.connectHeaders.redacted()` accessor.
-					let mut connect_headers = req.headers().clone();
-					for (name, value) in connect_headers.iter_mut() {
-						if matches!(
-							name.as_str(),
-							"authorization" | "proxy-authorization" | "cookie" | "set-cookie"
-						) {
-							value.set_sensitive(true);
-						}
-					}
+					crate::http::mark_sensitive_headers(&mut req, &inputs.cfg.sensitive_headers);
+					let connect_headers = req.headers().clone();
 					let authority = match req.uri().authority() {
 						Some(authority) => authority.as_str(),
 						None => return Ok(ProxyError::InvalidRequest.into_response_with_grpc(false)),
