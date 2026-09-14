@@ -730,9 +730,9 @@ mod responses {
 		provider: &str,
 		relative_path: &str,
 		xlate: impl FnOnce(
-			http::Response<axum_core::body::Body>,
+			http::Response<agent_http::Body>,
 			StreamingUsageGuard,
-		) -> http::Response<axum_core::body::Body>,
+		) -> http::Response<agent_http::Body>,
 	) {
 		let input_path = fixture_path(relative_path);
 		let input_bytes = fs::read(&input_path)
@@ -752,7 +752,7 @@ mod responses {
 			LLMResponse::default(),
 		)));
 		let reporter = TestStreamingReporter { info: info.clone() };
-		let mut response = http::Response::new(axum_core::body::Body::from(input_bytes));
+		let mut response = http::Response::new(agent_http::Body::from(input_bytes));
 		response
 			.headers_mut()
 			.insert("x-amzn-requestid", "request_id".parse().unwrap());
@@ -1356,7 +1356,7 @@ data: [DONE]
 
 "#;
 		let output = conversion::completions::from_messages::translate_stream(
-			axum_core::body::Body::from(input),
+			agent_http::Body::from(input),
 			1024 * 1024,
 			StreamingUsageGuard::default(),
 			LogContentFields::default(),
@@ -1394,7 +1394,7 @@ data: [DONE]
 
 "#;
 		let output = conversion::completions::from_messages::translate_stream(
-			axum_core::body::Body::from(input),
+			agent_http::Body::from(input),
 			1024 * 1024,
 			StreamingUsageGuard::default(),
 			LogContentFields::default(),
@@ -1440,7 +1440,7 @@ data: {"type":"message_stop"}
 
 "#;
 		let output = conversion::messages::from_completions::translate_stream(
-			axum_core::body::Body::from(input),
+			agent_http::Body::from(input),
 			1024 * 1024,
 			StreamingUsageGuard::default(),
 			LogContentFields::default(),
@@ -1530,7 +1530,7 @@ data: {"type":"message_stop"}
 			LLMResponse::default(),
 		)));
 		let reporter = TestStreamingReporter { info: info.clone() };
-		let response = http::Response::new(axum_core::body::Body::from(input_bytes));
+		let response = http::Response::new(agent_http::Body::from(input_bytes));
 		let response = crate::conversion::completions::passthrough_stream(
 			StreamingUsageGuard::new(Box::new(reporter)),
 			crate::LogContentFields::default(),
@@ -1553,7 +1553,7 @@ async fn test_stream(provider: &str, relative_path: &str) {
 	let input_str = String::from_utf8_lossy(&provider_bytes).to_string();
 
 	let output = conversion::responses::from_messages::translate_stream(
-		axum_core::body::Body::from(provider_bytes),
+		agent_http::Body::from(provider_bytes),
 		1024 * 1024,
 		StreamingUsageGuard::default(),
 		crate::LogContentFields {
