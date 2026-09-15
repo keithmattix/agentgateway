@@ -140,7 +140,7 @@ impl<'a> HttpSemconvAttributes<'a> {
 	}
 }
 
-fn database_llm_payload(
+pub(super) fn database_llm_payload(
 	mode: Option<crate::types::frontend::DatabaseLlmMode>,
 	input_messages: Option<&[agent_llm::types::NormalizedMessage]>,
 	info: Option<&LLMContext>,
@@ -2118,18 +2118,12 @@ impl Drop for DropOnLog {
 						}
 					}
 					let attributes = database_attributes(&db_kv);
-					let payload = database_llm_payload(
-						log.database_llm,
-						log.input_messages.as_deref().map(Vec::as_slice),
-						llm_response.as_ref(),
-					);
-					let has_payload = payload.is_some();
 					let total_tokens = llm_response.as_ref().and_then(|llm| {
 						llm
 							.total_tokens
 							.or_else(|| Some(llm.input_tokens?.saturating_add(llm.output_tokens?)))
 					});
-					log_store::emit(log_store::StoredRequestLog {
+					let record = log_store::StoredRequestLog {
 						id: uuid::Uuid::now_v7().to_string(),
 						started_at: log.start.as_datetime().with_timezone(&chrono::Utc),
 						completed_at: end_time.as_datetime().with_timezone(&chrono::Utc),
@@ -2163,9 +2157,15 @@ impl Drop for DropOnLog {
 						agentgateway_user: attributes.agentgateway_user,
 						agentgateway_group: attributes.agentgateway_group,
 						user_agent_name: attributes.user_agent_name,
-						has_payload,
+						has_payload: false,
 						attributes_json: attributes.json,
-						payload,
+						payload: None,
+					};
+					log_store::emit(log_store::PendingRequestLog {
+						record,
+						llm_mode: log.database_llm,
+						input_messages: log.input_messages.take(),
+						llm_response,
 					});
 				}
 			}
