@@ -161,13 +161,15 @@ pub mod from_messages {
 	};
 
 	pub fn translate(req: &types::messages::Request) -> Result<Vec<u8>, AIError> {
-		validate_raw_request(req)?;
-		let typed = json_util::convert::<_, messages::Request>(req).map_err(AIError::RequestMarshal)?;
-		let xlated = translate_internal(typed)?;
+		let xlated = translate_request(req)?;
 		serde_json::to_vec(&xlated).map_err(AIError::RequestMarshal)
 	}
 
-	fn translate_internal(req: messages::Request) -> Result<types::responses::Request, AIError> {
+	pub fn translate_request(
+		req: &types::messages::Request,
+	) -> Result<types::responses::Request, AIError> {
+		validate_raw_request(req)?;
+		let typed = json_util::convert::<_, messages::Request>(req).map_err(AIError::RequestMarshal)?;
 		let messages::Request {
 			messages,
 			system,
@@ -183,7 +185,7 @@ pub mod from_messages {
 			metadata,
 			thinking,
 			output_config,
-		} = req;
+		} = typed;
 
 		// Responses has no direct stop_sequences/top_k equivalent; these are
 		// accepted and dropped rather than failing the conversion (see #2662).

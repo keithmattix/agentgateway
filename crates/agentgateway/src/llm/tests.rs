@@ -915,47 +915,88 @@ async fn openai_inline_moderation_injected_for_responses() {
 	);
 }
 
-#[tokio::test]
-async fn openai_inline_moderation_injected_after_messages_translation() {
-	let provider = AIProvider::OpenAI(openai::Provider {
-		model: None,
-		moderation: Some(openai_inline_moderation_param()),
-	});
-	let backend_info = openai_test_backend_info();
-	let req = ::http::Request::builder()
-		.uri("/v1/messages")
-		.header(::http::header::CONTENT_TYPE, "application/json")
-		.body(Body::from(
-			br#"{
+#[test]
+fn openai_inline_moderation_injected_after_messages_translation() {
+	let mut cases = Vec::new();
+	for moderation in [None, Some(openai_inline_moderation_param())] {
+		let configured = moderation.is_some();
+		let provider = AIProvider::OpenAI(openai::Provider {
+			model: None,
+			moderation,
+		});
+		for output in [ChatFormat::OpenAICompletions, ChatFormat::OpenAIResponses] {
+			let request = serde_json::from_value(json!({
 				"model": "gpt-5",
 				"max_tokens": 64,
 				"messages": [{"role": "user", "content": "hello"}]
-			}"#
-				.to_vec(),
-		))
-		.unwrap();
-
-	let RequestResult::Success {
-		request: forwarded,
-		upstream_route_type,
-		..
-	} = provider
-		.process_messages_request(&backend_info, None, req, false, &mut None, None)
-		.await
-		.expect("Anthropic messages request should translate to OpenAI completions")
-	else {
-		panic!("expected forwarded request");
-	};
-
-	let forwarded_body = forwarded.collect().await.unwrap().to_bytes();
-	let forwarded_json: Value =
-		serde_json::from_slice(&forwarded_body).expect("forwarded request should be JSON");
-
-	assert_eq!(upstream_route_type, RouteType::Completions);
-	assert_eq!(
-		forwarded_json["moderation"],
-		openai_inline_moderation_value()
-	);
+			}))
+			.unwrap();
+			let rendered = ChatTranslation {
+				input: InputFormat::Messages,
+				output,
+			}
+			.render_request(
+				types::ChatRequest::Messages(request),
+				&ChatRequestContext {
+					provider: &provider,
+					headers: &HeaderMap::new(),
+					prompt_caching: None,
+					catalog: None,
+				},
+			)
+			.unwrap();
+			let forwarded: Value = serde_json::from_slice(&rendered.body).unwrap();
+			cases.push(json!({
+				"format": format!("{output:?}"),
+				"moderation_configured": configured,
+				"moderation": forwarded.get("moderation"),
+			}));
+		}
+	}
+	insta::assert_json_snapshot!(cases, @r#"
+[
+  {
+    "format": "OpenAICompletions",
+    "moderation_configured": false,
+    "moderation": null
+  },
+  {
+    "format": "OpenAIResponses",
+    "moderation_configured": false,
+    "moderation": null
+  },
+  {
+    "format": "OpenAICompletions",
+    "moderation_configured": true,
+    "moderation": {
+      "model": "omni-moderation-latest",
+      "policy": {
+        "input": {
+          "mode": "block"
+        },
+        "output": {
+          "mode": "score"
+        }
+      }
+    }
+  },
+  {
+    "format": "OpenAIResponses",
+    "moderation_configured": true,
+    "moderation": {
+      "model": "omni-moderation-latest",
+      "policy": {
+        "input": {
+          "mode": "block"
+        },
+        "output": {
+          "mode": "score"
+        }
+      }
+    }
+  }
+]
+"#);
 }
 
 #[test]

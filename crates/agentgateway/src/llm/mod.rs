@@ -413,7 +413,11 @@ fn render_openai_responses(
 			apply_openai_moderation(&mut req.moderation, ctx)?;
 			serde_json::to_vec(&req).map_err(AIError::RequestMarshal)
 		},
-		types::ChatRequest::Messages(req) => conversion::responses::from_messages::translate(&req),
+		types::ChatRequest::Messages(req) => {
+			let mut translated = conversion::responses::from_messages::translate_request(&req)?;
+			apply_openai_moderation(&mut translated.moderation, ctx)?;
+			serde_json::to_vec(&translated).map_err(AIError::RequestMarshal)
+		},
 		_ => Err(AIError::UnsupportedConversion(strng::literal!(
 			"expected responses request"
 		))),
