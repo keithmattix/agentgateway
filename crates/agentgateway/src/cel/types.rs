@@ -1625,14 +1625,27 @@ impl LLMContext {
 			input_audio_tokens: resp.input_audio_tokens,
 			cached_input_tokens: resp.cached_input_tokens,
 			cache_creation_input_tokens: resp.cache_creation_input_tokens,
-			service_tier: resp.service_tier.clone(),
-			response_model: resp.provider_model.clone(),
+			service_tier: resp.service_tier,
+			response_model: resp.provider_model,
 			// Not always set
-			completion: resp.completion.clone(),
-			tool_calls: resp
-				.output_messages
-				.as_ref()
-				.map(|msgs| msgs.iter().flat_map(|m| m.tool_calls()).collect()),
+			completion: resp.completion,
+			tool_calls: resp.output_messages.map(|msgs| {
+				msgs
+					.into_iter()
+					.flat_map(|m| m.content)
+					.map(|part| match part {
+						llm::OutputMessagePart::ToolCall {
+							id,
+							name,
+							arguments,
+						} => llm::ToolCall {
+							id,
+							name,
+							arguments,
+						},
+					})
+					.collect()
+			}),
 			..LLMContext::from(value.request)
 		};
 
