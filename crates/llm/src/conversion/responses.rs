@@ -522,9 +522,9 @@ pub mod from_messages {
 				} => {
 					flush_output_message(&mut text_parts, out);
 					let arguments = serde_json::to_string(&input).map_err(AIError::RequestMarshal)?;
+					// Messages preserves the call ID, not the optional Responses item ID.
 					out.push(types::responses::RawInputItem::from_value(json!({
 						"type": "function_call",
-						"id": id,
 						"call_id": id,
 						"name": name,
 						"arguments": arguments,

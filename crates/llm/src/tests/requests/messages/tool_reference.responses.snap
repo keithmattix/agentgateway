@@ -57,7 +57,6 @@ info:
       },
       {
         "type": "function_call",
-        "id": "toolu_01AAAA",
         "call_id": "toolu_01AAAA",
         "name": "ToolSearch",
         "arguments": "{\"query\":\"widgets\"}",

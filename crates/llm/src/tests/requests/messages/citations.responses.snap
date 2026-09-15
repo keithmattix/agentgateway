@@ -1,0 +1,44 @@
+---
+source: crates/llm/src/golden_tests.rs
+description: src/tests/requests/messages/citations.json
+info:
+  model: gpt-5.6-luna
+  max_tokens: 64
+  messages:
+    - role: user
+      content: Say hello.
+    - role: assistant
+      content:
+        - type: text
+          text: Hello!
+          citations: []
+    - role: user
+      content: Continue.
+---
+{
+  "error": "unsupported conversion: messages text citations cannot be represented by responses",
+  "parsed": {
+    "input_format": "Messages",
+    "cache_convention": "InputIncludesCache",
+    "request_model": "gpt-5.6-luna",
+    "provider": "responses",
+    "streaming": false,
+    "params": {
+      "max_tokens": 64
+    },
+    "prompt": [
+      {
+        "role": "user",
+        "content": "Say hello."
+      },
+      {
+        "role": "assistant",
+        "content": "Hello!"
+      },
+      {
+        "role": "user",
+        "content": "Continue."
+      }
+    ]
+  }
+}

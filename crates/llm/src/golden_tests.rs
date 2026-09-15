@@ -61,8 +61,7 @@ mod requests {
 		let input_str = fs::read_to_string(&input_path).expect("failed to read input file");
 		let input_raw: Value = serde_json::from_str(&input_str).expect("failed to parse input JSON");
 		let mut input_typed: I = serde_json::from_str(&input_str).expect("failed to parse input JSON");
-		let provider_response =
-			xlate(&mut input_typed).expect("failed to translate input format to provider request");
+		let provider_response = xlate(&mut input_typed);
 		let mut llm_request = input_typed
 			.to_llm_request(
 				strng::new(match provider {
@@ -80,16 +79,18 @@ mod requests {
 			llm_request.prompt = Some(input_typed.get_messages().into());
 		}
 
-		let provider_value =
-			serde_json::from_slice::<Value>(&provider_response).expect("failed to parse provider JSON");
-		let report = json!({
-			"request": provider_value,
-			"parsed": llm_request,
-		});
+		let report = match provider_response {
+			Ok(body) => json!({
+				"request": serde_json::from_slice::<Value>(&body).expect("failed to parse provider JSON"),
+				"parsed": llm_request,
+			}),
+			Err(error) => json!({"error": error.to_string(), "parsed": llm_request}),
+		};
 		let (snapshot_path, snapshot_name) = snapshot_path_and_name(relative_path, provider);
 
 		insta::with_settings!({
 			info => &input_raw,
+			filters => vec![(r#""id": "msg_[0-9a-f]{16}""#, r#""id": "msg_redacted""#)],
 			description => input_path.to_string_lossy().to_string(),
 			omit_expression => true,
 			prepend_module_to_snapshot => false,
@@ -165,29 +166,51 @@ mod requests {
 			"basic",
 			&[ANTHROPIC, COMPLETIONS, BEDROCK, VERTEX, RESPONSES],
 		),
-		("system_message", &[ANTHROPIC, COMPLETIONS, BEDROCK, VERTEX]),
+		(
+			"system_message",
+			&[ANTHROPIC, COMPLETIONS, BEDROCK, VERTEX, RESPONSES],
+		),
 		(
 			"tools",
 			&[ANTHROPIC, COMPLETIONS, BEDROCK, VERTEX, RESPONSES],
 		),
-		("server_tools", &[ANTHROPIC, COMPLETIONS, BEDROCK, VERTEX]),
-		("reasoning", &[ANTHROPIC, COMPLETIONS, BEDROCK, VERTEX]),
-		("metadata", &[ANTHROPIC, COMPLETIONS, BEDROCK, VERTEX]),
+		(
+			"server_tools",
+			&[ANTHROPIC, COMPLETIONS, BEDROCK, VERTEX, RESPONSES],
+		),
+		(
+			"reasoning",
+			&[ANTHROPIC, COMPLETIONS, BEDROCK, VERTEX, RESPONSES],
+		),
+		(
+			"metadata",
+			&[ANTHROPIC, COMPLETIONS, BEDROCK, VERTEX, RESPONSES],
+		),
 		(
 			"structured-output",
-			&[ANTHROPIC, COMPLETIONS, BEDROCK, VERTEX],
+			&[ANTHROPIC, COMPLETIONS, BEDROCK, VERTEX, RESPONSES],
 		),
 		("cache_control", &[ANTHROPIC, COMPLETIONS, BEDROCK]),
 		("cache_control_responses", &[RESPONSES]),
 		("gpt_adaptive_thinking_with_tools", &[COMPLETIONS]),
-		("reasoning_replay", &[BEDROCK, COMPLETIONS]),
-		("tool_history_without_tools", &[BEDROCK]),
+		("reasoning_replay", &[BEDROCK, COMPLETIONS, RESPONSES]),
+		(
+			"tool_history_without_tools",
+			&[BEDROCK, COMPLETIONS, RESPONSES],
+		),
 		("tool_reference", &[COMPLETIONS, BEDROCK, RESPONSES]),
 		(
 			"tool_result_unknown_part",
 			&[COMPLETIONS, BEDROCK, RESPONSES],
 		),
 		("responses_agent_subset", &[RESPONSES]),
+		("tool_result_error", &[COMPLETIONS, RESPONSES]),
+		("citations", &[COMPLETIONS, RESPONSES]),
+		("unknown_content", &[COMPLETIONS, RESPONSES]),
+		("reasoning_enabled", &[COMPLETIONS, RESPONSES]),
+		("stop_sequences", &[COMPLETIONS, RESPONSES]),
+		("tool_result_empty", &[COMPLETIONS, RESPONSES]),
+		("tool_result_image", &[COMPLETIONS, RESPONSES]),
 	];
 	const RESPONSES_REQUESTS: &[(&str, &[&str])] = &[
 		("namespace-tools", &[BEDROCK, GEMINI]),
@@ -899,7 +922,16 @@ mod responses {
 		("tool", &[RESPONSES_TO_MESSAGES]),
 		("reasoning", &[RESPONSES_TO_MESSAGES]),
 		("custom-tool", &[RESPONSES_TO_RESPONSES]),
-		("truncated_tool_call", &[RESPONSES_TO_RESPONSES]),
+		(
+			"truncated_tool_call",
+			&[RESPONSES_TO_RESPONSES, RESPONSES_TO_MESSAGES],
+		),
+		("max_tokens", &[RESPONSES_TO_MESSAGES]),
+		("incomplete_no_details", &[RESPONSES_TO_MESSAGES]),
+		("content_filter", &[RESPONSES_TO_MESSAGES]),
+		("context_window", &[RESPONSES_TO_MESSAGES]),
+		("failed", &[RESPONSES_TO_MESSAGES]),
+		("empty_tool_call", &[RESPONSES_TO_MESSAGES]),
 	];
 	const EMBEDDING_RESPONSES: &[(&str, &str)] = &[
 		("response/bedrock-titan/embeddings.json", BEDROCK_TITAN),
@@ -962,12 +994,30 @@ mod responses {
 	];
 	const VERTEX_GEMINI_STREAM_RESPONSES: &[&str] = &["stream_tool"];
 	const RESPONSES_STREAM_RESPONSES: &[(&str, &[&str])] = &[
-		("stream", &[RESPONSES_TO_RESPONSES, RESPONSES_TO_DETECT]),
+		(
+			"stream",
+			&[
+				RESPONSES_TO_RESPONSES,
+				RESPONSES_TO_DETECT,
+				RESPONSES_TO_MESSAGES,
+			],
+		),
 		("stream-custom-tool", &[RESPONSES_TO_RESPONSES]),
 		(
 			"stream-image",
-			&[RESPONSES_TO_RESPONSES, RESPONSES_TO_DETECT],
+			&[
+				RESPONSES_TO_RESPONSES,
+				RESPONSES_TO_DETECT,
+				RESPONSES_TO_MESSAGES,
+			],
 		),
+		("stream-refusal", &[RESPONSES_TO_MESSAGES]),
+		("stream-error", &[RESPONSES_TO_MESSAGES]),
+		("stream-max_tokens", &[RESPONSES_TO_MESSAGES]),
+		("stream-incomplete_no_details", &[RESPONSES_TO_MESSAGES]),
+		("stream-content_filter", &[RESPONSES_TO_MESSAGES]),
+		("stream-context_window", &[RESPONSES_TO_MESSAGES]),
+		("stream-failed", &[RESPONSES_TO_MESSAGES]),
 	];
 
 	#[tokio::test]
@@ -1449,6 +1499,14 @@ mod responses {
 						conversion::responses::passthrough_stream(body, BUFFER_LIMIT, reporter, LOG_CONTENT)
 					}),
 					RESPONSES_TO_DETECT => types::detect::passthrough_stream(reporter, response),
+					RESPONSES_TO_MESSAGES => response.map(|body| {
+						conversion::responses::from_messages::translate_stream(
+							body,
+							BUFFER_LIMIT,
+							reporter,
+							LOG_CONTENT,
+						)
+					}),
 					_ => unreachable!(),
 				})
 				.await;
@@ -1664,78 +1722,6 @@ data: {"type":"message_stop"}
 	}
 }
 
-async fn test_stream(provider: &str, relative_path: &str) {
-	let input_path = fixture_path(relative_path);
-	let provider_bytes = fs::read(&input_path).expect("failed to read stream input file");
-	let input_str = String::from_utf8_lossy(&provider_bytes).to_string();
-
-	let output = conversion::responses::from_messages::translate_stream(
-		agent_http::Body::from(provider_bytes),
-		1024 * 1024,
-		StreamingUsageGuard::default(),
-		crate::LogContentFields {
-			completion: true,
-			tool_calls: true,
-		},
-	)
-	.collect()
-	.await
-	.unwrap()
-	.to_bytes();
-	let output_str = String::from_utf8_lossy(&output).to_string();
-	let (snapshot_path, snapshot_name) = snapshot_path_and_name(relative_path, provider);
-
-	insta::with_settings!({
-		info => &input_str,
-		description => input_path.to_string_lossy().to_string(),
-		omit_expression => true,
-		prepend_module_to_snapshot => false,
-		snapshot_path => snapshot_path,
-	}, {
-		insta::assert_snapshot!(snapshot_name, output_str);
-	});
-}
-
-#[tokio::test]
-async fn responses_to_messages_stream_translates_text_tool_and_usage() {
-	test_stream(
-		"responses-messages-streaming",
-		"response/responses/stream.json",
-	)
-	.await;
-}
-
-#[tokio::test]
-async fn responses_to_messages_stream_translates_image() {
-	test_stream(
-		"responses-messages-streaming",
-		"response/responses/stream-image.json",
-	)
-	.await;
-}
-
-#[tokio::test]
-async fn responses_to_messages_stream_translates_refusal() {
-	test_stream(
-		"responses-messages-streaming",
-		"response/responses/stream-refusal.json",
-	)
-	.await;
-}
-
-#[test]
-fn messages_to_responses_rejects_unsupported_features() {
-	let path = "requests/messages/reasoning_replay.json";
-	let input_str = fs::read_to_string(fixture_path(path)).expect("failed to read fixture");
-	let input: types::messages::Request =
-		serde_json::from_str(&input_str).expect("failed to parse fixture");
-	let err = conversion::responses::from_messages::translate(&input).unwrap_err();
-	assert!(
-		matches!(err, AIError::UnsupportedConversion(_)),
-		"expected UnsupportedConversion for {path}, got {err:?}"
-	);
-}
-
 #[test]
 fn messages_to_responses_accepts_and_drops_unrepresentable_fields() {
 	let input: types::messages::Request = serde_json::from_value(json!({
@@ -1755,30 +1741,6 @@ fn messages_to_responses_accepts_and_drops_unrepresentable_fields() {
 	assert!(body.get("stop").is_none());
 	assert!(body.get("top_k").is_none());
 	assert_eq!(body["input"][0]["content"][0]["text"], "hello");
-}
-
-#[test]
-fn messages_to_responses_maps_tool_result_is_error_to_incomplete() {
-	let input_str = fs::read_to_string(fixture_path("requests/messages/tool_result_error.json"))
-		.expect("failed to read fixture");
-	let input: types::messages::Request =
-		serde_json::from_str(&input_str).expect("failed to parse fixture");
-	let body = conversion::responses::from_messages::translate(&input)
-		.expect("tool_result is_error should be mapped, not rejected");
-	let body: Value = serde_json::from_slice(&body).expect("translated request should be JSON");
-	let call_outputs = body["input"]
-		.as_array()
-		.expect("input should be an array")
-		.iter()
-		.filter(|item| item["type"] == "function_call_output")
-		.collect::<Vec<_>>();
-	assert_eq!(
-		call_outputs.len(),
-		1,
-		"expected one function_call_output: {body}"
-	);
-	assert_eq!(call_outputs[0]["call_id"], "toolu_01");
-	assert_eq!(call_outputs[0]["status"], "incomplete");
 }
 
 #[test]

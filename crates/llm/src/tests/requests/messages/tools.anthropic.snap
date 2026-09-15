@@ -13,6 +13,9 @@ info:
           location:
             type: string
             description: "The city and state, e.g. San Francisco, CA"
+          unit:
+            type: string
+            description: Optional temperature unit
         required:
           - location
   messages:
@@ -39,6 +42,10 @@ info:
             "location": {
               "type": "string",
               "description": "The city and state, e.g. San Francisco, CA"
+            },
+            "unit": {
+              "type": "string",
+              "description": "Optional temperature unit"
             }
           },
           "required": [

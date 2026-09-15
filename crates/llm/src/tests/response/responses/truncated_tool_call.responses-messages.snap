@@ -1,0 +1,22 @@
+---
+source: crates/llm/src/golden_tests.rs
+description: src/tests/response/responses/truncated_tool_call.json
+info:
+  id: resp_truncated_tool_call
+  status: incomplete
+  model: gpt-x
+  output:
+    - type: function_call
+      id: fc_1
+      call_id: call_1
+      name: get_weather
+      arguments: "{\"location\": \"Par"
+      status: incomplete
+  object: response
+  created_at: 123
+  incomplete_details:
+    reason: max_output_tokens
+---
+{
+  "error": "unsupported conversion: responses function call arguments are not valid JSON"
+}

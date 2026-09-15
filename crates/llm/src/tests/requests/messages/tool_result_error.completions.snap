@@ -1,6 +1,6 @@
 ---
 source: crates/llm/src/golden_tests.rs
-description: src/tests/requests/messages/tools.json
+description: src/tests/requests/messages/tool_result_error.json
 info:
   model: claude-opus-4-6
   max_tokens: 1024
@@ -13,14 +13,24 @@ info:
           location:
             type: string
             description: "The city and state, e.g. San Francisco, CA"
-          unit:
-            type: string
-            description: Optional temperature unit
         required:
           - location
   messages:
     - role: user
       content: What is the weather like in San Francisco?
+    - role: assistant
+      content:
+        - type: tool_use
+          id: toolu_01
+          name: get_weather
+          input:
+            location: "San Francisco, CA"
+    - role: user
+      content:
+        - type: tool_result
+          tool_use_id: toolu_01
+          is_error: true
+          content: "Error: location not found"
 ---
 {
   "request": {
@@ -33,6 +43,24 @@ info:
             "text": "What is the weather like in San Francisco?"
           }
         ]
+      },
+      {
+        "role": "assistant",
+        "tool_calls": [
+          {
+            "type": "function",
+            "id": "toolu_01",
+            "function": {
+              "name": "get_weather",
+              "arguments": "{\"location\":\"San Francisco, CA\"}"
+            }
+          }
+        ]
+      },
+      {
+        "role": "tool",
+        "content": "Error: location not found",
+        "tool_call_id": "toolu_01"
       }
     ],
     "model": "claude-opus-4-6",
@@ -50,10 +78,6 @@ info:
               "location": {
                 "type": "string",
                 "description": "The city and state, e.g. San Francisco, CA"
-              },
-              "unit": {
-                "type": "string",
-                "description": "Optional temperature unit"
               }
             },
             "required": [
@@ -77,6 +101,14 @@ info:
       {
         "role": "user",
         "content": "What is the weather like in San Francisco?"
+      },
+      {
+        "role": "assistant",
+        "content": ""
+      },
+      {
+        "role": "user",
+        "content": ""
       }
     ]
   }
