@@ -4230,24 +4230,33 @@ mod tests {
 		"eviction": {"duration": "1s"}
 	}}))]
 	#[tokio::test]
-	async fn llm_retry_evicts_failed_priority_group_before_next_attempt(
+	async fn llm_retry_records_failed_attempt_for_eviction(
 		#[case] status: u16,
 		#[case] policies: serde_json::Value,
 	) {
 		let primary = wiremock::MockServer::start().await;
+		// Supply an eviction duration for the custom condition without adding a retry delay.
 		Mock::given(wiremock::matchers::any())
-			.respond_with(ResponseTemplate::new(status))
+			.respond_with(ResponseTemplate::new(status).insert_header("retry-after", "60"))
+			.up_to_n_times(1)
+			.with_priority(1)
+			.expect(1)
 			.mount(&primary)
 			.await;
 
 		let fallback = wiremock::MockServer::start().await;
-		Mock::given(wiremock::matchers::any())
-			.respond_with(ResponseTemplate::new(200).set_body_raw(
-				include_bytes!("../../../llm/src/tests/response/completions/basic.json").to_vec(),
-				"application/json",
-			))
-			.mount(&fallback)
-			.await;
+		// The retry may reach either provider before the eviction worker processes the failure.
+		// Both succeed, so only the failed first attempt can trigger eviction.
+		for mock in [&primary, &fallback] {
+			Mock::given(wiremock::matchers::any())
+				.respond_with(ResponseTemplate::new(200).set_body_raw(
+					include_bytes!("../../../llm/src/tests/response/completions/basic.json").to_vec(),
+					"application/json",
+				))
+				.with_priority(2)
+				.mount(mock)
+				.await;
+		}
 
 		let mut bind = proxymock::setup_proxy_test("{}").expect("proxy test harness");
 		let local_backend: LocalAIBackend = serde_json::from_value(json!({
@@ -4278,15 +4287,14 @@ mod tests {
 			]
 		}))
 		.expect("local AI backend");
-		let backend = Backend::AI(
-			ResourceName::new("llm".into(), "".into()),
-			local_backend
-				.translate(&crate::resource_manager::ResourceFetcher::direct(
-					bind.pi.upstream.clone(),
-				))
-				.await
-				.expect("translated backend"),
-		);
+		let ai = local_backend
+			.translate(&crate::resource_manager::ResourceFetcher::direct(
+				bind.pi.upstream.clone(),
+			))
+			.await
+			.expect("translated backend");
+		let providers = ai.providers.clone();
+		let backend = Backend::AI(ResourceName::new("llm".into(), "".into()), ai);
 		bind
 			.pi
 			.stores
@@ -4300,7 +4308,6 @@ mod tests {
 			.attach_route_policy(json!({
 				"retry": {
 					"attempts": 1,
-					"backoff": "10ms",
 					"codes": [status]
 				},
 				"ai": {
@@ -4321,24 +4328,33 @@ mod tests {
 		.await;
 
 		assert_eq!(res.status(), 200);
+		proxymock::read_body_raw(res.into_body()).await;
+
+		tokio::time::timeout(std::time::Duration::from_secs(1), async {
+			while !providers.iter().index().contains_key("fallback") {
+				tokio::task::yield_now().await;
+			}
+		})
+		.await
+		.expect("failed attempt should eventually evict the primary provider");
 
 		let primary_requests = primary
 			.received_requests()
 			.await
 			.expect("primary request recording");
-		assert_eq!(primary_requests.len(), 1);
 
 		let fallback_requests = fallback
 			.received_requests()
 			.await
 			.expect("fallback request recording");
-		assert_eq!(fallback_requests.len(), 1);
+		assert_eq!(primary_requests.len() + fallback_requests.len(), 2);
 		assert_eq!(
-			fallback_requests[0]
-				.headers
-				.get("x-retry-attempt")
-				.and_then(|v| v.to_str().ok()),
-			Some("1")
+			primary_requests
+				.iter()
+				.chain(&fallback_requests)
+				.filter(|r| r.headers.get("x-retry-attempt").is_some_and(|v| v == "1"))
+				.count(),
+			1
 		);
 	}
 }
