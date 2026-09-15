@@ -819,11 +819,13 @@ pub mod from_messages {
 				.map(Into::into)
 		};
 
-		let adaptive_thinking_requested = thinking
-			.as_ref()
-			.is_some_and(|t| matches!(t, messages::ThinkingInput::Adaptive {}));
 		let output_effort = output_config.as_ref().and_then(|cfg| cfg.effort);
-		let reasoning_effort = if adaptive_thinking_requested {
+		let reasoning_requested = match thinking {
+			Some(messages::ThinkingInput::Disabled {}) => false,
+			Some(messages::ThinkingInput::Adaptive {}) => true,
+			_ => output_effort.is_some(),
+		};
+		let reasoning_effort = if reasoning_requested {
 			Some(match output_effort {
 				Some(messages::ThinkingEffort::Low) => completions::ReasoningEffort::Low,
 				Some(messages::ThinkingEffort::Medium) => completions::ReasoningEffort::Medium,
