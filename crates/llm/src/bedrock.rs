@@ -31,8 +31,8 @@ const MANTLE_SIGNING_SERVICE_NAME: &str = "bedrock-mantle";
 #[cfg_attr(feature = "schema", schemars(rename = "BedrockProviderConfig"))]
 pub struct Provider {
 	/// Model ID to send to Bedrock, overriding the model in the client request.
-	#[serde(default, skip_serializing_if = "Option::is_none")]
-	pub model: Option<Strng>, // Optional: model override for Bedrock API path
+	#[serde(default, rename = "model", skip_serializing_if = "Option::is_none")]
+	pub model_override: Option<Strng>, // Optional: model override for Bedrock API path
 	/// AWS region for the Bedrock endpoint.
 	pub region: Strng, // Required: AWS region
 	/// Identifier of the Bedrock guardrail to apply.
@@ -51,14 +51,8 @@ impl super::Provider for Provider {
 }
 
 impl Provider {
-	fn configured_model<'a>(&'a self, request_model: Option<&'a str>) -> Option<&'a str> {
-		self.model.as_deref().or(request_model)
-	}
-
-	pub fn is_anthropic_model(&self, request_model: Option<&str>) -> bool {
-		self
-			.configured_model(request_model)
-			.unwrap_or_default()
+	pub fn is_anthropic_model(&self, request_model: &str) -> bool {
+		request_model
 			.to_ascii_lowercase()
 			.contains("anthropic.claude")
 	}
@@ -94,7 +88,6 @@ impl Provider {
 		use BedrockEndpointPreference::*;
 
 		use crate::model_catalog::tags;
-		let model_id = self.configured_model(model_id);
 		let has = |tag| model_id.is_some_and(|m| catalog.is_some_and(|c| c.model_has_tag(m, tag)));
 		match self.endpoint_preference {
 			RuntimeOnly => Runtime,
@@ -118,7 +111,7 @@ impl Provider {
 
 	pub fn supported_chat_formats(
 		&self,
-		request_model: Option<&str>,
+		request_model: &str,
 		catalog: crate::model_catalog::Catalog<'_>,
 	) -> Vec<super::ChatFormat> {
 		use super::ChatFormat;
@@ -127,8 +120,7 @@ impl Provider {
 			ChatFormat::AnthropicMessages,
 			ChatFormat::OpenAIResponses,
 		];
-		let request_model = self.configured_model(request_model);
-		match self.chat_endpoint(request_model, catalog) {
+		match self.chat_endpoint(Some(request_model), catalog) {
 			// all chat runtime models seem to support converse
 			BedrockEndpoint::Runtime => vec![ChatFormat::BedrockConverse],
 			BedrockEndpoint::Mantle => {
@@ -136,7 +128,7 @@ impl Provider {
 				if self.is_anthropic_model(request_model) {
 					return vec![ChatFormat::AnthropicMessages];
 				}
-				if let Some(tags) = request_model.and_then(|m| catalog.and_then(|c| c.get_model_tags(m))) {
+				if let Some(tags) = catalog.and_then(|c| c.get_model_tags(request_model)) {
 					let declared: Vec<ChatFormat> = NATIVE
 						.into_iter()
 						.filter(|f| tags.contains(f.tag()))
@@ -146,7 +138,7 @@ impl Provider {
 					}
 				}
 				// fallback for entries that havent gotten into loaded to catalog yet
-				let basemodelname = request_model.unwrap_or_default().to_ascii_lowercase();
+				let basemodelname = request_model.to_ascii_lowercase();
 				if basemodelname.contains("openai") || basemodelname.contains("grok") {
 					vec![ChatFormat::OpenAICompletions, ChatFormat::OpenAIResponses]
 				} else {
@@ -209,7 +201,7 @@ mod tests {
 
 	fn provider(pref: BedrockEndpointPreference) -> Provider {
 		Provider {
-			model: None,
+			model_override: None,
 			region: strng::new("us-east-1"),
 			guardrail_identifier: None,
 			guardrail_version: None,
@@ -368,24 +360,24 @@ mod tests {
 	fn supported_chat_formats_without_catalog_falls_back_to_model_family() {
 		let mantle = provider(BedrockEndpointPreference::MantleOnly);
 		assert_eq!(
-			mantle.supported_chat_formats(Some("deepseek.v3.1"), None),
+			mantle.supported_chat_formats("deepseek.v3.1", None),
 			vec![ChatFormat::OpenAICompletions]
 		);
 		assert_eq!(
-			mantle.supported_chat_formats(Some("openai.gpt-oss-120b"), None),
+			mantle.supported_chat_formats("openai.gpt-oss-120b", None),
 			vec![ChatFormat::OpenAICompletions, ChatFormat::OpenAIResponses]
 		);
 		assert_eq!(
-			mantle.supported_chat_formats(Some("xai.grok-4-6"), None),
+			mantle.supported_chat_formats("xai.grok-4-6", None),
 			vec![ChatFormat::OpenAICompletions, ChatFormat::OpenAIResponses]
 		);
 		assert_eq!(
-			mantle.supported_chat_formats(Some("anthropic.claude-3-sonnet"), None),
+			mantle.supported_chat_formats("anthropic.claude-3-sonnet", None),
 			vec![ChatFormat::AnthropicMessages]
 		);
 		let runtime = provider(BedrockEndpointPreference::RuntimeOnly);
 		assert_eq!(
-			runtime.supported_chat_formats(Some("any"), None),
+			runtime.supported_chat_formats("any", None),
 			vec![ChatFormat::BedrockConverse]
 		);
 	}
@@ -400,14 +392,14 @@ mod tests {
 		)]);
 		let catalog: crate::model_catalog::Catalog = Some(&cat);
 		assert_eq!(
-			mantle.supported_chat_formats(Some("openai.gpt-oss-safeguard-120b"), catalog),
+			mantle.supported_chat_formats("openai.gpt-oss-safeguard-120b", catalog),
 			vec![ChatFormat::OpenAICompletions]
 		);
 		// A Mantle model with no format tags still falls back to the model-family guess
 		let untagged = TestCatalog::new([("some.model", &[tags::MANTLE][..])]);
 		let untagged: crate::model_catalog::Catalog = Some(&untagged);
 		assert_eq!(
-			mantle.supported_chat_formats(Some("some.model"), untagged),
+			mantle.supported_chat_formats("some.model", untagged),
 			vec![ChatFormat::OpenAICompletions]
 		);
 	}
@@ -430,31 +422,27 @@ mod tests {
 		)]);
 		let catalog: crate::model_catalog::Catalog = Some(&cat);
 		assert_eq!(
-			mantle.supported_chat_formats(Some("anthropic.claude-sonnet-5"), catalog),
+			mantle.supported_chat_formats("anthropic.claude-sonnet-5", catalog),
 			vec![ChatFormat::AnthropicMessages]
 		);
 	}
 
 	#[test]
-	fn configured_model_override_drives_endpoint_and_formats() {
+	fn resolved_model_drives_endpoint_and_formats() {
 		use crate::model_catalog::{TestCatalog, tags};
 		let mut p = provider(BedrockEndpointPreference::RuntimePreferred);
-		p.model = Some(strng::new("openai.gpt-oss-120b"));
+		p.model_override = Some(strng::new("anthropic.claude-sonnet-4-5"));
 		let cat = TestCatalog::new([(
 			"openai.gpt-oss-120b",
 			&[tags::MANTLE, tags::OPENAI_COMPLETIONS][..],
 		)]);
 		let catalog: crate::model_catalog::Catalog = Some(&cat);
 		assert_eq!(
-			p.resolve_endpoint(
-				RouteType::Completions,
-				Some("ignored-client-model"),
-				catalog
-			),
+			p.resolve_endpoint(RouteType::Completions, Some("openai.gpt-oss-120b"), catalog),
 			BedrockEndpoint::Mantle
 		);
 		assert_eq!(
-			p.supported_chat_formats(Some("ignored-client-model"), catalog),
+			p.supported_chat_formats("openai.gpt-oss-120b", catalog),
 			vec![ChatFormat::OpenAICompletions]
 		);
 	}

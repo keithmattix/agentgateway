@@ -270,7 +270,7 @@ mod requests {
 			),
 		]);
 		let bedrock = bedrock::Provider {
-			model: Some(strng::new("anthropic.claude-3-5-sonnet-20241022-v2:0")),
+			model_override: Some(strng::new("anthropic.claude-3-5-sonnet-20241022-v2:0")),
 			region: strng::new("us-west-2"),
 			guardrail_identifier: None,
 			guardrail_version: None,
@@ -293,9 +293,15 @@ mod requests {
 						)
 						.map(|r| r.body)
 					}),
-					VERTEX_GEMINI => test_request(VERTEX_GEMINI, &path, |i| {
-						conversion::vertex_gemini::from_completions::translate(i, Some("gemini-2.5-pro"))
-					}),
+					VERTEX_GEMINI => test_request(
+						VERTEX_GEMINI,
+						&path,
+						|i: &mut types::completions::Request| {
+							let mut resolved = i.clone();
+							resolved.model = Some("gemini-2.5-pro".into());
+							conversion::vertex_gemini::from_completions::translate(&resolved)
+						},
+					),
 					other => panic!("unsupported provider in COMPLETION_REQUESTS: {other}"),
 				}
 			}
@@ -304,6 +310,7 @@ mod requests {
 
 	#[test]
 	fn from_completions_bedrock_reasoning() {
+		// Rendering must use the resolved request model, even when configuration differs.
 		for (model, provider) in [
 			("openai.gpt-oss-120b-1:0", BEDROCK_OPENAI),
 			("us.openai.gpt-5.6-luna", BEDROCK_OPENAI_GPT),
@@ -312,30 +319,36 @@ mod requests {
 			("us.amazon.nova-2-lite-v1:0", BEDROCK_NOVA),
 		] {
 			let bedrock = bedrock::Provider {
-				model: Some(strng::new(model)),
+				model_override: Some(strng::new("anthropic.claude-3-5-sonnet-20241022-v2:0")),
 				region: strng::new("us-west-2"),
 				guardrail_identifier: None,
 				guardrail_version: None,
 				endpoint_preference: Default::default(),
 			};
-			test_request(provider, "requests/completions/reasoning.json", |i| {
-				conversion::bedrock::from_completions::translate(i, &bedrock, None, None, None)
-					.map(|r| r.body)
-			});
+			test_request(
+				provider,
+				"requests/completions/reasoning.json",
+				|i: &mut types::completions::Request| {
+					let mut resolved = i.clone();
+					resolved.model = Some(model.into());
+					conversion::bedrock::from_completions::translate(&resolved, &bedrock, None, None, None)
+						.map(|r| r.body)
+				},
+			);
 		}
 	}
 
 	#[test]
 	fn from_messages() {
 		let bedrock = bedrock::Provider {
-			model: Some(strng::new("anthropic.claude-3-5-sonnet-20241022-v2:0")),
+			model_override: Some(strng::new("anthropic.claude-3-5-sonnet-20241022-v2:0")),
 			region: strng::new("us-west-2"),
 			guardrail_identifier: None,
 			guardrail_version: None,
 			endpoint_preference: Default::default(),
 		};
 		let vertex = vertex::Provider {
-			model: Some(strng::new("anthropic/claude-sonnet-4-5")),
+			model_override: Some(strng::new("anthropic/claude-sonnet-4-5")),
 			region: Some(strng::new("us-central1")),
 			project_id: strng::new("test-project-123"),
 		};
@@ -368,7 +381,7 @@ mod requests {
 	#[test]
 	fn from_responses() {
 		let bedrock = bedrock::Provider {
-			model: Some(strng::new("anthropic.claude-3-5-sonnet-20241022-v2:0")),
+			model_override: Some(strng::new("anthropic.claude-3-5-sonnet-20241022-v2:0")),
 			region: strng::new("us-west-2"),
 			guardrail_identifier: None,
 			guardrail_version: None,
@@ -393,36 +406,12 @@ mod requests {
 
 	#[test]
 	fn embeddings() {
-		let titan = bedrock::Provider {
-			model: Some(strng::new("amazon.titan-embed-text-v2:0")),
-			region: strng::new("us-west-2"),
-			guardrail_identifier: None,
-			guardrail_version: None,
-			endpoint_preference: Default::default(),
-		};
-		let cohere = bedrock::Provider {
-			model: Some(strng::new("cohere.embed-english-v3")),
-			region: strng::new("us-west-2"),
-			guardrail_identifier: None,
-			guardrail_version: None,
-			endpoint_preference: Default::default(),
-		};
-		let cohere_v4 = bedrock::Provider {
-			model: Some(strng::new("cohere.embed-v4:0")),
-			region: strng::new("us-west-2"),
-			guardrail_identifier: None,
-			guardrail_version: None,
-			endpoint_preference: Default::default(),
-		};
-		let nova = bedrock::Provider {
-			model: Some(strng::new("amazon.nova-2-multimodal-embeddings-v1:0")),
-			region: strng::new("us-east-1"),
-			guardrail_identifier: None,
-			guardrail_version: None,
-			endpoint_preference: Default::default(),
-		};
+		let titan = "amazon.titan-embed-text-v2:0";
+		let cohere = "cohere.embed-english-v3";
+		let cohere_v4 = "cohere.embed-v4:0";
+		let nova = "amazon.nova-2-multimodal-embeddings-v1:0";
 		let vertex = vertex::Provider {
-			model: None,
+			model_override: None,
 			region: Some(strng::new("global")),
 			project_id: strng::new("test-project-123"),
 		};
@@ -433,20 +422,36 @@ mod requests {
 					OPENAI => test_request(OPENAI, &path, |i: &mut types::embeddings::Request| {
 						serde_json::to_vec(i).map_err(AIError::RequestMarshal)
 					}),
-					BEDROCK_TITAN => test_request(BEDROCK_TITAN, &path, |i| {
-						conversion::bedrock::from_embeddings::translate(i, &titan)
-					}),
-					BEDROCK_COHERE => test_request(BEDROCK_COHERE, &path, |i| {
-						let provider = if *name == "cohere-v4" {
-							&cohere_v4
-						} else {
-							&cohere
-						};
-						conversion::bedrock::from_embeddings::translate(i, provider)
-					}),
-					BEDROCK_NOVA => test_request(BEDROCK_NOVA, &path, |i| {
-						conversion::bedrock::from_embeddings::translate(i, &nova)
-					}),
+					BEDROCK_TITAN => test_request(
+						BEDROCK_TITAN,
+						&path,
+						|i: &mut types::embeddings::Request| {
+							let mut resolved = i.clone();
+							resolved.model = Some(titan.into());
+							conversion::bedrock::from_embeddings::translate(&resolved)
+						},
+					),
+					BEDROCK_COHERE => test_request(
+						BEDROCK_COHERE,
+						&path,
+						|i: &mut types::embeddings::Request| {
+							let provider = if *name == "cohere-v4" {
+								cohere_v4
+							} else {
+								cohere
+							};
+							let mut resolved = i.clone();
+							resolved.model = Some(provider.into());
+							conversion::bedrock::from_embeddings::translate(&resolved)
+						},
+					),
+					BEDROCK_NOVA => {
+						test_request(BEDROCK_NOVA, &path, |i: &mut types::embeddings::Request| {
+							let mut resolved = i.clone();
+							resolved.model = Some(nova.into());
+							conversion::bedrock::from_embeddings::translate(&resolved)
+						})
+					},
 					VERTEX => test_request(VERTEX, &path, |i: &mut types::embeddings::Request| {
 						conversion::vertex::from_embeddings::translate(i, &vertex)
 					}),
@@ -459,14 +464,14 @@ mod requests {
 	#[test]
 	fn rerank() {
 		let bedrock = bedrock::Provider {
-			model: Some(strng::new("cohere.rerank-v3-5:0")),
+			model_override: Some(strng::new("configured-model-before-transformation")),
 			region: strng::new("us-west-2"),
 			guardrail_identifier: None,
 			guardrail_version: None,
 			endpoint_preference: Default::default(),
 		};
 		let vertex = vertex::Provider {
-			model: Some(strng::new("semantic-ranker-default@latest")),
+			model_override: Some(strng::new("semantic-ranker-default@latest")),
 			region: Some(strng::new("global")),
 			project_id: strng::new("test-project-123"),
 		};
@@ -478,7 +483,9 @@ mod requests {
 						serde_json::to_vec(i).map_err(AIError::RequestMarshal)
 					}),
 					BEDROCK => test_request(BEDROCK, &path, |i: &mut types::rerank::Request| {
-						conversion::bedrock::from_rerank::translate(i, &bedrock)
+						let mut resolved = i.clone();
+						resolved.model = Some("cohere.rerank-v3-5:0".into());
+						conversion::bedrock::from_rerank::translate(&resolved, &bedrock)
 					}),
 					VERTEX => test_request(VERTEX, &path, |i: &mut types::rerank::Request| {
 						conversion::vertex::from_rerank::translate(i, &vertex)
@@ -494,7 +501,7 @@ mod requests {
 		let mut headers = http::HeaderMap::new();
 		headers.insert("anthropic-version", "2023-06-01".parse().unwrap());
 		let vertex = vertex::Provider {
-			model: Some(strng::new("anthropic/claude-sonnet-4-5")),
+			model_override: Some(strng::new("configured-model-before-transformation")),
 			region: Some(strng::new("us-central1")),
 			project_id: strng::new("test-project-123"),
 		};
@@ -509,7 +516,9 @@ mod requests {
 						conversion::bedrock::from_anthropic_token_count::translate(i, &headers)
 					}),
 					VERTEX => test_request(VERTEX, &path, |i: &mut types::count_tokens::Request| {
-						let body = serde_json::to_vec(i).map_err(AIError::RequestMarshal)?;
+						let mut resolved = i.clone();
+						resolved.model = Some("anthropic/claude-sonnet-4-5".into());
+						let body = serde_json::to_vec(&resolved).map_err(AIError::RequestMarshal)?;
 						vertex.prepare_anthropic_count_tokens_body(body)
 					}),
 					other => panic!("unsupported provider in COUNT_TOKENS_REQUESTS: {other}"),
@@ -1027,7 +1036,7 @@ mod responses {
 		))
 		.unwrap();
 		let provider = bedrock::Provider {
-			model: Some(strng::new("anthropic.claude-3-5-sonnet-20241022-v2:0")),
+			model_override: Some(strng::new("anthropic.claude-3-5-sonnet-20241022-v2:0")),
 			region: strng::new("us-west-2"),
 			guardrail_identifier: None,
 			guardrail_version: None,
@@ -1270,7 +1279,7 @@ mod responses {
 	#[test]
 	fn embeddings() {
 		let vertex = vertex::Provider {
-			model: None,
+			model_override: None,
 			region: Some(strng::new("global")),
 			project_id: strng::new("test-project-123"),
 		};

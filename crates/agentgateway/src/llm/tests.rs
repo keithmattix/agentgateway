@@ -82,10 +82,10 @@ fn llm_request_with_tokens(input_tokens: Option<u64>) -> LLMRequest {
 fn vertex_gemini_uses_native_completions_and_compat_fallbacks() {
 	let provider = AIProvider::Vertex(vertex::Provider {
 		project_id: strng::new("test-project"),
-		model: None,
+		model_override: None,
 		region: None,
 	});
-	let model = Some("google/gemini-2.5-flash-lite");
+	let model = "google/gemini-2.5-flash-lite";
 
 	assert_eq!(
 		provider
@@ -109,7 +109,7 @@ fn vertex_gemini_uses_native_completions_and_compat_fallbacks() {
 fn bedrock_chat_translation_follows_endpoint_selection() {
 	fn bedrock(pref: bedrock::BedrockEndpointPreference) -> AIProvider {
 		AIProvider::Bedrock(BedrockProvider::new(bedrock::Provider {
-			model: None,
+			model_override: None,
 			region: strng::new("us-east-1"),
 			guardrail_identifier: None,
 			guardrail_version: None,
@@ -125,11 +125,7 @@ fn bedrock_chat_translation_follows_endpoint_selection() {
 	] {
 		assert_eq!(
 			runtime
-				.chat_translation(
-					input,
-					Some("anthropic.claude-3-5-sonnet-20241022-v2:0"),
-					None
-				)
+				.chat_translation(input, "anthropic.claude-3-5-sonnet-20241022-v2:0", None)
 				.unwrap()
 				.output,
 			ChatFormat::BedrockConverse,
@@ -152,7 +148,7 @@ fn bedrock_chat_translation_follows_endpoint_selection() {
 	] {
 		assert_eq!(
 			mantle
-				.chat_translation(input, Some("openai.gpt-oss-120b"), catalog)
+				.chat_translation(input, "openai.gpt-oss-120b", catalog)
 				.unwrap()
 				.output,
 			expected,
@@ -162,11 +158,7 @@ fn bedrock_chat_translation_follows_endpoint_selection() {
 	// Claude serves the native Messages API on Mantle.
 	assert_eq!(
 		mantle
-			.chat_translation(
-				InputFormat::Messages,
-				Some("anthropic.claude-sonnet-5"),
-				catalog
-			)
+			.chat_translation(InputFormat::Messages, "anthropic.claude-sonnet-5", catalog)
 			.unwrap()
 			.output,
 		ChatFormat::AnthropicMessages,
@@ -180,7 +172,7 @@ fn bedrock_chat_translation_follows_endpoint_selection() {
 fn bedrock_mantle_never_sends_completions_to_a_claude_model() {
 	fn mantle_provider() -> AIProvider {
 		AIProvider::Bedrock(BedrockProvider::new(bedrock::Provider {
-			model: None,
+			model_override: None,
 			region: strng::new("us-east-1"),
 			guardrail_identifier: None,
 			guardrail_version: None,
@@ -199,7 +191,7 @@ fn bedrock_mantle_never_sends_completions_to_a_claude_model() {
 		mantle
 			.chat_translation(
 				InputFormat::Completions,
-				Some("anthropic.claude-sonnet-5"),
+				"anthropic.claude-sonnet-5",
 				Some(catalog.as_handle()),
 			)
 			.unwrap()
@@ -211,11 +203,7 @@ fn bedrock_mantle_never_sends_completions_to_a_claude_model() {
 	// Untagged fallback: the is_anthropic_model heuristic must also keep Completions off completions.
 	assert_eq!(
 		mantle
-			.chat_translation(
-				InputFormat::Completions,
-				Some("anthropic.claude-opus-4-8"),
-				None
-			)
+			.chat_translation(InputFormat::Completions, "anthropic.claude-opus-4-8", None)
 			.unwrap()
 			.output,
 		ChatFormat::AnthropicMessages,
@@ -227,12 +215,12 @@ fn bedrock_mantle_never_sends_completions_to_a_claude_model() {
 fn gemini_inbound_selects_native_translation_only_for_gemini_upstreams() {
 	let vertex = AIProvider::Vertex(vertex::Provider {
 		project_id: strng::new("test-project"),
-		model: None,
+		model_override: None,
 		region: None,
 	});
 	assert_eq!(
 		vertex
-			.chat_translation(InputFormat::Gemini, Some("gemini-2.5-flash"), None)
+			.chat_translation(InputFormat::Gemini, "gemini-2.5-flash", None)
 			.unwrap()
 			.output,
 		ChatFormat::VertexGemini
@@ -240,14 +228,16 @@ fn gemini_inbound_selects_native_translation_only_for_gemini_upstreams() {
 	// Vertex with a non-Gemini model has no Gemini-input translation.
 	assert!(
 		vertex
-			.chat_translation(InputFormat::Gemini, Some("claude-sonnet-4-5"), None)
+			.chat_translation(InputFormat::Gemini, "claude-sonnet-4-5", None)
 			.is_err()
 	);
 
-	let gemini = AIProvider::Gemini(gemini::Provider { model: None });
+	let gemini = AIProvider::Gemini(gemini::Provider {
+		model_override: None,
+	});
 	assert_eq!(
 		gemini
-			.chat_translation(InputFormat::Gemini, Some("gemini-2.5-flash"), None)
+			.chat_translation(InputFormat::Gemini, "gemini-2.5-flash", None)
 			.unwrap()
 			.output,
 		ChatFormat::VertexGemini
@@ -256,7 +246,7 @@ fn gemini_inbound_selects_native_translation_only_for_gemini_upstreams() {
 	// OpenAI-compat shim, matching Vertex with a Gemini model.
 	assert_eq!(
 		gemini
-			.chat_translation(InputFormat::Completions, Some("gemini-2.5-flash"), None)
+			.chat_translation(InputFormat::Completions, "gemini-2.5-flash", None)
 			.unwrap()
 			.output,
 		ChatFormat::VertexGemini
@@ -266,7 +256,7 @@ fn gemini_inbound_selects_native_translation_only_for_gemini_upstreams() {
 	for input in [InputFormat::Messages, InputFormat::Responses] {
 		assert_eq!(
 			gemini
-				.chat_translation(input, Some("gemini-2.5-flash"), None)
+				.chat_translation(input, "gemini-2.5-flash", None)
 				.unwrap()
 				.output,
 			ChatFormat::OpenAICompletions
@@ -276,9 +266,10 @@ fn gemini_inbound_selects_native_translation_only_for_gemini_upstreams() {
 
 #[test]
 fn gemini_inbound_to_non_gemini_upstream_is_unsupported() {
-	let anthropic = AIProvider::Anthropic(anthropic::Provider { model: None });
-	let Err(err) = anthropic.chat_translation(InputFormat::Gemini, Some("claude-opus-4"), None)
-	else {
+	let anthropic = AIProvider::Anthropic(anthropic::Provider {
+		model_override: None,
+	});
+	let Err(err) = anthropic.chat_translation(InputFormat::Gemini, "claude-opus-4", None) else {
 		panic!("expected unsupported conversion");
 	};
 	assert!(matches!(err, AIError::UnsupportedConversion(_)));
@@ -287,11 +278,10 @@ fn gemini_inbound_to_non_gemini_upstream_is_unsupported() {
 
 	let vertex = AIProvider::Vertex(vertex::Provider {
 		project_id: strng::new("test-project"),
-		model: None,
+		model_override: None,
 		region: None,
 	});
-	let Err(err) = vertex.chat_translation(InputFormat::Gemini, Some("claude-sonnet-4-5"), None)
-	else {
+	let Err(err) = vertex.chat_translation(InputFormat::Gemini, "claude-sonnet-4-5", None) else {
 		panic!("expected unsupported conversion");
 	};
 	let msg = err.to_string();
@@ -305,7 +295,7 @@ fn custom_provider_generate_content_advertises_the_native_chat_format() {
 	// Native Gemini input takes the direct passthrough.
 	assert_eq!(
 		provider
-			.chat_translation(InputFormat::Gemini, Some("gemini-2.5-flash"), None)
+			.chat_translation(InputFormat::Gemini, "gemini-2.5-flash", None)
 			.unwrap()
 			.output,
 		ChatFormat::VertexGemini
@@ -314,7 +304,7 @@ fn custom_provider_generate_content_advertises_the_native_chat_format() {
 	// Vertex with a Gemini model (the CHAT_TRANSLATIONS quirk).
 	assert_eq!(
 		provider
-			.chat_translation(InputFormat::Completions, Some("gemini-2.5-flash"), None)
+			.chat_translation(InputFormat::Completions, "gemini-2.5-flash", None)
 			.unwrap()
 			.output,
 		ChatFormat::VertexGemini
@@ -324,7 +314,7 @@ fn custom_provider_generate_content_advertises_the_native_chat_format() {
 	let undeclared = custom_provider(custom::ProviderFormat::Completions);
 	assert!(
 		undeclared
-			.chat_translation(InputFormat::Gemini, Some("gemini-2.5-flash"), None)
+			.chat_translation(InputFormat::Gemini, "gemini-2.5-flash", None)
 			.is_err()
 	);
 }
@@ -419,11 +409,11 @@ fn custom_provider_declaring_gemini_count_tokens_renders_passthrough() {
 fn gemini_render_is_passthrough_with_unknown_fields() {
 	let provider = AIProvider::Vertex(vertex::Provider {
 		project_id: strng::new("test-project"),
-		model: None,
+		model_override: None,
 		region: None,
 	});
 	let translation = provider
-		.chat_translation(InputFormat::Gemini, Some("gemini-2.5-flash"), None)
+		.chat_translation(InputFormat::Gemini, "gemini-2.5-flash", None)
 		.unwrap();
 
 	let raw = json!({
@@ -485,14 +475,14 @@ fn gemini_render_is_passthrough_with_unknown_fields() {
 fn gemini_error_passes_google_shape_through() {
 	let provider = AIProvider::Vertex(vertex::Provider {
 		project_id: strng::new("test-project"),
-		model: None,
+		model_override: None,
 		region: None,
 	});
 	let translation = provider
-		.chat_translation(InputFormat::Gemini, Some("gemini-2.5-flash"), None)
+		.chat_translation(InputFormat::Gemini, "gemini-2.5-flash", None)
 		.unwrap();
 	assert!(matches!(
-		provider.chat_error_format(translation, Some("gemini-2.5-flash")),
+		provider.chat_error_format(translation, "gemini-2.5-flash"),
 		ChatErrorFormat::Google
 	));
 
@@ -725,7 +715,7 @@ fn openai_test_backend_info() -> crate::http::auth::BackendInfo {
 #[tokio::test]
 async fn openai_inline_moderation_injected_for_completions() {
 	let provider = AIProvider::OpenAI(openai::Provider {
-		model: None,
+		model_override: None,
 		moderation: Some(openai_inline_moderation_param()),
 	});
 	let backend_info = openai_test_backend_info();
@@ -767,7 +757,7 @@ async fn openai_inline_moderation_injected_for_completions() {
 #[tokio::test]
 async fn openai_inline_moderation_overrides_client_value_for_completions() {
 	let provider = AIProvider::OpenAI(openai::Provider {
-		model: None,
+		model_override: None,
 		moderation: Some(openai_inline_moderation_param()),
 	});
 	let backend_info = openai_test_backend_info();
@@ -813,7 +803,7 @@ async fn openai_inline_moderation_overrides_client_value_for_completions() {
 #[tokio::test]
 async fn openai_client_moderation_passthrough_without_config() {
 	let provider = AIProvider::OpenAI(openai::Provider {
-		model: None,
+		model_override: None,
 		moderation: None,
 	});
 	let backend_info = openai_test_backend_info();
@@ -876,7 +866,7 @@ async fn openai_client_moderation_passthrough_without_config() {
 #[tokio::test]
 async fn openai_inline_moderation_injected_for_responses() {
 	let provider = AIProvider::OpenAI(openai::Provider {
-		model: None,
+		model_override: None,
 		moderation: Some(openai_inline_moderation_param()),
 	});
 	let backend_info = openai_test_backend_info();
@@ -921,7 +911,7 @@ fn openai_inline_moderation_injected_after_messages_translation() {
 	for moderation in [None, Some(openai_inline_moderation_param())] {
 		let configured = moderation.is_some();
 		let provider = AIProvider::OpenAI(openai::Provider {
-			model: None,
+			model_override: None,
 			moderation,
 		});
 		for output in [ChatFormat::OpenAICompletions, ChatFormat::OpenAIResponses] {
@@ -1050,7 +1040,7 @@ async fn openai_provider_normalizes_max_tokens_before_forwarding() {
 	use crate::types::agent::BackendTarget;
 
 	let provider = AIProvider::OpenAI(openai::Provider {
-		model: None,
+		model_override: None,
 		moderation: None,
 	});
 	let inputs = setup_proxy_test("{}").unwrap().pi;
@@ -1101,7 +1091,7 @@ async fn openai_provider_normalizes_max_tokens_after_model_alias() {
 	use crate::types::agent::BackendTarget;
 
 	let provider = AIProvider::OpenAI(openai::Provider {
-		model: None,
+		model_override: None,
 		moderation: None,
 	});
 	let inputs = setup_proxy_test("{}").unwrap().pi;
@@ -1160,7 +1150,7 @@ async fn openai_provider_preserves_max_tokens_for_non_gpt_models() {
 	use crate::types::agent::BackendTarget;
 
 	let provider = AIProvider::OpenAI(openai::Provider {
-		model: None,
+		model_override: None,
 		moderation: None,
 	});
 	let inputs = setup_proxy_test("{}").unwrap().pi;
@@ -1210,7 +1200,9 @@ async fn count_tokens_resolves_model_alias_once_for_upstream_request() {
 	use crate::test_helpers::proxymock::setup_proxy_test;
 	use crate::types::agent::BackendTarget;
 
-	let provider = AIProvider::Anthropic(anthropic::Provider { model: None });
+	let provider = AIProvider::Anthropic(anthropic::Provider {
+		model_override: None,
+	});
 	let inputs = setup_proxy_test("{}").unwrap().pi;
 	let backend_info = BackendInfo {
 		target: BackendTarget::Invalid,
@@ -1264,7 +1256,7 @@ async fn count_tokens_uses_native_endpoint_after_model_alias() {
 	use crate::types::agent::BackendTarget;
 
 	let provider = AIProvider::Vertex(vertex::Provider {
-		model: None,
+		model_override: None,
 		region: None,
 		project_id: strng::new("test-project"),
 	});
@@ -1342,7 +1334,7 @@ fn vertex_backend_info() -> crate::http::auth::BackendInfo {
 #[tokio::test]
 async fn gemini_generate_content_forwards_unknown_top_level_fields() {
 	let provider = AIProvider::Vertex(vertex::Provider {
-		model: None,
+		model_override: None,
 		region: None,
 		project_id: strng::new("test-project"),
 	});
@@ -1378,7 +1370,7 @@ async fn gemini_generate_content_forwards_unknown_top_level_fields() {
 #[tokio::test]
 async fn gemini_stream_without_alt_sse_is_rejected_with_google_shaped_400() {
 	let provider = AIProvider::Vertex(vertex::Provider {
-		model: None,
+		model_override: None,
 		region: None,
 		project_id: strng::new("test-project"),
 	});
@@ -1436,7 +1428,7 @@ async fn gemini_count_tokens_passes_body_through_on_vertex() {
 	use crate::types::agent::BackendTarget;
 
 	let provider = AIProvider::Vertex(vertex::Provider {
-		model: None,
+		model_override: None,
 		region: None,
 		project_id: strng::new("test-project"),
 	});
@@ -1485,7 +1477,9 @@ async fn gemini_count_tokens_applies_model_alias_and_rewrites_upstream_path() {
 	use crate::test_helpers::proxymock::setup_proxy_test;
 	use crate::types::agent::BackendTarget;
 
-	let provider = AIProvider::Gemini(gemini::Provider { model: None });
+	let provider = AIProvider::Gemini(gemini::Provider {
+		model_override: None,
+	});
 	let inputs = setup_proxy_test("{}").unwrap().pi;
 	let backend_info = BackendInfo {
 		target: BackendTarget::Invalid,
@@ -1544,7 +1538,9 @@ async fn gemini_count_tokens_on_non_gemini_upstream_is_unsupported() {
 	use crate::test_helpers::proxymock::setup_proxy_test;
 	use crate::types::agent::BackendTarget;
 
-	let provider = AIProvider::Anthropic(anthropic::Provider { model: None });
+	let provider = AIProvider::Anthropic(anthropic::Provider {
+		model_override: None,
+	});
 	let inputs = setup_proxy_test("{}").unwrap().pi;
 	let backend_info = BackendInfo {
 		target: BackendTarget::Invalid,
@@ -1563,7 +1559,9 @@ async fn gemini_count_tokens_on_non_gemini_upstream_is_unsupported() {
 
 #[test]
 fn gemini_count_tokens_response_reports_total_tokens() {
-	let provider = AIProvider::Gemini(gemini::Provider { model: None });
+	let provider = AIProvider::Gemini(gemini::Provider {
+		model_override: None,
+	});
 	let req = LLMRequest {
 		input_tokens: None,
 		input_format: InputFormat::GeminiCountTokens,
@@ -1596,7 +1594,7 @@ fn gemini_count_tokens_response_reports_total_tokens() {
 #[tokio::test]
 async fn anthropic_count_tokens_preserves_upstream_errors() {
 	let provider = AIProvider::bedrock(bedrock::Provider {
-		model: None,
+		model_override: None,
 		region: strng::new("us-east-1"),
 		guardrail_identifier: None,
 		guardrail_version: None,
@@ -1637,7 +1635,7 @@ async fn vertex_anthropic_messages_prepares_vertex_body() {
 	use crate::types::agent::BackendTarget;
 
 	let provider = AIProvider::Vertex(vertex::Provider {
-		model: None,
+		model_override: None,
 		region: Some(strng::new("us-central1")),
 		project_id: strng::new("test-project"),
 	});
@@ -1692,7 +1690,7 @@ async fn provider_model_is_set_before_llm_transformations() {
 	use crate::types::agent::BackendTarget;
 
 	let provider = AIProvider::OpenAI(openai::Provider {
-		model: Some("gcp/failover-model".into()),
+		model_override: Some("gcp/failover-model".into()),
 		moderation: None,
 	});
 	let inputs = setup_proxy_test("{}").unwrap().pi;
@@ -1752,7 +1750,7 @@ async fn messages_to_completions_final_transformation() {
 
 	async fn create_llm_request(vec_body: Vec<u8>, policy: Option<&Policy>) -> (Request, RouteType) {
 		let provider = AIProvider::OpenAI(openai::Provider {
-			model: None,
+			model_override: None,
 			moderation: None,
 		});
 		let backend_info = openai_test_backend_info();
@@ -1853,7 +1851,7 @@ async fn detect_final_transformations_skip_opaque_bodies() {
 		policy: Option<&Policy>,
 	) -> (Request, RouteType) {
 		let provider = AIProvider::OpenAI(openai::Provider {
-			model: None,
+			model_override: None,
 			moderation: None,
 		});
 		let backend_info = openai_test_backend_info();
@@ -1942,7 +1940,7 @@ async fn bedrock_transformed_provider_model_is_used_for_upstream_path() {
 	use crate::types::agent::BackendTarget;
 
 	let provider = AIProvider::bedrock(bedrock::Provider {
-		model: Some(strng::new(
+		model_override: Some(strng::new(
 			"bedrock-runtime/us/anthropic.claude-3-5-sonnet-20241022-v2:0",
 		)),
 		region: strng::new("us-east-1"),
@@ -2026,7 +2024,7 @@ async fn bedrock_provider_model_overrides_client_model() {
 
 	let configured_model = "anthropic.claude-3-5-sonnet-20241022-v2:0";
 	let provider = AIProvider::bedrock(bedrock::Provider {
-		model: Some(strng::new(configured_model)),
+		model_override: Some(strng::new(configured_model)),
 		region: strng::new("us-east-1"),
 		guardrail_identifier: None,
 		guardrail_version: None,
@@ -2089,7 +2087,7 @@ async fn llm_transformations_can_set_missing_model() {
 	use crate::types::agent::BackendTarget;
 
 	let provider = AIProvider::OpenAI(openai::Provider {
-		model: None,
+		model_override: None,
 		moderation: None,
 	});
 	let inputs = setup_proxy_test("{}").unwrap().pi;
@@ -2146,7 +2144,9 @@ async fn copilot_anthropic_model_uses_messages_route() {
 	use crate::test_helpers::proxymock::setup_proxy_test;
 	use crate::types::agent::BackendTarget;
 
-	let provider = AIProvider::Copilot(copilot::Provider { model: None });
+	let provider = AIProvider::Copilot(copilot::Provider {
+		model_override: None,
+	});
 	let inputs = setup_proxy_test("{}").unwrap().pi;
 	let backend_info = BackendInfo {
 		target: BackendTarget::Invalid,
@@ -2209,7 +2209,9 @@ async fn copilot_anthropic_model_uses_messages_route() {
 
 #[test]
 fn copilot_embeddings_response_adds_missing_openai_fields() {
-	let provider = AIProvider::Copilot(copilot::Provider { model: None });
+	let provider = AIProvider::Copilot(copilot::Provider {
+		model_override: None,
+	});
 	let mut request = llm_request_with_tokens(None);
 	request.input_format = InputFormat::Embeddings;
 	request.request_model = "text-embedding-3-small".into();
@@ -2231,7 +2233,9 @@ fn copilot_embeddings_response_adds_missing_openai_fields() {
 
 #[test]
 fn copilot_embeddings_response_preserves_missing_usage() {
-	let provider = AIProvider::Copilot(copilot::Provider { model: None });
+	let provider = AIProvider::Copilot(copilot::Provider {
+		model_override: None,
+	});
 	let mut request = llm_request_with_tokens(None);
 	request.input_format = InputFormat::Embeddings;
 	request.request_model = "text-embedding-3-small".into();
@@ -2248,7 +2252,9 @@ fn copilot_embeddings_response_preserves_missing_usage() {
 
 #[test]
 fn copilot_embeddings_response_preserves_explicit_openai_fields() {
-	let provider = AIProvider::Copilot(copilot::Provider { model: None });
+	let provider = AIProvider::Copilot(copilot::Provider {
+		model_override: None,
+	});
 	let mut request = llm_request_with_tokens(None);
 	request.input_format = InputFormat::Embeddings;
 	request.request_model = "requested-model".into();
@@ -2290,7 +2296,9 @@ fn copilot_embeddings_parse_error_logs_normalized_response() {
 		.finish();
 
 	tracing::subscriber::with_default(subscriber, || {
-		let provider = AIProvider::Copilot(copilot::Provider { model: None });
+		let provider = AIProvider::Copilot(copilot::Provider {
+			model_override: None,
+		});
 		let mut request = llm_request_with_tokens(None);
 		request.input_format = InputFormat::Embeddings;
 		request.request_model = "text-embedding-3-small".into();
@@ -2314,7 +2322,7 @@ fn copilot_embeddings_parse_error_logs_normalized_response() {
 #[test]
 fn non_copilot_embeddings_response_still_requires_openai_fields() {
 	let provider = AIProvider::OpenAI(openai::Provider {
-		model: None,
+		model_override: None,
 		moderation: None,
 	});
 	let mut request = llm_request_with_tokens(None);
@@ -2496,7 +2504,7 @@ async fn process_response_routes_streaming_error_to_buffered_path() {
 	use crate::test_helpers::proxymock::setup_proxy_test;
 
 	let bedrock = AIProvider::bedrock(bedrock::Provider {
-		model: Some(strng::new("anthropic.claude-3-5-sonnet-20241022-v2:0")),
+		model_override: Some(strng::new("anthropic.claude-3-5-sonnet-20241022-v2:0")),
 		region: strng::new("us-west-2"),
 		guardrail_identifier: None,
 		guardrail_version: None,
@@ -2567,7 +2575,7 @@ async fn upstream_encoding_is_applied_after_messages_response_translation() {
 	use crate::test_helpers::proxymock::setup_proxy_test;
 
 	let provider = AIProvider::OpenAI(openai::Provider {
-		model: None,
+		model_override: None,
 		moderation: None,
 	});
 	let mut req = llm_request_with_tokens(None);
@@ -2640,7 +2648,7 @@ async fn upstream_encoding_is_applied_after_messages_response_translation() {
 #[test]
 fn openai_completions_error_translates_to_messages_client() {
 	let provider = AIProvider::OpenAI(openai::Provider {
-		model: None,
+		model_override: None,
 		moderation: None,
 	});
 	let mut req = llm_request_with_tokens(None);
@@ -2682,7 +2690,7 @@ fn custom_messages_error_translates_to_completions_client() {
 #[test]
 fn foundry_claude_messages_error_uses_anthropic_shape() {
 	let provider = AIProvider::azure(azure::Provider {
-		model: None,
+		model_override: None,
 		resource_name: strng::new("example"),
 		resource_type: azure::AzureResourceType::Foundry,
 		api_version: None,
@@ -2710,7 +2718,7 @@ async fn process_streaming_bedrock_completions_normalizes_sse_headers_and_done()
 	use crate::proxy::httpproxy::PolicyClient;
 	use crate::test_helpers::proxymock::setup_proxy_test;
 	let bedrock = AIProvider::bedrock(bedrock::Provider {
-		model: Some(strng::new("openai.gpt-oss-120b-1:0")),
+		model_override: Some(strng::new("openai.gpt-oss-120b-1:0")),
 		region: strng::new("us-east-1"),
 		guardrail_identifier: None,
 		guardrail_version: None,
@@ -2775,7 +2783,7 @@ async fn process_streaming_bedrock_completions_normalizes_sse_headers_and_done()
 #[test]
 fn setup_request_openai_applies_prefixed_path_without_host_override() {
 	let provider = AIProvider::OpenAI(openai::Provider {
-		model: None,
+		model_override: None,
 		moderation: None,
 	});
 	let mut req = crate::http::tests_common::request(
@@ -2808,7 +2816,7 @@ fn setup_request_openai_applies_prefixed_path_without_host_override() {
 #[test]
 fn setup_request_openai_normalizes_trailing_slash_in_path_prefix() {
 	let provider = AIProvider::OpenAI(openai::Provider {
-		model: None,
+		model_override: None,
 		moderation: None,
 	});
 	let mut req = crate::http::tests_common::request(
@@ -2837,7 +2845,7 @@ fn setup_request_openai_normalizes_trailing_slash_in_path_prefix() {
 #[test]
 fn setup_request_custom_path_override_wins_over_format_path() {
 	let provider = AIProvider::Custom(custom::Provider {
-		model: None,
+		model_override: None,
 		provider_override: None,
 		formats: vec![custom::ProviderFormatConfig {
 			format: custom::ProviderFormat::Messages,
@@ -3032,7 +3040,9 @@ fn native_gemini_llm_request(request_model: &str, streaming: bool) -> LLMRequest
 
 #[test]
 fn setup_request_gemini_native_builds_generate_content_path() {
-	let provider = AIProvider::Gemini(gemini::Provider { model: None });
+	let provider = AIProvider::Gemini(gemini::Provider {
+		model_override: None,
+	});
 	let llm_request = native_gemini_llm_request("gemini-2.5-flash", false);
 	let mut req = crate::http::tests_common::request(
 		"https://example.com/v1beta/models/gemini-2.5-flash:generateContent",
@@ -3066,7 +3076,9 @@ fn setup_request_gemini_native_builds_generate_content_path() {
 
 #[test]
 fn setup_request_gemini_native_streaming_adds_alt_sse_and_strips_client_api_keys() {
-	let provider = AIProvider::Gemini(gemini::Provider { model: None });
+	let provider = AIProvider::Gemini(gemini::Provider {
+		model_override: None,
+	});
 	// The client's own alt=sse is dropped in favour of the path-provided one. Credential query
 	// parameters are stripped while unrelated parameters survive.
 	let llm_request = native_gemini_llm_request("models/gemini-2.5-flash", true);
@@ -3100,12 +3112,14 @@ fn setup_request_gemini_native_streaming_adds_alt_sse_and_strips_client_api_keys
 fn setup_request_strips_query_api_keys_only_for_native_gemini() {
 	for (provider, expected_query) in [
 		(
-			AIProvider::Gemini(gemini::Provider { model: None }),
+			AIProvider::Gemini(gemini::Provider {
+				model_override: None,
+			}),
 			"alt=sse&keep=yes",
 		),
 		(
 			AIProvider::Vertex(vertex::Provider {
-				model: None,
+				model_override: None,
 				region: None,
 				project_id: strng::new("test-project"),
 			}),
@@ -3142,7 +3156,9 @@ fn setup_request_strips_query_api_keys_only_for_native_gemini() {
 
 #[test]
 fn setup_request_gemini_without_native_state_keeps_compat_path() {
-	let provider = AIProvider::Gemini(gemini::Provider { model: None });
+	let provider = AIProvider::Gemini(gemini::Provider {
+		model_override: None,
+	});
 	let llm_request = LLMRequest {
 		provider_state: None,
 		..native_gemini_llm_request("gemini-2.5-flash", false)
@@ -3173,7 +3189,9 @@ fn setup_request_gemini_without_native_state_keeps_compat_path() {
 #[test]
 fn setup_request_gemini_applies_path_prefix_with_host_override() {
 	assert_prefixed_host_override_path(
-		AIProvider::Gemini(gemini::Provider { model: None }),
+		AIProvider::Gemini(gemini::Provider {
+			model_override: None,
+		}),
 		"gemini-2.5-pro",
 		"/proxy/v1beta/openai/chat/completions",
 		Some("trace=repro"),
@@ -3184,7 +3202,7 @@ fn setup_request_gemini_applies_path_prefix_with_host_override() {
 fn setup_request_vertex_applies_path_prefix_with_host_override() {
 	assert_prefixed_host_override_path(
 		AIProvider::Vertex(vertex::Provider {
-			model: None,
+			model_override: None,
 			region: Some(strng::new("us-central1")),
 			project_id: strng::new("example-project"),
 		}),
@@ -3198,7 +3216,7 @@ fn setup_request_vertex_applies_path_prefix_with_host_override() {
 fn setup_request_bedrock_applies_path_prefix_with_host_override() {
 	assert_prefixed_host_override_path(
 		AIProvider::bedrock(bedrock::Provider {
-			model: None,
+			model_override: None,
 			region: strng::new("us-east-1"),
 			guardrail_identifier: None,
 			guardrail_version: None,
@@ -3213,7 +3231,7 @@ fn setup_request_bedrock_applies_path_prefix_with_host_override() {
 #[test]
 fn setup_request_bedrock_sets_signing_region_with_host_override() {
 	let provider = AIProvider::bedrock(bedrock::Provider {
-		model: None,
+		model_override: None,
 		region: strng::new("ca-central-1"),
 		guardrail_identifier: None,
 		guardrail_version: None,
@@ -3255,7 +3273,7 @@ fn setup_request_bedrock_sets_signing_region_with_host_override() {
 fn setup_request_azure_applies_path_prefix_with_host_override() {
 	assert_prefixed_host_override_path(
 		AIProvider::azure(azure::Provider {
-			model: None,
+			model_override: None,
 			resource_name: strng::new("example"),
 			resource_type: azure::AzureResourceType::OpenAI,
 			api_version: Some(strng::new("2024-02-15-preview")),
@@ -3764,7 +3782,7 @@ async fn responses_passthrough_stream_skips_completion_when_disabled() {
 
 fn vertex_provider(model: &str) -> AIProvider {
 	AIProvider::Vertex(vertex::Provider {
-		model: Some(strng::new(model)),
+		model_override: Some(strng::new(model)),
 		region: None,
 		project_id: strng::new("test-project"),
 	})
@@ -3772,7 +3790,7 @@ fn vertex_provider(model: &str) -> AIProvider {
 
 fn custom_provider(format: custom::ProviderFormat) -> AIProvider {
 	AIProvider::Custom(custom::Provider {
-		model: None,
+		model_override: None,
 		provider_override: None,
 		formats: vec![custom::ProviderFormatConfig { format, path: None }],
 	})
@@ -3903,7 +3921,7 @@ fn custom_provider_name_falls_back_to_custom() {
 #[test]
 fn custom_provider_override_drives_provider_name() {
 	let provider = AIProvider::Custom(custom::Provider {
-		model: None,
+		model_override: None,
 		provider_override: Some(strng::literal!("cohere")),
 		formats: vec![custom::ProviderFormatConfig {
 			format: custom::ProviderFormat::Rerank,
@@ -3961,7 +3979,9 @@ fn custom_completions_backend_uses_inclusive_convention() {
 fn fixed_providers_classify_by_family() {
 	assert_eq!(
 		cache_convention_for(
-			&AIProvider::Anthropic(anthropic::Provider { model: None }),
+			&AIProvider::Anthropic(anthropic::Provider {
+				model_override: None
+			}),
 			None,
 			"claude-sonnet-4-5"
 		),
@@ -3970,7 +3990,7 @@ fn fixed_providers_classify_by_family() {
 	assert_eq!(
 		cache_convention_for(
 			&AIProvider::OpenAI(openai::Provider {
-				model: None,
+				model_override: None,
 				moderation: None,
 			}),
 			Some(custom::ProviderFormat::Completions),

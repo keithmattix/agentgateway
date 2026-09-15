@@ -7,7 +7,7 @@ fn req(v: Value) -> types::completions::Request {
 }
 
 fn to_gemini(v: Value) -> Value {
-	let bytes = from_completions::translate(&req(v), None).expect("translate ok");
+	let bytes = from_completions::translate(&req(v)).expect("translate ok");
 	serde_json::from_slice(&bytes).expect("valid json")
 }
 
@@ -63,15 +63,12 @@ fn empty_messages_get_synthetic_user_entry() {
 
 #[test]
 fn gs_url_without_extension_or_hint_is_rejected() {
-	let err = from_completions::translate(
-		&req(json!({
-			"model": "gemini-2.5-flash",
-			"messages": [{ "role": "user", "content": [
-				{ "type": "image_url", "image_url": { "url": "gs://bucket/object" } }
-			]}]
-		})),
-		None,
-	);
+	let err = from_completions::translate(&req(json!({
+		"model": "gemini-2.5-flash",
+		"messages": [{ "role": "user", "content": [
+			{ "type": "image_url", "image_url": { "url": "gs://bucket/object" } }
+		]}]
+	})));
 	assert!(
 		err.is_err(),
 		"extension-less gs:// with no MIME hint must be rejected before egress"
@@ -130,12 +127,9 @@ fn file_gs_uri_takes_mime_from_filename() {
 
 #[test]
 fn file_gs_uri_without_extension_or_hint_is_rejected() {
-	let err = from_completions::translate(
-		&req(file_content(json!({
-			"file_data": "gs://bucket/object"
-		}))),
-		None,
-	);
+	let err = from_completions::translate(&req(file_content(json!({
+		"file_data": "gs://bucket/object"
+	}))));
 	assert!(
 		err.is_err(),
 		"extension-less gs:// file with no MIME hint must be rejected before egress"
@@ -156,12 +150,9 @@ fn data_url_without_media_type_falls_back_to_filename() {
 
 #[test]
 fn data_url_without_media_type_or_filename_is_rejected() {
-	let err = from_completions::translate(
-		&req(file_content(
-			json!({ "file_data": "data:;base64,JVBERi0xLjQK" }),
-		)),
-		None,
-	);
+	let err = from_completions::translate(&req(file_content(
+		json!({ "file_data": "data:;base64,JVBERi0xLjQK" }),
+	)));
 	assert!(
 		err.is_err(),
 		"an empty mimeType is rejected by Vertex, so it must not be sent"
@@ -181,10 +172,7 @@ fn raw_base64_file_data_takes_mime_from_filename() {
 
 #[test]
 fn raw_base64_file_data_without_a_mime_source_is_rejected() {
-	let err = from_completions::translate(
-		&req(file_content(json!({ "file_data": "JVBERi0xLjQK" }))),
-		None,
-	);
+	let err = from_completions::translate(&req(file_content(json!({ "file_data": "JVBERi0xLjQK" }))));
 	assert!(
 		err.is_err(),
 		"raw base64 with no filename or hint cannot yield the mimeType Vertex requires"
@@ -205,10 +193,7 @@ fn file_id_holding_a_gs_uri_becomes_file_data() {
 fn file_id_is_rejected_rather_than_dropped() {
 	// Vertex has no OpenAI Files store, so an opaque file_id cannot be resolved. It must
 	// error rather than silently vanish from the request (#3117).
-	let err = from_completions::translate(
-		&req(file_content(json!({ "file_id": "file-abc123" }))),
-		None,
-	);
+	let err = from_completions::translate(&req(file_content(json!({ "file_id": "file-abc123" }))));
 	let err = err.expect_err("opaque file_id must be rejected");
 	// Load-bearing: classify_ai_request maps UnsupportedConversion to 400, InvalidResponse to 503.
 	assert!(
@@ -223,10 +208,7 @@ fn file_id_is_rejected_rather_than_dropped() {
 
 #[test]
 fn file_part_without_data_or_id_is_rejected() {
-	let err = from_completions::translate(
-		&req(file_content(json!({ "filename": "report.pdf" }))),
-		None,
-	);
+	let err = from_completions::translate(&req(file_content(json!({ "filename": "report.pdf" }))));
 	assert!(
 		err.is_err(),
 		"a file part carrying no payload must be rejected"
@@ -246,15 +228,12 @@ fn empty_string_user_content_is_preserved() {
 
 #[test]
 fn http_image_url_is_rejected() {
-	let err = from_completions::translate(
-		&req(json!({
-			"model": "gemini-2.5-flash",
-			"messages": [{ "role": "user", "content": [
-				{ "type": "image_url", "image_url": { "url": "https://example.com/cat.png" } }
-			]}]
-		})),
-		None,
-	);
+	let err = from_completions::translate(&req(json!({
+		"model": "gemini-2.5-flash",
+		"messages": [{ "role": "user", "content": [
+			{ "type": "image_url", "image_url": { "url": "https://example.com/cat.png" } }
+		]}]
+	})));
 	assert!(err.is_err(), "http(s) image_url must be rejected");
 }
 

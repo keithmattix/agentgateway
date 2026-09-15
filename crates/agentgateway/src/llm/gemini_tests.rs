@@ -17,14 +17,14 @@ use crate::types::agent::Target;
 fn vertex_provider(region: Option<&str>, model: Option<&str>) -> AIProvider {
 	AIProvider::Vertex(vertex::Provider {
 		project_id: strng::new("test-project"),
-		model: model.map(strng::new),
+		model_override: model.map(strng::new),
 		region: region.map(strng::new),
 	})
 }
 
 fn gemini_provider(model: Option<&str>) -> AIProvider {
 	AIProvider::Gemini(gemini::Provider {
-		model: model.map(strng::new),
+		model_override: model.map(strng::new),
 	})
 }
 
@@ -914,7 +914,7 @@ fn a_client_alt_query_is_stripped_from_count_tokens() {
 
 fn native_translation() -> &'static crate::llm::ChatTranslation {
 	vertex_provider(None, None)
-		.chat_translation(InputFormat::Gemini, Some("gemini-2.5-flash"), None)
+		.chat_translation(InputFormat::Gemini, "gemini-2.5-flash", None)
 		.expect("gemini inbound on a gemini upstream")
 }
 
@@ -1010,13 +1010,15 @@ async fn count_tokens_errors_pass_through_unchanged() {
 async fn gemini_inbound_requires_a_gemini_upstream() {
 	let cases = [
 		(
-			AIProvider::Anthropic(anthropic::Provider { model: None }),
+			AIProvider::Anthropic(anthropic::Provider {
+				model_override: None,
+			}),
 			"api.anthropic.com",
 			"anthropic",
 		),
 		(
 			AIProvider::OpenAI(openai::Provider {
-				model: None,
+				model_override: None,
 				moderation: None,
 			}),
 			"api.openai.com",
@@ -1024,7 +1026,7 @@ async fn gemini_inbound_requires_a_gemini_upstream() {
 		),
 		(
 			AIProvider::Bedrock(crate::llm::BedrockProvider::new(bedrock::Provider {
-				model: None,
+				model_override: None,
 				region: strng::new("us-east-1"),
 				guardrail_identifier: None,
 				guardrail_version: None,

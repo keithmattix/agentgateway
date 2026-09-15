@@ -260,10 +260,10 @@ fn cache_convention_for(
 	use custom::ProviderFormat::{AnthropicTokenCount, Messages};
 	match provider {
 		AIProvider::Anthropic(_) | AIProvider::Bedrock(_) => InputExcludesCache,
-		AIProvider::Copilot(_) if copilot::Provider::is_anthropic_model(Some(request_model)) => {
+		AIProvider::Copilot(_) if copilot::Provider::is_anthropic_model(request_model) => {
 			InputExcludesCache
 		},
-		AIProvider::Vertex(p) if p.is_anthropic_model(Some(request_model)) => InputExcludesCache,
+		AIProvider::Vertex(p) if p.is_anthropic_model(request_model) => InputExcludesCache,
 		AIProvider::Custom(_) => match provider_format {
 			Some(Messages | AnthropicTokenCount) => InputExcludesCache,
 			_ => InputIncludesCache,
@@ -458,17 +458,14 @@ fn render_anthropic_messages(
 
 fn render_vertex_gemini(
 	req: types::ChatRequest,
-	ctx: &ChatRequestContext<'_>,
+	_ctx: &ChatRequestContext<'_>,
 ) -> Result<Vec<u8>, AIError> {
 	match req {
 		// Native Gemini inbound is a passthrough, so unlike the completions conversion it does
 		// not depend on Vertex specifics; the Gemini API provider renders through here too.
 		types::ChatRequest::Gemini(req) => serde_json::to_vec(&req).map_err(AIError::RequestMarshal),
 		types::ChatRequest::Completions(req) => {
-			// The conversion only needs the backend-pinned model, which every Gemini-speaking
-			// provider (Vertex, the Gemini API, custom) exposes the same way.
-			let override_model = ctx.provider.override_model();
-			conversion::vertex_gemini::from_completions::translate(&req, override_model.as_deref())
+			conversion::vertex_gemini::from_completions::translate(&req)
 		},
 		_ => Err(AIError::UnsupportedConversion(strng::literal!(
 			"vertex gemini only supports completions or native gemini input"
@@ -948,20 +945,21 @@ impl AIProvider {
 		}
 	}
 
+	/// Configuration override, applied before request transformations and model aliases.
 	pub fn override_model(&self) -> Option<Strng> {
 		match self {
-			AIProvider::OpenAI(p) => p.model.clone(),
-			AIProvider::Anthropic(p) => p.model.clone(),
-			AIProvider::Gemini(p) => p.model.clone(),
-			AIProvider::Vertex(p) => p.model.clone(),
-			AIProvider::Bedrock(p) => p.model.clone(),
-			AIProvider::Azure(p) => p.model.clone(),
-			AIProvider::Copilot(p) => p.model.clone(),
-			AIProvider::Custom(p) => p.model.clone(),
+			AIProvider::OpenAI(p) => p.model_override.clone(),
+			AIProvider::Anthropic(p) => p.model_override.clone(),
+			AIProvider::Gemini(p) => p.model_override.clone(),
+			AIProvider::Vertex(p) => p.model_override.clone(),
+			AIProvider::Bedrock(p) => p.model_override.clone(),
+			AIProvider::Azure(p) => p.model_override.clone(),
+			AIProvider::Copilot(p) => p.model_override.clone(),
+			AIProvider::Custom(p) => p.model_override.clone(),
 		}
 	}
 
-	pub fn supported_formats(&self, request_model: Option<&str>) -> Vec<custom::ProviderFormat> {
+	pub fn supported_formats(&self, request_model: &str) -> Vec<custom::ProviderFormat> {
 		use custom::ProviderFormat::*;
 		match self {
 			AIProvider::OpenAI(_) => vec![Completions, Responses, Embeddings, Realtime, Rerank],
@@ -1008,7 +1006,7 @@ impl AIProvider {
 
 	fn supported_chat_formats(
 		&self,
-		request_model: Option<&str>,
+		request_model: &str,
 		catalog: agent_llm::model_catalog::Catalog<'_>,
 	) -> Vec<ChatFormat> {
 		match self {
@@ -1059,7 +1057,7 @@ impl AIProvider {
 	fn chat_error_format(
 		&self,
 		translation: &ChatTranslation,
-		request_model: Option<&str>,
+		request_model: &str,
 	) -> ChatErrorFormat {
 		match (self, translation.output) {
 			(AIProvider::Gemini(_), ChatFormat::OpenAICompletions) => ChatErrorFormat::Google,
@@ -1078,7 +1076,7 @@ impl AIProvider {
 	fn chat_translation(
 		&self,
 		input_format: InputFormat,
-		request_model: Option<&str>,
+		request_model: &str,
 		catalog: agent_llm::model_catalog::Catalog<'_>,
 	) -> Result<&'static ChatTranslation, AIError> {
 		let supported = self.supported_chat_formats(request_model, catalog);
@@ -1095,18 +1093,14 @@ impl AIProvider {
 			})
 	}
 
-	pub fn supports_format(
-		&self,
-		format: custom::ProviderFormat,
-		request_model: Option<&str>,
-	) -> bool {
+	pub fn supports_format(&self, format: custom::ProviderFormat, request_model: &str) -> bool {
 		self.supported_formats(request_model).contains(&format)
 	}
 
 	fn non_chat_provider_format_for(
 		&self,
 		input_format: InputFormat,
-		request_model: Option<&str>,
+		request_model: &str,
 	) -> Option<custom::ProviderFormat> {
 		use custom::ProviderFormat::*;
 		let format = match input_format {
@@ -1373,10 +1367,14 @@ impl AIProvider {
 				})
 			},
 			AIProvider::Vertex(provider) => {
-				let request_model = llm_request.map(|l| l.request_model.as_str());
-				let streaming = llm_request.map(|l| l.streaming).unwrap_or(false);
+				let Some(llm_request) = llm_request else {
+					return Ok(());
+				};
+				let request_model = llm_request.request_model.as_str();
+				let streaming = llm_request.streaming;
 				let native_gemini = llm_request
-					.and_then(|l| l.provider_state.as_ref())
+					.provider_state
+					.as_ref()
 					.is_some_and(|s| matches!(s, ProviderState::VertexGemini));
 				http::modify_req(req, |req| {
 					http::modify_uri(req, |uri| {
@@ -1547,9 +1545,8 @@ impl AIProvider {
 			AIProvider::Azure(p) => {
 				// Foundry's Anthropic-native endpoint requires the anthropic-version header,
 				// but only for Claude models — GPT models use the OpenAI-compatible path.
-				let model = llm_request.map(|r| r.request_model.as_str()).unwrap_or("");
 				if matches!(p.resource_type, azure::AzureResourceType::Foundry)
-					&& p.is_anthropic_model(Some(model))
+					&& llm_request.is_some_and(|r| p.is_anthropic_model(&r.request_model))
 					&& matches!(
 						route_type,
 						RouteType::Messages | RouteType::AnthropicTokenCount
@@ -1888,7 +1885,10 @@ impl AIProvider {
 		// back to local token estimation using the normalized messages payload.
 		let use_local = !self.supports_format(
 			custom::ProviderFormat::AnthropicTokenCount,
-			req.model.as_deref(),
+			req
+				.model
+				.as_deref()
+				.ok_or_else(|| AIError::MissingField("model not specified".into()))?,
 		);
 		if use_local {
 			let messages = req.get_messages();
@@ -2045,7 +2045,7 @@ impl AIProvider {
 			},
 			AIProvider::Azure(p)
 				if matches!(p.resource_type, azure::AzureResourceType::Foundry)
-					&& p.is_anthropic_model(Some(request_model)) =>
+					&& p.is_anthropic_model(request_model) =>
 			{
 				serde_json::to_vec(req).map_err(AIError::RequestMarshal)
 			},
@@ -2064,7 +2064,7 @@ impl AIProvider {
 	) -> Result<Vec<u8>, AIError> {
 		match self {
 			AIProvider::Gemini(_) => serde_json::to_vec(req).map_err(AIError::RequestMarshal),
-			AIProvider::Vertex(p) if p.is_gemini_model(Some(request_model)) => {
+			AIProvider::Vertex(p) if p.is_gemini_model(request_model) => {
 				serde_json::to_vec(req).map_err(AIError::RequestMarshal)
 			},
 			AIProvider::Custom(p) if p.supports(custom::ProviderFormat::GeminiCountTokens) => {
@@ -2089,7 +2089,7 @@ impl AIProvider {
 			| AIProvider::Gemini(_)
 			| AIProvider::Anthropic(_) => serde_json::to_vec(req).map_err(AIError::RequestMarshal),
 			AIProvider::Vertex(p) => conversion::vertex::from_embeddings::translate(req, p),
-			AIProvider::Bedrock(p) => conversion::bedrock::from_embeddings::translate(req, p),
+			AIProvider::Bedrock(_) => conversion::bedrock::from_embeddings::translate(req),
 		}
 	}
 
@@ -2200,13 +2200,11 @@ impl AIProvider {
 		T: RequestType,
 		F: FnOnce(T) -> types::ChatRequest,
 	{
-		let request_model = if req.supports_model() {
-			req.model().as_deref().map(str::to_string)
-		} else {
-			None
-		};
-		let chat_translation =
-			self.chat_translation(original_format, request_model.as_deref(), catalog)?;
+		let request_model = req
+			.model()
+			.as_deref()
+			.ok_or_else(|| AIError::MissingField("model not specified".into()))?;
+		let chat_translation = self.chat_translation(original_format, request_model, catalog)?;
 		let provider_format = chat_translation.provider_format();
 		let prepared = self
 			.prepare_request(
@@ -2275,17 +2273,18 @@ impl AIProvider {
 		T: RequestType,
 		F: FnOnce(&AIProvider, &T, &Parts, &str) -> Result<Vec<u8>, AIError>,
 	{
-		let request_model = if req.supports_model() {
-			req.model().as_deref().map(str::to_string)
-		} else {
-			None
-		};
 		// Detect is raw passthrough and keeps its client-facing route type upstream.
 		let provider_format = match original_format {
 			InputFormat::Detect => None,
 			_ => Some(
 				self
-					.non_chat_provider_format_for(original_format, request_model.as_deref())
+					.non_chat_provider_format_for(
+						original_format,
+						req
+							.model()
+							.as_deref()
+							.ok_or_else(|| AIError::MissingField("model not specified".into()))?,
+					)
 					.ok_or_else(|| {
 						AIError::UnsupportedConversion(strng::format!(
 							"from {original_format:?} to provider {}",
@@ -2573,7 +2572,7 @@ impl AIProvider {
 			},
 			AIProvider::Azure(p)
 				if matches!(p.resource_type, azure::AzureResourceType::Foundry)
-					&& p.is_anthropic_model(Some(&req.request_model)) =>
+					&& p.is_anthropic_model(&req.request_model) =>
 			{
 				// Foundry returns the Anthropic-native count_tokens shape for Claude models.
 				types::count_tokens::Response::translate_response(bytes)?
@@ -2763,7 +2762,7 @@ impl AIProvider {
 				let llm_resp = resp.to_llm_response(LogContentFields::default());
 				Ok((llm_resp, Bytes::from(normalized)))
 			},
-			AIProvider::Vertex(p) if !p.is_anthropic_model(Some(&req.request_model)) => {
+			AIProvider::Vertex(p) if !p.is_anthropic_model(&req.request_model) => {
 				let translated =
 					conversion::vertex::from_embeddings::translate_response(&bytes, p, &req.request_model)?;
 				let llm_resp = translated.to_llm_response(LogContentFields::default());
@@ -2822,7 +2821,7 @@ impl AIProvider {
 			));
 		}
 
-		let translation = self.chat_translation(req.input_format, Some(&req.request_model), catalog)?;
+		let translation = self.chat_translation(req.input_format, &req.request_model, catalog)?;
 		translation.render_response(
 			bytes,
 			&ChatResponseContext {
@@ -2856,7 +2855,7 @@ impl AIProvider {
 		let chat_translation = if input_format.is_chat() {
 			Some(self.chat_translation(
 				input_format,
-				Some(&model),
+				&model,
 				model_catalog.as_deref().map(|c| c.as_handle()),
 			)?)
 		} else {
@@ -3119,12 +3118,11 @@ impl AIProvider {
 		catalog: agent_llm::model_catalog::Catalog<'_>,
 	) -> Result<Bytes, AIError> {
 		if req.input_format.is_chat() {
-			let translation =
-				self.chat_translation(req.input_format, Some(&req.request_model), catalog)?;
+			let translation = self.chat_translation(req.input_format, &req.request_model, catalog)?;
 			return translation.error(
 				bytes,
 				status,
-				self.chat_error_format(translation, Some(&req.request_model)),
+				self.chat_error_format(translation, &req.request_model),
 			);
 		}
 		match (self, req.input_format) {

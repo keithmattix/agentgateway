@@ -27,17 +27,12 @@ pub struct BedrockRequest {
 
 fn reasoning_fields(
 	model: &str,
-	provider: &crate::bedrock::Provider,
 	catalog: crate::model_catalog::Catalog<'_>,
 	explicit_budget: Option<u64>,
 	effort: Option<serde_json::Value>,
 	anthropic_effort: Option<messages::typed::ThinkingEffort>,
 ) -> Result<(Option<serde_json::Value>, bool), AIError> {
-	let target_model = provider
-		.model
-		.as_deref()
-		.unwrap_or(model)
-		.to_ascii_lowercase();
+	let target_model = model.to_ascii_lowercase();
 	let fields = if target_model.contains("gpt-oss") || target_model.contains("deepseek") {
 		effort.map(|effort| serde_json::json!({ "reasoning_effort": effort }))
 	} else if target_model.contains("openai.") {
@@ -340,11 +335,10 @@ pub mod from_rerank {
 		if req.documents.is_empty() {
 			return Err(AIError::MissingField("rerank documents".into()));
 		}
-		let model = provider
+		let model = req
 			.model
 			.as_deref()
-			.or(req.model.as_deref())
-			.unwrap_or_default();
+			.ok_or_else(|| AIError::MissingField("model not specified".into()))?;
 		let sources = req
 			.documents
 			.iter()
@@ -406,18 +400,14 @@ pub mod from_rerank {
 }
 
 pub mod from_embeddings {
-	use crate::bedrock::Provider;
 	use crate::types::ResponseType;
 	use crate::{AIError, json, logged_response_parsing, types};
 
-	pub fn translate(
-		req: &types::embeddings::Request,
-		provider: &Provider,
-	) -> Result<Vec<u8>, AIError> {
+	pub fn translate(req: &types::embeddings::Request) -> Result<Vec<u8>, AIError> {
 		let typed = json::convert::<_, types::embeddings::typed::Request>(req)
 			.map_err(AIError::RequestMarshal)?;
 
-		let model = provider.model.as_deref().unwrap_or(&typed.model);
+		let model = typed.model.as_str();
 
 		// Bedrock has three embedding model families with incompatible APIs:
 		// Cohere accepts batched text arrays; Titan and Nova accept a single string.
@@ -1052,7 +1042,6 @@ pub mod from_completions {
 			.and_then(crate::types::anthropic_effort_for_reasoning_effort);
 		let (mut additional_model_request_fields, manual_thinking) = super::reasoning_fields(
 			&model_id,
-			provider,
 			catalog,
 			req.vendor_extensions.thinking_budget_tokens,
 			req
@@ -2980,7 +2969,6 @@ pub mod from_responses {
 		});
 		let (additional_model_request_fields, _) = super::reasoning_fields(
 			&model_id,
-			provider,
 			catalog,
 			explicit_thinking_budget,
 			req

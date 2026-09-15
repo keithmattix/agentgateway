@@ -127,14 +127,14 @@ fn provider_preset_from_proto(
 fn override_ai_provider_model(provider: &mut AIProvider, model: &str) {
 	let model = Some(strng::new(model));
 	match provider {
-		AIProvider::Anthropic(provider) => provider.model = model,
-		AIProvider::OpenAI(provider) => provider.model = model,
-		AIProvider::Copilot(provider) => provider.model = model,
-		AIProvider::Gemini(provider) => provider.model = model,
-		AIProvider::Custom(provider) => provider.model = model,
-		AIProvider::Vertex(provider) => provider.model = model,
-		AIProvider::Bedrock(provider) => provider.model = model,
-		AIProvider::Azure(provider) => provider.model = model,
+		AIProvider::Anthropic(provider) => provider.model_override = model,
+		AIProvider::OpenAI(provider) => provider.model_override = model,
+		AIProvider::Copilot(provider) => provider.model_override = model,
+		AIProvider::Gemini(provider) => provider.model_override = model,
+		AIProvider::Custom(provider) => provider.model_override = model,
+		AIProvider::Vertex(provider) => provider.model_override = model,
+		AIProvider::Bedrock(provider) => provider.model_override = model,
+		AIProvider::Azure(provider) => provider.model_override = model,
 	}
 }
 
@@ -1900,26 +1900,26 @@ pub(crate) fn backend_with_policies_from_proto(
 								.map(openai_moderation_from_proto)
 								.transpose()?;
 							AIProvider::OpenAI(llm::openai::Provider {
-								model: openai.model.as_deref().map(strng::new),
+								model_override: openai.model.as_deref().map(strng::new),
 								moderation,
 							})
 						},
 						Some(provider::Provider::Gemini(gemini)) => AIProvider::Gemini(llm::gemini::Provider {
-							model: gemini.model.as_deref().map(strng::new),
+							model_override: gemini.model.as_deref().map(strng::new),
 						}),
 						Some(provider::Provider::Vertex(vertex)) => AIProvider::Vertex(llm::vertex::Provider {
-							model: vertex.model.as_deref().map(strng::new),
+							model_override: vertex.model.as_deref().map(strng::new),
 							region: (!vertex.region.is_empty()).then(|| strng::new(&vertex.region)),
 							project_id: strng::new(&vertex.project_id),
 						}),
 						Some(provider::Provider::Anthropic(anthropic)) => {
 							AIProvider::Anthropic(llm::anthropic::Provider {
-								model: anthropic.model.as_deref().map(strng::new),
+								model_override: anthropic.model.as_deref().map(strng::new),
 							})
 						},
 						Some(provider::Provider::Bedrock(bedrock)) => {
 							AIProvider::bedrock(llm::bedrock::Provider {
-								model: bedrock.model.as_deref().map(strng::new),
+								model_override: bedrock.model.as_deref().map(strng::new),
 								region: strng::new(&bedrock.region),
 								guardrail_identifier: bedrock.guardrail_identifier.as_deref().map(strng::new),
 								guardrail_version: bedrock.guardrail_version.as_deref().map(strng::new),
@@ -1945,7 +1945,7 @@ pub(crate) fn backend_with_policies_from_proto(
 								_ => llm::azure::AzureResourceType::OpenAI,
 							};
 							AIProvider::azure(llm::azure::Provider {
-								model: azure.model.as_deref().map(strng::new),
+								model_override: azure.model.as_deref().map(strng::new),
 								resource_name: strng::new(&azure.resource_name),
 								resource_type,
 								api_version: azure.api_version.as_deref().map(strng::new),
@@ -1969,7 +1969,7 @@ pub(crate) fn backend_with_policies_from_proto(
 								.map(|format| convert_provider_format_config(format, provider_idx))
 								.collect::<Result<Vec<_>, _>>()?;
 							AIProvider::Custom(llm::custom::Provider {
-								model: custom.model.as_deref().map(strng::new),
+								model_override: custom.model.as_deref().map(strng::new),
 								provider_override: custom.provider_override.as_deref().map(strng::new),
 								formats,
 							})
@@ -5911,7 +5911,7 @@ mod tests {
 			panic!("Expected AIProvider::Custom");
 		};
 		assert_eq!(custom.provider_override.as_deref(), Some("ollama"));
-		assert_eq!(custom.model.as_deref(), Some("llama3.3"));
+		assert_eq!(custom.model_override.as_deref(), Some("llama3.3"));
 		assert!(custom.supports(llm::custom::ProviderFormat::Responses));
 		assert_eq!(
 			provider.host_override,

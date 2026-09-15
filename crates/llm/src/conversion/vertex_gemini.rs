@@ -149,22 +149,18 @@ pub mod from_completions {
 			mime_from_ext_token(hint).map(str::to_string)
 		}
 	}
-	pub fn translate(
-		req: &types::completions::Request,
-		configured_model: Option<&str>,
-	) -> Result<Vec<u8>, AIError> {
-		let out = build_request(req, configured_model)?;
+	pub fn translate(req: &types::completions::Request) -> Result<Vec<u8>, AIError> {
+		let out = build_request(req)?;
 		serde_json::to_vec(&out).map_err(AIError::RequestMarshal)
 	}
 
 	pub(super) fn build_request(
 		req: &types::completions::Request,
-		configured_model: Option<&str>,
 	) -> Result<vg::GenerateContentRequest, AIError> {
-		let model = configured_model
-			.or(req.model.as_deref())
-			.unwrap_or_default()
-			.to_string();
+		let model = req
+			.model
+			.as_deref()
+			.ok_or_else(|| AIError::MissingField("model not specified".into()))?;
 
 		let (system_text, contents) = messages_to_contents(&req.messages)?;
 
@@ -187,7 +183,7 @@ pub mod from_completions {
 
 		let tools = build_tools(req);
 		let tool_config = build_tool_config(req);
-		let generation_config = build_generation_config(req, &model);
+		let generation_config = build_generation_config(req, model);
 
 		let cached_content = req
 			.rest

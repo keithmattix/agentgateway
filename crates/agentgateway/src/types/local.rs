@@ -4304,14 +4304,14 @@ fn llm_route_types(
 fn ensure_ai_provider_model(provider: &mut AIProvider, model: &str) {
 	let model = || Some(strng::new(model));
 	match provider {
-		AIProvider::Anthropic(p) => p.model = p.model.clone().or_else(model),
-		AIProvider::OpenAI(p) => p.model = p.model.clone().or_else(model),
-		AIProvider::Copilot(p) => p.model = p.model.clone().or_else(model),
-		AIProvider::Gemini(p) => p.model = p.model.clone().or_else(model),
-		AIProvider::Custom(p) => p.model = p.model.clone().or_else(model),
-		AIProvider::Vertex(p) => p.model = p.model.clone().or_else(model),
-		AIProvider::Bedrock(p) => p.model = p.model.clone().or_else(model),
-		AIProvider::Azure(p) => p.model = p.model.clone().or_else(model),
+		AIProvider::Anthropic(p) => p.model_override = p.model_override.clone().or_else(model),
+		AIProvider::OpenAI(p) => p.model_override = p.model_override.clone().or_else(model),
+		AIProvider::Copilot(p) => p.model_override = p.model_override.clone().or_else(model),
+		AIProvider::Gemini(p) => p.model_override = p.model_override.clone().or_else(model),
+		AIProvider::Custom(p) => p.model_override = p.model_override.clone().or_else(model),
+		AIProvider::Vertex(p) => p.model_override = p.model_override.clone().or_else(model),
+		AIProvider::Bedrock(p) => p.model_override = p.model_override.clone().or_else(model),
+		AIProvider::Azure(p) => p.model_override = p.model_override.clone().or_else(model),
 	}
 }
 
@@ -4458,19 +4458,25 @@ async fn convert_llm_config(
 				)
 			},
 			LocalModelAIProvider::Builtin(LocalBuiltinModelAIProvider::Anthropic) => {
-				AIProvider::Anthropic(anthropic::Provider { model })
+				AIProvider::Anthropic(anthropic::Provider {
+					model_override: model,
+				})
 			},
 			LocalModelAIProvider::Builtin(LocalBuiltinModelAIProvider::OpenAI) => {
 				AIProvider::OpenAI(openai::Provider {
-					model,
+					model_override: model,
 					moderation: None,
 				})
 			},
 			LocalModelAIProvider::Builtin(LocalBuiltinModelAIProvider::Copilot) => {
-				AIProvider::Copilot(copilot::Provider { model })
+				AIProvider::Copilot(copilot::Provider {
+					model_override: model,
+				})
 			},
 			LocalModelAIProvider::Builtin(LocalBuiltinModelAIProvider::Gemini) => {
-				AIProvider::Gemini(crate::llm::gemini::Provider { model })
+				AIProvider::Gemini(crate::llm::gemini::Provider {
+					model_override: model,
+				})
 			},
 			LocalModelAIProvider::Builtin(LocalBuiltinModelAIProvider::Custom(custom_provider)) => {
 				if custom_provider.formats.is_empty() {
@@ -4486,21 +4492,21 @@ async fn convert_llm_config(
 					);
 				}
 				AIProvider::Custom(crate::llm::custom::Provider {
-					model: model.or_else(|| custom_provider.model.clone()),
+					model_override: model.or_else(|| custom_provider.model_override.clone()),
 					..custom_provider.clone()
 				})
 			},
 			LocalModelAIProvider::Preset(preset) => AIProvider::Custom(preset.provider(model.clone())),
 			LocalModelAIProvider::Builtin(LocalBuiltinModelAIProvider::Vertex) => {
 				AIProvider::Vertex(crate::llm::vertex::Provider {
-					model,
+					model_override: model,
 					region: p.vertex_region,
 					project_id: p.vertex_project.context("vertex requires vertex_project")?,
 				})
 			},
 			LocalModelAIProvider::Builtin(LocalBuiltinModelAIProvider::Bedrock) => {
 				AIProvider::bedrock(crate::llm::bedrock::Provider {
-					model,
+					model_override: model,
 					region: p.aws_region.context("bedrock requires aws_region")?,
 					guardrail_identifier: None,
 					guardrail_version: None,
@@ -4509,7 +4515,7 @@ async fn convert_llm_config(
 			},
 			LocalModelAIProvider::Builtin(LocalBuiltinModelAIProvider::Azure) => {
 				AIProvider::azure(crate::llm::azure::Provider {
-					model,
+					model_override: model,
 					resource_name: p
 						.azure_resource_name
 						.context("azure requires azureResourceName")?,

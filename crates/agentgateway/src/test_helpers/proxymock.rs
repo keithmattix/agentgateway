@@ -227,7 +227,7 @@ pub fn custom_llm_backend_with_formats(
 	let provider = NamedAIProvider {
 		name: "default".into(),
 		provider: AIProvider::Custom(crate::llm::custom::Provider {
-			model: None,
+			model_override: None,
 			provider_override: None,
 			formats,
 		}),
