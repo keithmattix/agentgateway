@@ -28,13 +28,14 @@ use crate::types::agent::{
 	A2aPolicy, Authorization, Backend, BackendKey, BackendReference, BackendTrafficPolicy,
 	BackendWithPolicies, Bind, BindMode, BindProtocol, BindSnapshot, FrontendPolicy, HeaderMatch,
 	JwtAuthentication, Listener, ListenerKey, ListenerName, ListenerProtocol, ListenerSet,
-	ListenerTarget, LocalMcpAuthentication, McpAuthentication, McpBackend, McpPrefixMode, McpTarget,
-	McpTargetName, McpTargetSpec, OpenAPITarget, PathMatch, PolicyPhase, PolicyTarget, PolicyType,
-	ResourceName, Route, RouteBackendReference, RouteBackendTarget, RouteGroupKey, RouteMatch,
-	RouteName, ServerTLSConfig, SimpleBackend, SimpleBackendReference,
-	SimpleBackendReferenceWithPolicies, SimpleBackendWithPolicies, SseTargetSpec,
-	StreamableHTTPTargetSpec, TCPRoute, TCPRouteBackendReference, Target, TargetedPolicy,
-	TracingConfig, TrafficPolicy, TunnelProtocol, TypedResourceName, validate_mcp_target_name,
+	ListenerTarget, LocalMcpAuthentication, McpAuthentication, McpBackend, McpPrefixMode,
+	McpServerOverrides, McpTarget, McpTargetName, McpTargetSpec, OpenAPITarget, PathMatch,
+	PolicyPhase, PolicyTarget, PolicyType, ResourceName, Route, RouteBackendReference,
+	RouteBackendTarget, RouteGroupKey, RouteMatch, RouteName, ServerTLSConfig, SimpleBackend,
+	SimpleBackendReference, SimpleBackendReferenceWithPolicies, SimpleBackendWithPolicies,
+	SseTargetSpec, StreamableHTTPTargetSpec, TCPRoute, TCPRouteBackendReference, Target,
+	TargetedPolicy, TracingConfig, TrafficPolicy, TunnelProtocol, TypedResourceName,
+	validate_mcp_target_name,
 };
 use crate::types::discovery::{NamespacedHostname, Service};
 use crate::types::{backend, frontend};
@@ -1796,6 +1797,9 @@ impl LocalBackend {
 					McpStatefulMode::Stateless => false,
 					McpStatefulMode::Stateful => true,
 				};
+				if let Some(server) = &tgt.server {
+					server.validate().map_err(Error::msg)?;
+				}
 				let m = McpBackend {
 					targets,
 					stateful,
@@ -1804,6 +1808,7 @@ impl LocalBackend {
 					session_idle_ttl: mcp_session_ttl,
 					sse_keep_alive: tgt.sse_keep_alive,
 					dns_rebinding_protection: tgt.dns_rebinding_protection,
+					server: tgt.server.clone(),
 				};
 				backends.push(Backend::MCP(name, m).into());
 				backends
@@ -1885,6 +1890,11 @@ pub struct LocalMcpBackend {
 	/// Off by default; see https://github.com/agentgateway/agentgateway/issues/1855.
 	#[serde(default, skip_serializing_if = "crate::serdes::is_default")]
 	pub dns_rebinding_protection: bool,
+	/// Overrides for the MCP `serverInfo` and gateway instructions reported to clients on
+	/// `initialize`/`server/discover` when multiplexing multiple targets. Unset fields fall
+	/// back to the normal defaults.
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub server: Option<McpServerOverrides>,
 }
 
 #[apply(schema_de!)]

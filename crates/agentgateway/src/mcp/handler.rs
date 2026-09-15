@@ -32,7 +32,7 @@ use crate::mcp::upstream::{IncomingRequestContext, UpstreamError};
 use crate::mcp::{ClientError, FailureMode, MCPInfo, apps, mergestream, rbac, upstream};
 use crate::proxy::httpproxy::PolicyClient;
 use crate::telemetry::log::AsyncLog;
-use crate::types::agent::{McpPrefixMode, ResourceName};
+use crate::types::agent::{McpPrefixMode, McpServerOverrides, ResourceName};
 
 const DELIMITER: &str = "_";
 
@@ -819,6 +819,7 @@ impl Relay {
 					resource_subscribe,
 					upstream_instructions,
 					upstreams.merged_extensions(&HashMap::new()),
+					upstreams.server_overrides(),
 				)
 				.into(),
 			)
@@ -872,6 +873,7 @@ impl Relay {
 				resource_subscribe,
 				upstream_instructions,
 				upstreams.merged_extensions(&upstream_extensions),
+				upstreams.server_overrides(),
 			);
 			discover.supported_versions = supported_versions;
 			Ok(discover.into())
@@ -1568,11 +1570,14 @@ impl Relay {
 		Ok(accepted_response())
 	}
 
+	pub(crate) const DEFAULT_GATEWAY_PREAMBLE: &str = "This server is a gateway to a set of mcp servers. It is responsible for routing requests to the correct server and aggregating the results.";
+
 	fn get_info(
 		pv: ProtocolVersion,
 		resource_subscribe: bool,
 		upstream_instructions: Vec<(String, String)>,
 		extensions: Option<ExtensionCapabilities>,
+		server_overrides: Option<McpServerOverrides>,
 	) -> ServerInfo {
 		let capabilities = {
 			// Prompts are supported with multiplexing using proxy-prefixed names.
@@ -1591,7 +1596,10 @@ impl Relay {
 			capabilities.extensions = extensions;
 			capabilities
 		};
-		let gateway_preamble = "This server is a gateway to a set of mcp servers. It is responsible for routing requests to the correct server and aggregating the results.";
+		let gateway_preamble = server_overrides
+			.as_ref()
+			.and_then(|o| o.instructions.as_deref())
+			.unwrap_or(Self::DEFAULT_GATEWAY_PREAMBLE);
 		let instructions = if upstream_instructions.is_empty() {
 			Some(gateway_preamble.to_string())
 		} else {
@@ -1601,12 +1609,24 @@ impl Relay {
 			}
 			Some(merged)
 		};
+		let mut server_info = Implementation::new(
+			server_overrides
+				.as_ref()
+				.and_then(|o| o.name.clone())
+				.map(|s| s.to_string())
+				.unwrap_or_else(|| "agentgateway".to_string()),
+			server_overrides
+				.as_ref()
+				.and_then(|o| o.version.clone())
+				.map(|s| s.to_string())
+				.unwrap_or_else(|| BuildInfo::new().version.to_string()),
+		);
+		if let Some(title) = server_overrides.as_ref().and_then(|o| o.title.clone()) {
+			server_info = server_info.with_title(title.to_string());
+		}
 		ServerInfo::new(capabilities)
 			.with_protocol_version(pv)
-			.with_server_info(Implementation::new(
-				"agentgateway",
-				BuildInfo::new().version.to_string(),
-			))
+			.with_server_info(server_info)
 			.with_instructions(instructions.unwrap_or_default())
 	}
 
@@ -1614,12 +1634,14 @@ impl Relay {
 		resource_subscribe: bool,
 		upstream_instructions: Vec<(String, String)>,
 		extensions: Option<ExtensionCapabilities>,
+		server_overrides: Option<McpServerOverrides>,
 	) -> DiscoverResult {
 		let info = Self::get_info(
 			ProtocolVersion::default(),
 			resource_subscribe,
 			upstream_instructions,
 			extensions,
+			server_overrides,
 		);
 		let mut result =
 			DiscoverResult::new(ProtocolVersion::KNOWN_VERSIONS.to_vec(), info.capabilities)

@@ -29,7 +29,7 @@ use crate::proxy::httpproxy::PolicyClient;
 use crate::proxy::{ProxyError, ProxyResponseReason};
 use crate::telemetry::log::{SpanWriteOnDrop, SpanWriter};
 use crate::telemetry::metrics::{OutboundCallKind, OutboundCallLabels, OutboundCallSubtype};
-use crate::types::agent::{McpPrefixMode, McpTargetSpec};
+use crate::types::agent::{McpPrefixMode, McpServerOverrides, McpTargetSpec};
 use crate::*;
 
 #[derive(Debug, Clone)]
@@ -532,6 +532,10 @@ impl UpstreamGroup {
 
 	pub(crate) fn stateful(&self) -> bool {
 		self.backend.stateful
+	}
+
+	pub(crate) fn server_overrides(&self) -> Option<McpServerOverrides> {
+		self.backend.server.clone()
 	}
 
 	/// True when some target's `delete` does teardown work even without an upstream

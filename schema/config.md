@@ -6846,6 +6846,11 @@
 |`binds[].listeners[].routes[].backends[].mcp.failureMode`|enum|Behavior when one or more MCP targets fail to initialize or fail during fanout.<br>Defaults to `failClosed`.<br>Possible values: `failClosed`, `failOpen`.|
 |`binds[].listeners[].routes[].backends[].mcp.sseKeepAlive`|string|Interval at which SSE keep-alive comments are sent on long-lived MCP streams.<br>Disabled when unset. Set this when a load balancer or API gateway sits in front<br>of agentgateway and reaps connections that carry no traffic.|
 |`binds[].listeners[].routes[].backends[].mcp.dnsRebindingProtection`|boolean|Opt-in MCP DNS rebinding protection (Host/Origin must be localhost).<br>Off by default; see https://github.com/agentgateway/agentgateway/issues/1855.|
+|`binds[].listeners[].routes[].backends[].mcp.server`|object|Overrides for the MCP `serverInfo` and gateway instructions reported to clients on<br>`initialize`/`server/discover` when multiplexing multiple targets. Unset fields fall<br>back to the normal defaults.|
+|`binds[].listeners[].routes[].backends[].mcp.server.name`|string|Overrides `serverInfo.name`. Must be set together with `version` — setting only one<br>would otherwise mix an overridden name with agentgateway's own version, or vice versa.<br>Defaults to `agentgateway` when unset.|
+|`binds[].listeners[].routes[].backends[].mcp.server.version`|string|Overrides `serverInfo.version`. Must be set together with `name`, for the same reason.<br>Defaults to the build version when unset.|
+|`binds[].listeners[].routes[].backends[].mcp.server.title`|string|Overrides `serverInfo.title`. Unset by default.|
+|`binds[].listeners[].routes[].backends[].mcp.server.instructions`|string|Overrides the gateway preamble prepended to merged upstream instructions.<br>Defaults to a generic gateway description when unset.|
 |`binds[].listeners[].routes[].backends[].ai`|object||
 |`binds[].listeners[].routes[].backends[].ai.name`|string|Name identifying this provider, referenced by `llm.models[].provider`.|
 |`binds[].listeners[].routes[].backends[].ai.provider`|object|The upstream LLM provider type and its configuration.<br>Exactly one of openAI, gemini, vertex, anthropic, bedrock, azure, copilot, or custom may be set.|
@@ -28485,6 +28490,11 @@
 |`backends[].mcp.failureMode`|enum|Behavior when one or more MCP targets fail to initialize or fail during fanout.<br>Defaults to `failClosed`.<br>Possible values: `failClosed`, `failOpen`.|
 |`backends[].mcp.sseKeepAlive`|string|Interval at which SSE keep-alive comments are sent on long-lived MCP streams.<br>Disabled when unset. Set this when a load balancer or API gateway sits in front<br>of agentgateway and reaps connections that carry no traffic.|
 |`backends[].mcp.dnsRebindingProtection`|boolean|Opt-in MCP DNS rebinding protection (Host/Origin must be localhost).<br>Off by default; see https://github.com/agentgateway/agentgateway/issues/1855.|
+|`backends[].mcp.server`|object|Overrides for the MCP `serverInfo` and gateway instructions reported to clients on<br>`initialize`/`server/discover` when multiplexing multiple targets. Unset fields fall<br>back to the normal defaults.|
+|`backends[].mcp.server.name`|string|Overrides `serverInfo.name`. Must be set together with `version` — setting only one<br>would otherwise mix an overridden name with agentgateway's own version, or vice versa.<br>Defaults to `agentgateway` when unset.|
+|`backends[].mcp.server.version`|string|Overrides `serverInfo.version`. Must be set together with `name`, for the same reason.<br>Defaults to the build version when unset.|
+|`backends[].mcp.server.title`|string|Overrides `serverInfo.title`. Unset by default.|
+|`backends[].mcp.server.instructions`|string|Overrides the gateway preamble prepended to merged upstream instructions.<br>Defaults to a generic gateway description when unset.|
 |`backends[].ai`|object||
 |`backends[].ai.name`|string|Name identifying this provider, referenced by `llm.models[].provider`.|
 |`backends[].ai.provider`|object|The upstream LLM provider type and its configuration.<br>Exactly one of openAI, gemini, vertex, anthropic, bedrock, azure, copilot, or custom may be set.|
@@ -46998,6 +47008,11 @@
 |`routeGroups[].routes[].backends[].mcp.failureMode`|enum|Behavior when one or more MCP targets fail to initialize or fail during fanout.<br>Defaults to `failClosed`.<br>Possible values: `failClosed`, `failOpen`.|
 |`routeGroups[].routes[].backends[].mcp.sseKeepAlive`|string|Interval at which SSE keep-alive comments are sent on long-lived MCP streams.<br>Disabled when unset. Set this when a load balancer or API gateway sits in front<br>of agentgateway and reaps connections that carry no traffic.|
 |`routeGroups[].routes[].backends[].mcp.dnsRebindingProtection`|boolean|Opt-in MCP DNS rebinding protection (Host/Origin must be localhost).<br>Off by default; see https://github.com/agentgateway/agentgateway/issues/1855.|
+|`routeGroups[].routes[].backends[].mcp.server`|object|Overrides for the MCP `serverInfo` and gateway instructions reported to clients on<br>`initialize`/`server/discover` when multiplexing multiple targets. Unset fields fall<br>back to the normal defaults.|
+|`routeGroups[].routes[].backends[].mcp.server.name`|string|Overrides `serverInfo.name`. Must be set together with `version` — setting only one<br>would otherwise mix an overridden name with agentgateway's own version, or vice versa.<br>Defaults to `agentgateway` when unset.|
+|`routeGroups[].routes[].backends[].mcp.server.version`|string|Overrides `serverInfo.version`. Must be set together with `name`, for the same reason.<br>Defaults to the build version when unset.|
+|`routeGroups[].routes[].backends[].mcp.server.title`|string|Overrides `serverInfo.title`. Unset by default.|
+|`routeGroups[].routes[].backends[].mcp.server.instructions`|string|Overrides the gateway preamble prepended to merged upstream instructions.<br>Defaults to a generic gateway description when unset.|
 |`routeGroups[].routes[].backends[].ai`|object||
 |`routeGroups[].routes[].backends[].ai.name`|string|Name identifying this provider, referenced by `llm.models[].provider`.|
 |`routeGroups[].routes[].backends[].ai.provider`|object|The upstream LLM provider type and its configuration.<br>Exactly one of openAI, gemini, vertex, anthropic, bedrock, azure, copilot, or custom may be set.|
@@ -68162,6 +68177,11 @@
 |`routes[].backends[].mcp.failureMode`|enum|Behavior when one or more MCP targets fail to initialize or fail during fanout.<br>Defaults to `failClosed`.<br>Possible values: `failClosed`, `failOpen`.|
 |`routes[].backends[].mcp.sseKeepAlive`|string|Interval at which SSE keep-alive comments are sent on long-lived MCP streams.<br>Disabled when unset. Set this when a load balancer or API gateway sits in front<br>of agentgateway and reaps connections that carry no traffic.|
 |`routes[].backends[].mcp.dnsRebindingProtection`|boolean|Opt-in MCP DNS rebinding protection (Host/Origin must be localhost).<br>Off by default; see https://github.com/agentgateway/agentgateway/issues/1855.|
+|`routes[].backends[].mcp.server`|object|Overrides for the MCP `serverInfo` and gateway instructions reported to clients on<br>`initialize`/`server/discover` when multiplexing multiple targets. Unset fields fall<br>back to the normal defaults.|
+|`routes[].backends[].mcp.server.name`|string|Overrides `serverInfo.name`. Must be set together with `version` — setting only one<br>would otherwise mix an overridden name with agentgateway's own version, or vice versa.<br>Defaults to `agentgateway` when unset.|
+|`routes[].backends[].mcp.server.version`|string|Overrides `serverInfo.version`. Must be set together with `name`, for the same reason.<br>Defaults to the build version when unset.|
+|`routes[].backends[].mcp.server.title`|string|Overrides `serverInfo.title`. Unset by default.|
+|`routes[].backends[].mcp.server.instructions`|string|Overrides the gateway preamble prepended to merged upstream instructions.<br>Defaults to a generic gateway description when unset.|
 |`routes[].backends[].ai`|object||
 |`routes[].backends[].ai.name`|string|Name identifying this provider, referenced by `llm.models[].provider`.|
 |`routes[].backends[].ai.provider`|object|The upstream LLM provider type and its configuration.<br>Exactly one of openAI, gemini, vertex, anthropic, bedrock, azure, copilot, or custom may be set.|
@@ -88803,6 +88823,11 @@
 |`mcp.failureMode`|enum|Behavior when one or more MCP targets fail to initialize or fail during fanout.<br>Defaults to `failClosed`.<br>Possible values: `failClosed`, `failOpen`.|
 |`mcp.sseKeepAlive`|string|Interval at which SSE keep-alive comments are sent on long-lived MCP streams.<br>Disabled when unset. Set this when a load balancer or API gateway sits in front<br>of agentgateway and reaps connections that carry no traffic.|
 |`mcp.dnsRebindingProtection`|boolean|Opt-in MCP DNS rebinding protection (Host/Origin must be localhost).<br>Off by default; see https://github.com/agentgateway/agentgateway/issues/1855.|
+|`mcp.server`|object|Overrides for the MCP `serverInfo` and gateway instructions reported to clients on<br>`initialize`/`server/discover` when multiplexing multiple targets. Unset fields fall<br>back to the normal defaults.|
+|`mcp.server.name`|string|Overrides `serverInfo.name`. Must be set together with `version` — setting only one<br>would otherwise mix an overridden name with agentgateway's own version, or vice versa.<br>Defaults to `agentgateway` when unset.|
+|`mcp.server.version`|string|Overrides `serverInfo.version`. Must be set together with `name`, for the same reason.<br>Defaults to the build version when unset.|
+|`mcp.server.title`|string|Overrides `serverInfo.title`. Unset by default.|
+|`mcp.server.instructions`|string|Overrides the gateway preamble prepended to merged upstream instructions.<br>Defaults to a generic gateway description when unset.|
 |`mcp.policies`|object|Policies applied to MCP requests.|
 |`mcp.policies.requestHeaderModifier`|object|Modify request headers before forwarding.|
 |`mcp.policies.requestHeaderModifier.add`|object|Headers to append without replacing existing values.|
