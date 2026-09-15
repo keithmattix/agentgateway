@@ -5,8 +5,16 @@ info:
   model: gpt-5.6-luna
   max_tokens: 64
   messages:
+    - role: system
+      content:
+        - type: text
+          text: Be concise.
+          citations: []
     - role: user
-      content: Say hello.
+      content:
+        - type: text
+          text: Say hello.
+          citations: []
     - role: assistant
       content:
         - type: text
@@ -18,6 +26,15 @@ info:
 {
   "request": {
     "messages": [
+      {
+        "role": "system",
+        "content": [
+          {
+            "type": "text",
+            "text": "Be concise."
+          }
+        ]
+      },
       {
         "role": "user",
         "content": [
@@ -60,6 +77,10 @@ info:
       "max_tokens": 64
     },
     "prompt": [
+      {
+        "role": "system",
+        "content": "Be concise."
+      },
       {
         "role": "user",
         "content": "Say hello."

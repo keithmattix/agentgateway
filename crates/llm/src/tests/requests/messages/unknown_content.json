@@ -3,6 +3,19 @@
   "max_tokens": 64,
   "messages": [
     {
+      "role": "system",
+      "content": [
+        {
+          "type": "future_block",
+          "data": "unrecognized"
+        },
+        {
+          "type": "text",
+          "text": "Be concise."
+        }
+      ]
+    },
+    {
       "role": "user",
       "content": [
         {
@@ -14,6 +27,23 @@
           "text": "hello"
         }
       ]
+    },
+    {
+      "role": "assistant",
+      "content": [
+        {
+          "type": "future_block",
+          "data": "unrecognized"
+        },
+        {
+          "type": "text",
+          "text": "Hello!"
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": "Continue."
     }
   ]
 }

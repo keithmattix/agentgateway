@@ -33,7 +33,69 @@ info:
       content: Continue.
 ---
 {
-  "error": "unsupported conversion: messages thinking history cannot be represented by responses",
+  "request": {
+    "input": [
+      {
+        "type": "message",
+        "role": "user",
+        "content": [
+          {
+            "type": "input_text",
+            "text": "What is 2+2?"
+          }
+        ]
+      },
+      {
+        "type": "message",
+        "id": "msg_redacted",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "output_text",
+            "text": "4",
+            "annotations": []
+          }
+        ],
+        "status": "completed"
+      },
+      {
+        "type": "message",
+        "role": "user",
+        "content": [
+          {
+            "type": "input_text",
+            "text": "And 3+3?"
+          }
+        ]
+      },
+      {
+        "type": "message",
+        "id": "msg_redacted",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "output_text",
+            "text": "6",
+            "annotations": []
+          }
+        ],
+        "status": "completed"
+      },
+      {
+        "type": "message",
+        "role": "user",
+        "content": [
+          {
+            "type": "input_text",
+            "text": "Continue."
+          }
+        ]
+      }
+    ],
+    "model": "claude-3-7-sonnet-20250219-v1:0",
+    "max_output_tokens": 1024,
+    "stream": false
+  },
   "parsed": {
     "input_format": "Messages",
     "cache_convention": "InputIncludesCache",

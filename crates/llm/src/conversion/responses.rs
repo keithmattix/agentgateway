@@ -198,7 +198,7 @@ pub mod from_messages {
 		}
 
 		let output_config = output_config.unwrap_or_default();
-		if let Some(reasoning) = translate_reasoning(thinking, output_config.effort)? {
+		if let Some(reasoning) = translate_reasoning(thinking, output_config.effort) {
 			rest.insert(
 				"reasoning".to_string(),
 				serde_json::to_value(reasoning).map_err(AIError::RequestMarshal)?,
@@ -315,34 +315,16 @@ pub mod from_messages {
 	fn translate_reasoning(
 		thinking: Option<messages::ThinkingInput>,
 		effort: Option<messages::ThinkingEffort>,
-	) -> Result<Option<responses::Reasoning>, AIError> {
+	) -> Option<responses::Reasoning> {
 		match thinking {
-			Some(messages::ThinkingInput::Adaptive {}) => Ok(Some(responses::Reasoning {
+			Some(messages::ThinkingInput::Disabled {}) => None,
+			None if effort.is_none() => None,
+			_ => Some(responses::Reasoning {
 				context: None,
 				effort: translate_effort(effort),
 				mode: None,
 				summary: None,
-			})),
-			Some(messages::ThinkingInput::Disabled {}) => {
-				if effort.is_some() {
-					unsupported("messages output_config.effort requires adaptive thinking")
-				} else {
-					Ok(None)
-				}
-			},
-			Some(messages::ThinkingInput::Enabled { .. }) => Ok(Some(responses::Reasoning {
-				context: None,
-				effort: translate_effort(effort),
-				mode: None,
-				summary: None,
-			})),
-			None => {
-				if effort.is_some() {
-					unsupported("messages output_config.effort requires adaptive thinking")
-				} else {
-					Ok(None)
-				}
-			},
+			}),
 		}
 	}
 
@@ -452,7 +434,6 @@ pub mod from_messages {
 		for block in content {
 			match block {
 				messages::ContentBlock::Text(text) => {
-					validate_text_block(&text)?;
 					let mut part = json!({
 						"type": "input_text",
 						"text": text.text,
@@ -492,9 +473,7 @@ pub mod from_messages {
 				| messages::ContentBlock::Thinking { .. }
 				| messages::ContentBlock::RedactedThinking { .. }
 				| messages::ContentBlock::ToolUse { .. }
-				| messages::ContentBlock::Unknown => {
-					return unsupported("messages user content block cannot be represented by responses");
-				},
+				| messages::ContentBlock::Unknown => {},
 			}
 		}
 		flush_input_message("user", &mut parts, out);
@@ -509,7 +488,6 @@ pub mod from_messages {
 		for block in content {
 			match block {
 				messages::ContentBlock::Text(text) => {
-					validate_text_block(&text)?;
 					text_parts.push(json!({
 						"type": "output_text",
 						"text": text.text,
@@ -533,15 +511,10 @@ pub mod from_messages {
 						"status": "completed",
 					})));
 				},
-				messages::ContentBlock::Thinking { .. }
-				| messages::ContentBlock::RedactedThinking { .. } => {
-					return unsupported("messages thinking history cannot be represented by responses");
-				},
-				_ => {
-					return unsupported(
-						"messages assistant content block cannot be represented by responses",
-					);
-				},
+				// TODO: Preserve reasoning summaries and round-trip OpenAI encrypted reasoning
+				// through Messages signature/data using a marker like LiteLLM's
+				// ENCRYPTED_REASONING_SIGNATURE_PREFIX, distinguishing it from foreign signatures.
+				_ => {},
 			}
 		}
 		flush_output_message(&mut text_parts, out);
@@ -554,19 +527,13 @@ pub mod from_messages {
 	) -> Result<(), AIError> {
 		let mut parts = Vec::new();
 		for block in content {
-			match block {
-				messages::ContentBlock::Text(text) => {
-					validate_text_block(&text)?;
-					let mut part = json!({
-						"type": "input_text",
-						"text": text.text,
-					});
-					add_prompt_cache_breakpoint(&mut part, text.cache_control);
-					parts.push(part);
-				},
-				_ => {
-					return unsupported("messages system content block cannot be represented by responses");
-				},
+			if let messages::ContentBlock::Text(text) = block {
+				let mut part = json!({
+					"type": "input_text",
+					"text": text.text,
+				});
+				add_prompt_cache_breakpoint(&mut part, text.cache_control);
+				parts.push(part);
 			}
 		}
 		flush_input_message("system", &mut parts, out);
@@ -599,13 +566,6 @@ pub mod from_messages {
 			"content": std::mem::take(parts),
 			"status": "completed",
 		})));
-	}
-
-	fn validate_text_block(text: &messages::ContentTextBlock) -> Result<(), AIError> {
-		reject_option(
-			&text.citations,
-			"messages text citations cannot be represented by responses",
-		)
 	}
 
 	fn translate_image_source(source: &Value) -> Result<Value, AIError> {
@@ -684,29 +644,25 @@ pub mod from_messages {
 				let mut text_values = Vec::new();
 				let has_cache_control = cache_control.is_some();
 				for part in parts {
-					let (text, citations, cache_control) = match part {
+					let (text, cache_control) = match part {
 						messages::ToolResultContentPart::Text {
 							text,
-							citations,
 							cache_control,
-						} => (text, citations, cache_control),
+							..
+						} => (text, cache_control),
 						messages::ToolResultContentPart::ToolReference {
 							tool_name,
 							cache_control,
-						} => (tool_name, None, cache_control),
-						messages::ToolResultContentPart::Unknown => continue,
-						messages::ToolResultContentPart::Image { .. }
-						| messages::ToolResultContentPart::Document { .. }
-						| messages::ToolResultContentPart::SearchResult { .. } => {
+						} => (tool_name, cache_control),
+						messages::ToolResultContentPart::Image { .. } => {
 							return unsupported(
 								"messages non-text tool_result content cannot be represented by responses",
 							);
 						},
+						messages::ToolResultContentPart::Unknown
+						| messages::ToolResultContentPart::Document { .. }
+						| messages::ToolResultContentPart::SearchResult { .. } => continue,
 					};
-					reject_option(
-						&citations,
-						"messages tool_result citations cannot be represented by responses",
-					)?;
 					let mut value = json!({
 						"type": "input_text",
 						"text": &text,
@@ -1675,14 +1631,6 @@ pub mod from_messages {
 			}
 		}
 		Ok(())
-	}
-
-	fn reject_option<T>(value: &Option<T>, reason: &'static str) -> Result<(), AIError> {
-		if value.is_some() {
-			unsupported(reason)
-		} else {
-			Ok(())
-		}
 	}
 
 	fn unsupported<T>(reason: &'static str) -> Result<T, AIError> {
