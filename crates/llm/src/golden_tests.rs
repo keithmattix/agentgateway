@@ -249,6 +249,7 @@ mod requests {
 			region: strng::new("us-west-2"),
 			guardrail_identifier: None,
 			guardrail_version: None,
+			endpoint_preference: Default::default(),
 		};
 		for (name, providers) in COMPLETION_REQUESTS {
 			let path = format!("requests/completions/{name}.json");
@@ -290,6 +291,7 @@ mod requests {
 				region: strng::new("us-west-2"),
 				guardrail_identifier: None,
 				guardrail_version: None,
+				endpoint_preference: Default::default(),
 			};
 			test_request(provider, "requests/completions/reasoning.json", |i| {
 				conversion::bedrock::from_completions::translate(i, &bedrock, None, None, None)
@@ -305,6 +307,7 @@ mod requests {
 			region: strng::new("us-west-2"),
 			guardrail_identifier: None,
 			guardrail_version: None,
+			endpoint_preference: Default::default(),
 		};
 		let vertex = vertex::Provider {
 			model: Some(strng::new("anthropic/claude-sonnet-4-5")),
@@ -344,6 +347,7 @@ mod requests {
 			region: strng::new("us-west-2"),
 			guardrail_identifier: None,
 			guardrail_version: None,
+			endpoint_preference: Default::default(),
 		};
 		for (name, providers) in RESPONSES_REQUESTS {
 			let path = format!("requests/responses/{name}.json");
@@ -369,24 +373,28 @@ mod requests {
 			region: strng::new("us-west-2"),
 			guardrail_identifier: None,
 			guardrail_version: None,
+			endpoint_preference: Default::default(),
 		};
 		let cohere = bedrock::Provider {
 			model: Some(strng::new("cohere.embed-english-v3")),
 			region: strng::new("us-west-2"),
 			guardrail_identifier: None,
 			guardrail_version: None,
+			endpoint_preference: Default::default(),
 		};
 		let cohere_v4 = bedrock::Provider {
 			model: Some(strng::new("cohere.embed-v4:0")),
 			region: strng::new("us-west-2"),
 			guardrail_identifier: None,
 			guardrail_version: None,
+			endpoint_preference: Default::default(),
 		};
 		let nova = bedrock::Provider {
 			model: Some(strng::new("amazon.nova-2-multimodal-embeddings-v1:0")),
 			region: strng::new("us-east-1"),
 			guardrail_identifier: None,
 			guardrail_version: None,
+			endpoint_preference: Default::default(),
 		};
 		let vertex = vertex::Provider {
 			model: None,
@@ -430,6 +438,7 @@ mod requests {
 			region: strng::new("us-west-2"),
 			guardrail_identifier: None,
 			guardrail_version: None,
+			endpoint_preference: Default::default(),
 		};
 		let vertex = vertex::Provider {
 			model: Some(strng::new("semantic-ranker-default@latest")),

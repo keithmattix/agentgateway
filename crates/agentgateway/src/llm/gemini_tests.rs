@@ -110,6 +110,7 @@ fn set_required_fields_leaves_oauth_bearer_tokens_untouched() {
 					&mut req,
 					route_type,
 					Some(&native_chat_request("gemini-2.5-flash", false)),
+					None,
 				)
 				.unwrap();
 
@@ -144,7 +145,7 @@ fn set_required_fields_moves_api_keys_to_x_goog_api_key_on_native_routes(#[case]
 		);
 
 		provider
-			.set_required_fields(&mut req, route_type, Some(&llm_request))
+			.set_required_fields(&mut req, route_type, Some(&llm_request), None)
 			.unwrap();
 
 		assert!(
@@ -180,7 +181,7 @@ fn set_required_fields_keeps_api_keys_on_the_compat_shim_and_explicit_locations(
 		&[("authorization", &authorization)],
 	);
 	provider
-		.set_required_fields(&mut req, RouteType::Completions, Some(&shim_request))
+		.set_required_fields(&mut req, RouteType::Completions, Some(&shim_request), None)
 		.unwrap();
 	assert_eq!(
 		req.headers().get(::http::header::AUTHORIZATION).unwrap(),
@@ -202,6 +203,7 @@ fn set_required_fields_keeps_api_keys_on_the_compat_shim_and_explicit_locations(
 			&mut req,
 			RouteType::GenerateContent,
 			Some(&native_chat_request("gemini-2.5-flash", false)),
+			None,
 		)
 		.unwrap();
 	assert_eq!(
@@ -221,7 +223,16 @@ fn setup(
 ) -> crate::http::Request {
 	let mut req = crate::http::tests_common::request(uri, ::http::Method::POST, &[]);
 	provider
-		.setup_request(&mut req, route_type, Some(llm_request), None, None, false)
+		.setup_request(
+			&mut req,
+			route_type,
+			Some(llm_request),
+			None,
+			None,
+			false,
+			None,
+			None,
+		)
 		.expect("setup_request should succeed");
 	req
 }
@@ -402,6 +413,8 @@ async fn process_and_setup(
 			None,
 			None,
 			false,
+			None,
+			None,
 		)
 		.expect("setup_request should succeed");
 	(llm_request, req)
@@ -486,6 +499,8 @@ async fn completions_inbound_to_the_gemini_provider_renders_native() {
 			None,
 			None,
 			false,
+			None,
+			None,
 		)
 		.expect("setup_request should succeed");
 	assert_eq!(
@@ -735,6 +750,8 @@ async fn process_and_setup_count_tokens(
 			None,
 			None,
 			false,
+			None,
+			None,
 		)
 		.expect("setup_request should succeed");
 	(llm_request, req)
@@ -1009,6 +1026,7 @@ async fn gemini_inbound_requires_a_gemini_upstream() {
 				region: strng::new("us-east-1"),
 				guardrail_identifier: None,
 				guardrail_version: None,
+				endpoint_preference: Default::default(),
 			})),
 			"bedrock-runtime.us-east-1.amazonaws.com",
 			"bedrock",

@@ -106,6 +106,124 @@ fn vertex_gemini_uses_native_completions_and_compat_fallbacks() {
 }
 
 #[test]
+fn bedrock_chat_translation_follows_endpoint_selection() {
+	fn bedrock(pref: bedrock::BedrockEndpointPreference) -> AIProvider {
+		AIProvider::Bedrock(BedrockProvider::new(bedrock::Provider {
+			model: None,
+			region: strng::new("us-east-1"),
+			guardrail_identifier: None,
+			guardrail_version: None,
+			endpoint_preference: pref,
+		}))
+	}
+
+	let runtime = bedrock(bedrock::BedrockEndpointPreference::RuntimeOnly);
+	for input in [
+		InputFormat::Completions,
+		InputFormat::Messages,
+		InputFormat::Responses,
+	] {
+		assert_eq!(
+			runtime
+				.chat_translation(
+					input,
+					Some("anthropic.claude-3-5-sonnet-20241022-v2:0"),
+					None
+				)
+				.unwrap()
+				.output,
+			ChatFormat::BedrockConverse,
+			"{input:?} must render Converse on the Runtime endpoint"
+		);
+	}
+
+	let catalog = crate::llm::catalog::ModelCatalog::from_json(
+		r#"{"providers":{"aws.bedrock":{"models":{
+			"anthropic.claude-sonnet-5":{"tags":["mantle","anthropic_messages"]},
+			"openai.gpt-oss-120b":{"tags":["mantle","openai_completions","openai_responses"]}
+		}}}}"#,
+	);
+	let catalog = Some(catalog.as_handle());
+	let mantle = bedrock(bedrock::BedrockEndpointPreference::MantleOnly);
+	// gpt-oss-120b serves the two OpenAI-compatible formats on Mantle.
+	for (input, expected) in [
+		(InputFormat::Completions, ChatFormat::OpenAICompletions),
+		(InputFormat::Responses, ChatFormat::OpenAIResponses),
+	] {
+		assert_eq!(
+			mantle
+				.chat_translation(input, Some("openai.gpt-oss-120b"), catalog)
+				.unwrap()
+				.output,
+			expected,
+			"{input:?} must pass through natively on the Mantle endpoint"
+		);
+	}
+	// Claude serves the native Messages API on Mantle.
+	assert_eq!(
+		mantle
+			.chat_translation(
+				InputFormat::Messages,
+				Some("anthropic.claude-sonnet-5"),
+				catalog
+			)
+			.unwrap()
+			.output,
+		ChatFormat::AnthropicMessages,
+		"Messages must pass through natively for a Claude model on Mantle"
+	);
+}
+
+// A Claude model only speaks the Anthropic Messages API on Mantle, so an inbound Chat Completions
+// request must be translated to Messages, never sent to Mantle as OpenAI Chat Completions.
+#[test]
+fn bedrock_mantle_never_sends_completions_to_a_claude_model() {
+	fn mantle_provider() -> AIProvider {
+		AIProvider::Bedrock(BedrockProvider::new(bedrock::Provider {
+			model: None,
+			region: strng::new("us-east-1"),
+			guardrail_identifier: None,
+			guardrail_version: None,
+			endpoint_preference: bedrock::BedrockEndpointPreference::MantleOnly,
+		}))
+	}
+	let mantle = mantle_provider();
+
+	// Tag-driven: the imported catalog tags Claude with anthropic_messages only.
+	let catalog = crate::llm::catalog::ModelCatalog::from_json(
+		r#"{"providers":{"aws.bedrock":{"models":{
+			"anthropic.claude-sonnet-5":{"tags":["mantle","anthropic_messages"]}
+		}}}}"#,
+	);
+	assert_eq!(
+		mantle
+			.chat_translation(
+				InputFormat::Completions,
+				Some("anthropic.claude-sonnet-5"),
+				Some(catalog.as_handle()),
+			)
+			.unwrap()
+			.output,
+		ChatFormat::AnthropicMessages,
+		"a Completions request to a tagged Claude model must translate to Messages, not completions"
+	);
+
+	// Untagged fallback: the is_anthropic_model heuristic must also keep Completions off completions.
+	assert_eq!(
+		mantle
+			.chat_translation(
+				InputFormat::Completions,
+				Some("anthropic.claude-opus-4-8"),
+				None
+			)
+			.unwrap()
+			.output,
+		ChatFormat::AnthropicMessages,
+		"an untagged Claude model must still translate Completions to Messages"
+	);
+}
+
+#[test]
 fn gemini_inbound_selects_native_translation_only_for_gemini_upstreams() {
 	let vertex = AIProvider::Vertex(vertex::Provider {
 		project_id: strng::new("test-project"),
@@ -259,6 +377,8 @@ async fn custom_provider_completions_inbound_renders_native_gemini() {
 			None,
 			None,
 			false,
+			None,
+			None,
 		)
 		.expect("setup_request should succeed");
 	assert_eq!(
@@ -1080,7 +1200,7 @@ async fn count_tokens_resolves_model_alias_once_for_upstream_request() {
 		llm_request,
 		..
 	} = provider
-		.process_count_tokens_request(&backend_info, req, Some(&policy), &mut None)
+		.process_count_tokens_request(&backend_info, req, Some(&policy), &mut None, None)
 		.await
 		.expect("count_tokens request should process")
 	else {
@@ -1138,7 +1258,7 @@ async fn count_tokens_uses_native_endpoint_after_model_alias() {
 		upstream_route_type,
 		..
 	} = provider
-		.process_count_tokens_request(&backend_info, req, Some(&policy), &mut None)
+		.process_count_tokens_request(&backend_info, req, Some(&policy), &mut None, None)
 		.await
 		.expect("count_tokens request should process")
 	else {
@@ -1362,6 +1482,8 @@ async fn gemini_count_tokens_applies_model_alias_and_rewrites_upstream_path() {
 			None,
 			None,
 			false,
+			None,
+			None,
 		)
 		.expect("setup_request should succeed");
 	assert_eq!(
@@ -1437,6 +1559,7 @@ async fn anthropic_count_tokens_preserves_upstream_errors() {
 		region: strng::new("us-east-1"),
 		guardrail_identifier: None,
 		guardrail_version: None,
+		endpoint_preference: Default::default(),
 	});
 	let req = LLMRequest {
 		input_tokens: None,
@@ -1784,6 +1907,7 @@ async fn bedrock_transformed_provider_model_is_used_for_upstream_path() {
 		region: strng::new("us-east-1"),
 		guardrail_identifier: None,
 		guardrail_version: None,
+		endpoint_preference: Default::default(),
 	});
 	let inputs = setup_proxy_test("{}").unwrap().pi;
 	let backend_info = BackendInfo {
@@ -1843,6 +1967,8 @@ async fn bedrock_transformed_provider_model_is_used_for_upstream_path() {
 			None,
 			None,
 			false,
+			None,
+			None,
 		)
 		.expect("Bedrock upstream request should be finalized");
 	assert_eq!(
@@ -1863,6 +1989,7 @@ async fn bedrock_provider_model_overrides_client_model() {
 		region: strng::new("us-east-1"),
 		guardrail_identifier: None,
 		guardrail_version: None,
+		endpoint_preference: Default::default(),
 	});
 	let inputs = setup_proxy_test("{}").unwrap().pi;
 	let backend_info = BackendInfo {
@@ -1903,6 +2030,8 @@ async fn bedrock_provider_model_overrides_client_model() {
 			None,
 			None,
 			false,
+			None,
+			None,
 		)
 		.expect("Bedrock upstream request should be finalized");
 	assert_eq!(
@@ -2024,6 +2153,8 @@ async fn copilot_anthropic_model_uses_messages_route() {
 			None,
 			None,
 			false,
+			None,
+			None,
 		)
 		.expect("setup_request should succeed");
 	assert_eq!(setup_req.uri().path(), "/v1/messages");
@@ -2328,6 +2459,7 @@ async fn process_response_routes_streaming_error_to_buffered_path() {
 		region: strng::new("us-west-2"),
 		guardrail_identifier: None,
 		guardrail_version: None,
+		endpoint_preference: Default::default(),
 	});
 
 	let error_json = r#"{"message":"Expected toolResult blocks at messages.2.content for the following Ids: tooluse_abc123"}"#;
@@ -2541,6 +2673,7 @@ async fn process_streaming_bedrock_completions_normalizes_sse_headers_and_done()
 		region: strng::new("us-east-1"),
 		guardrail_identifier: None,
 		guardrail_version: None,
+		endpoint_preference: Default::default(),
 	});
 
 	let body = Body::from(
@@ -2618,6 +2751,8 @@ fn setup_request_openai_applies_prefixed_path_without_host_override() {
 			None,
 			Some("/v1/custom"),
 			false,
+			None,
+			None,
 		)
 		.expect("setup_request should succeed");
 
@@ -2649,6 +2784,8 @@ fn setup_request_openai_normalizes_trailing_slash_in_path_prefix() {
 			None,
 			Some("/v1/custom/"),
 			false,
+			None,
+			None,
 		)
 		.expect("setup_request should succeed");
 
@@ -2691,6 +2828,8 @@ fn setup_request_custom_path_override_wins_over_format_path() {
 			Some("/override/messages"),
 			None,
 			true,
+			None,
+			None,
 		)
 		.expect("setup_request should succeed");
 
@@ -2740,6 +2879,8 @@ fn setup_request_custom_generate_content_defaults_to_the_native_path() {
 				None,
 				None,
 				false,
+				None,
+				None,
 			)
 			.expect("setup_request should succeed");
 
@@ -2778,6 +2919,8 @@ fn setup_request_custom_count_tokens_defaults_to_the_native_path() {
 			None,
 			None,
 			false,
+			None,
+			None,
 		)
 		.expect("setup_request should succeed");
 
@@ -2823,6 +2966,8 @@ fn assert_prefixed_host_override_path(
 			None,
 			Some("/proxy/"),
 			true,
+			None,
+			None,
 		)
 		.expect("setup_request should succeed");
 
@@ -2862,6 +3007,8 @@ fn setup_request_gemini_native_builds_generate_content_path() {
 			None,
 			None,
 			false,
+			None,
+			None,
 		)
 		.expect("setup_request should succeed");
 
@@ -2896,6 +3043,8 @@ fn setup_request_gemini_native_streaming_adds_alt_sse_and_strips_client_api_keys
 			None,
 			None,
 			false,
+			None,
+			None,
 		)
 		.expect("setup_request should succeed");
 
@@ -2937,6 +3086,8 @@ fn setup_request_strips_query_api_keys_only_for_native_gemini() {
 				None,
 				None,
 				true,
+				None,
+				None,
 			)
 			.expect("setup_request should succeed");
 
@@ -2969,6 +3120,8 @@ fn setup_request_gemini_without_native_state_keeps_compat_path() {
 			None,
 			None,
 			false,
+			None,
+			None,
 		)
 		.expect("setup_request should succeed");
 
@@ -3008,6 +3161,7 @@ fn setup_request_bedrock_applies_path_prefix_with_host_override() {
 			region: strng::new("us-east-1"),
 			guardrail_identifier: None,
 			guardrail_version: None,
+			endpoint_preference: Default::default(),
 		}),
 		"anthropic.claude-3-5-sonnet-20241022-v2:0",
 		"/proxy/model/anthropic.claude-3-5-sonnet-20241022-v2:0/converse",
@@ -3022,6 +3176,7 @@ fn setup_request_bedrock_sets_signing_region_with_host_override() {
 		region: strng::new("ca-central-1"),
 		guardrail_identifier: None,
 		guardrail_version: None,
+		endpoint_preference: Default::default(),
 	});
 	let mut req = crate::http::tests_common::request(
 		"https://bedrock-vpce.example.com/model/example/converse",
@@ -3030,7 +3185,16 @@ fn setup_request_bedrock_sets_signing_region_with_host_override() {
 	);
 
 	provider
-		.setup_request(&mut req, RouteType::Messages, None, None, None, true)
+		.setup_request(
+			&mut req,
+			RouteType::Messages,
+			None,
+			None,
+			None,
+			true,
+			None,
+			None,
+		)
 		.expect("setup_request should succeed");
 
 	assert_eq!(
