@@ -3026,6 +3026,13 @@ pub struct FilterOrPolicy {
 	/// Enforce the CONNECT-pinned effective Substrate egress policy.
 	#[serde(default)]
 	substrate_egress: Option<crate::http::substrate::SubstrateEgress>,
+	/// Resolve an actor selected by CONNECT metadata for a TCP connection.
+	#[serde(default)]
+	substrate_tcp_ingress: Option<crate::http::substrate::SubstrateTcpIngress>,
+	/// Enforce actor egress policy before forwarding a TCP connection.
+	#[serde(default)]
+	substrate_tcp_egress: Option<crate::http::substrate::SubstrateTcpEgress>,
+
 	/// Modify request and response headers, bodies, or metadata.
 	#[serde(default)]
 	#[cfg_attr(
@@ -3055,6 +3062,13 @@ pub struct FilterOrPolicy {
 
 #[apply(schema_de!)]
 struct TCPFilterOrPolicy {
+	/// Resolve an actor selected by CONNECT metadata for a TCP connection.
+	#[serde(default)]
+	substrate_tcp_ingress: Option<crate::http::substrate::SubstrateTcpIngress>,
+	/// Enforce actor egress policy before forwarding a TCP connection.
+	#[serde(default)]
+	substrate_tcp_egress: Option<crate::http::substrate::SubstrateTcpEgress>,
+
 	/// TLS configuration for connections to the TCP route's backend.
 	#[serde(default, skip_serializing_if = "Option::is_none")]
 	#[serde(rename = "backendTLS")]
@@ -5330,6 +5344,8 @@ pub(crate) async fn split_policies_for_target(
 		ext_proc,
 		substrate_ingress,
 		substrate_egress,
+		substrate_tcp_ingress,
+		substrate_tcp_egress,
 		buffer,
 		timeout,
 		retry,
@@ -5508,6 +5524,15 @@ pub(crate) async fn split_policies_for_target(
 	if let Some(p) = ext_proc {
 		route_policies.push(TrafficPolicy::ExtProc(p.into_policy()?))
 	}
+	if backend_target && (substrate_tcp_ingress.is_some() || substrate_tcp_egress.is_some()) {
+		bail!("TCP Substrate policies must target a listener or route");
+	}
+	if let Some(p) = substrate_tcp_ingress {
+		route_policies.push(TrafficPolicy::SubstrateTcpIngress(Arc::new(p)));
+	}
+	if let Some(p) = substrate_tcp_egress {
+		route_policies.push(TrafficPolicy::SubstrateTcpEgress(Arc::new(p)));
+	}
 	if let Some(p) = substrate_ingress {
 		route_policies.push(TrafficPolicy::SubstrateIngress(RequestPolicy::single(p)))
 	}
@@ -5562,6 +5587,7 @@ async fn convert_tcp_route(
 	let key = strng::format!("{listener_key}/{namespace}/{route_name}");
 
 	let external_policies = vec![];
+	let mut tcp_policies = vec![];
 
 	let mut backend_refs = Vec::new();
 	let mut external_backends = Vec::new();
@@ -5598,7 +5624,17 @@ async fn convert_tcp_route(
 	}
 
 	if let Some(pol) = policies {
-		let TCPFilterOrPolicy { backend_tls } = pol;
+		let TCPFilterOrPolicy {
+			backend_tls,
+			substrate_tcp_ingress,
+			substrate_tcp_egress,
+		} = pol;
+		if let Some(p) = substrate_tcp_ingress {
+			tcp_policies.push(TrafficPolicy::SubstrateTcpIngress(Arc::new(p)));
+		}
+		if let Some(p) = substrate_tcp_egress {
+			tcp_policies.push(TrafficPolicy::SubstrateTcpEgress(Arc::new(p)));
+		}
 		if let Some(p) = backend_tls {
 			let backend_tls = BackendTrafficPolicy::BackendTLS(p.try_into(resources).await?);
 			for br in backend_refs.iter_mut() {
@@ -5607,6 +5643,7 @@ async fn convert_tcp_route(
 		}
 	}
 	let route = TCPRoute {
+		inline_policies: tcp_policies,
 		key,
 		service_key: None,
 		service_port: 0,

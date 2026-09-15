@@ -679,6 +679,10 @@
           "items": {
             "$ref": "#/$defs/TCPRouteBackendReference"
           }
+        },
+        "inlinePolicies": {
+          "type": "array",
+          "items": true
         }
       },
       "additionalProperties": false,

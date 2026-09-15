@@ -1556,6 +1556,7 @@ impl TCPRoute {
 		_diagnostics: &mut Diagnostics,
 	) -> Result<(Self, ListenerKey), ProtoError> {
 		let r = TCPRoute {
+			inline_policies: Vec::new(),
 			key: strng::new(&s.key),
 			service_key: service_key_from_proto(s.service_key.as_ref()),
 			service_port: u16::try_from(s.service_port)
@@ -3927,6 +3928,8 @@ fn traffic_policy_kind_name(policy: &TrafficPolicy) -> &'static str {
 		TrafficPolicy::ExtAuthz(_) => "extAuthz",
 		TrafficPolicy::SubstrateEgress(_) => "substrateEgress",
 		TrafficPolicy::SubstrateIngress(_) => "substrateIngress",
+		TrafficPolicy::SubstrateTcpIngress(_) => "substrateTcpIngress",
+		TrafficPolicy::SubstrateTcpEgress(_) => "substrateTcpEgress",
 		TrafficPolicy::ExtProc(_) => "extProc",
 		TrafficPolicy::JwtAuth(_) => "jwt",
 		TrafficPolicy::Oidc(_) => "oidc",

@@ -1563,3 +1563,414 @@ async fn substrate_egress_authorizes_http_tls_and_opaque_tcp_connect_tunnels() {
 		);
 	}
 }
+
+fn tcp_client_hello(hostname: &str) -> Vec<u8> {
+	let mut config = rustls::ClientConfig::builder_with_provider(agentgateway::crypto::provider())
+		.with_safe_default_protocol_versions()
+		.unwrap()
+		.with_root_certificates(rustls::RootCertStore::empty())
+		.with_no_client_auth();
+	config.enable_sni = !hostname.is_empty();
+	let hostname = if hostname.is_empty() {
+		"unused.example"
+	} else {
+		hostname
+	};
+	let mut client = rustls::ClientConnection::new(
+		Arc::new(config),
+		rustls::pki_types::ServerName::try_from(hostname.to_owned()).unwrap(),
+	)
+	.unwrap();
+	let mut hello = Vec::new();
+	client.write_tls(&mut hello).unwrap();
+	hello
+}
+
+fn substrate_tcp_bind(tls: bool) -> BindSnapshot {
+	use agentgateway::types::agent::{BindProtocol, ListenerProtocol, ListenerSet};
+	let mut bind = simple_tcp_bind();
+	bind.address = "0.0.0.0:18080".parse().unwrap();
+	bind.mode = BindMode::Internal;
+	bind.protocol = if tls {
+		BindProtocol::tls
+	} else {
+		BindProtocol::tcp
+	};
+	let mut listener = bind.listeners.iter().next().unwrap().clone();
+	listener.protocol = if tls {
+		ListenerProtocol::TLS(None)
+	} else {
+		ListenerProtocol::TCP
+	};
+	BindSnapshot::new(
+		Arc::unwrap_or_clone(bind.bind),
+		ListenerSet::from_list([listener]),
+	)
+}
+
+async fn open_substrate_tcp_tunnel(
+	gateway: &TestBind,
+	target_actor: Option<&str>,
+	authenticated: bool,
+	authority: &str,
+) -> tokio::io::DuplexStream {
+	let mut io = gateway.serve_tunnel_with_tls_info(
+		strng::literal!("outer"),
+		authenticated.then(|| TLSConnectionInfo {
+			src_identity: Some(TlsInfo {
+				certificate: Some(actor_certificate("uid-1").into()),
+				..Default::default()
+			}),
+			..Default::default()
+		}),
+	);
+	let actor_header = target_actor
+		.map(|actor| format!("ate-target-actor: {actor}\r\n"))
+		.unwrap_or_default();
+	io.write_all(
+		format!(
+			"CONNECT {authority} HTTP/1.1\r\nHost: application.example:18080\r\n{actor_header}\r\n"
+		)
+		.as_bytes(),
+	)
+	.await
+	.unwrap();
+	let mut response = Vec::new();
+	loop {
+		let mut byte = [0];
+		io.read_exact(&mut byte).await.unwrap();
+		response.push(byte[0]);
+		if response.ends_with(b"\r\n\r\n") {
+			break;
+		}
+	}
+	assert!(String::from_utf8_lossy(&response).starts_with("HTTP/1.1 200 OK\r\n"));
+	io
+}
+
+#[derive(Clone)]
+struct TcpEgressHandler {
+	policy: Result<EgressPolicy, tonic::Status>,
+	calls: Arc<AtomicUsize>,
+}
+
+#[async_trait::async_trait]
+impl ateapimock::Handler for TcpEgressHandler {
+	async fn get_actor(
+		&mut self,
+		request: &protos::ateapi::GetActorRequest,
+	) -> Result<Actor, tonic::Status> {
+		CredentialEgressHandler {
+			policy: EgressPolicy::default(),
+		}
+		.get_actor(request)
+		.await
+	}
+	async fn get_actor_egress_policy(
+		&mut self,
+		request: &protos::ateapi::GetActorEgressPolicyRequest,
+	) -> Result<EgressPolicy, tonic::Status> {
+		assert_eq!(request.actor.as_ref().unwrap().name, "my-actor");
+		assert_eq!(request.actor.as_ref().unwrap().atespace, "demo");
+		self.calls.fetch_add(1, Ordering::Relaxed);
+		self.policy.clone()
+	}
+}
+
+async fn check_tcp_egress(
+	policy: Result<EgressPolicy, tonic::Status>,
+	sni: Option<&str>,
+	authenticated: bool,
+	allowed: bool,
+) {
+	let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+	let address = listener.local_addr().unwrap();
+	let calls = Arc::new(AtomicUsize::new(0));
+	let handler = TcpEgressHandler {
+		policy,
+		calls: calls.clone(),
+	};
+	let api = ateapimock::AteApiMock::new(move || handler.clone())
+		.spawn()
+		.await;
+	let mut outer = simple_bind();
+	outer.key = strng::literal!("outer");
+	outer.address = "127.0.0.1:15012".parse().unwrap();
+	let mut gateway = setup_proxy_test("{}")
+		.unwrap()
+		.with_backend(address)
+		.with_bind(outer)
+		.with_bind(substrate_tcp_bind(sni.is_some()))
+		.with_tcp_route(basic_named_tcp_route(strng::format!("/{address}")))
+		.with_connect_mode_on_port(agentgateway::types::frontend::ConnectMode::Tunnel, 15012);
+	if authenticated {
+		gateway
+			.attach_frontend_policy(
+				json!({"substrateEgressActorResolution": {"host": api.address.to_string()}}),
+			)
+			.await;
+	}
+	gateway
+		.attach_route_policy(json!({"substrateTcpEgress": {"host": api.address.to_string()}}))
+		.await;
+	let mut io = open_substrate_tcp_tunnel(&gateway, None, authenticated, "192.0.2.10:18080").await;
+	let payload = sni
+		.map(tcp_client_hello)
+		.unwrap_or_else(|| b"opaque tcp payload".to_vec());
+	let write = io.write_all(&payload).await;
+	if allowed {
+		write.unwrap();
+		let (mut upstream, _) = tokio::time::timeout(Duration::from_secs(5), listener.accept())
+			.await
+			.unwrap()
+			.unwrap();
+		let mut received = vec![0; payload.len()];
+		upstream.read_exact(&mut received).await.unwrap();
+		assert_eq!(
+			received, payload,
+			"passthrough must preserve the original bytes"
+		);
+		upstream.write_all(b"reply").await.unwrap();
+		let mut reply = [0; 5];
+		io.read_exact(&mut reply).await.unwrap();
+		assert_eq!(&reply, b"reply");
+		io.write_all(b"more").await.unwrap();
+		let mut more = [0; 4];
+		upstream.read_exact(&mut more).await.unwrap();
+		assert_eq!(&more, b"more");
+	} else {
+		let mut received = [0; 1];
+		let result = tokio::time::timeout(Duration::from_secs(5), io.read(&mut received))
+			.await
+			.unwrap();
+		assert!(
+			matches!(result, Ok(0) | Err(_)),
+			"denied connection must close"
+		);
+		assert!(
+			tokio::time::timeout(Duration::from_millis(50), listener.accept())
+				.await
+				.is_err(),
+			"denied connection reached the backend"
+		);
+	}
+	assert_eq!(calls.load(Ordering::Relaxed), usize::from(authenticated));
+}
+
+#[tokio::test]
+async fn substrate_tcp_egress_enforces_sni_cidr_and_effects() {
+	use protos::ateapi::{
+		CredentialHeaderInjection, EgressRule, EgressRuleEffects, HostnameRule, IpBlockRule,
+	};
+	let hostname = EgressRule {
+		hostnames: Some(HostnameRule {
+			patterns: vec!["allowed.example".into()],
+			effects: None,
+		}),
+		..Default::default()
+	};
+	let cidr = EgressRule {
+		ip_blocks: Some(IpBlockRule {
+			cidrs: vec!["192.0.2.0/24".into()],
+		}),
+		..Default::default()
+	};
+	let all = EgressRule {
+		all: Some(()),
+		..Default::default()
+	};
+	for (rules, sni, allowed) in [
+		(vec![hostname.clone()], Some("allowed.example"), true),
+		(vec![hostname.clone()], Some("denied.example"), false),
+		(vec![hostname.clone()], Some("Allowed.Example"), true),
+		(vec![hostname.clone()], Some(""), false),
+		(vec![hostname.clone()], None, false),
+		(vec![cidr], None, true),
+		(
+			vec![EgressRule {
+				ip_blocks: Some(IpBlockRule {
+					cidrs: vec!["127.0.0.0/8".into()],
+				}),
+				..Default::default()
+			}],
+			None,
+			false,
+		),
+		(vec![], None, false),
+		(vec![all.clone()], None, true),
+		(
+			vec![
+				EgressRule {
+					hostnames: Some(HostnameRule {
+						patterns: vec!["allowed.example".into()],
+						effects: Some(EgressRuleEffects {
+							inject_static_headers: vec![CredentialHeaderInjection {
+								header: "authorization".into(),
+								credential_uri: "substrate-secret://example/token".into(),
+								prefix: "Bearer ".into(),
+							}],
+						}),
+					}),
+					..Default::default()
+				},
+				all.clone(),
+			],
+			Some("allowed.example"),
+			false,
+		),
+	] {
+		check_tcp_egress(
+			Ok(EgressPolicy {
+				rules,
+				..Default::default()
+			}),
+			sni,
+			true,
+			allowed,
+		)
+		.await;
+	}
+	check_tcp_egress(
+		Ok(EgressPolicy {
+			rules: vec![all],
+			..Default::default()
+		}),
+		None,
+		false,
+		false,
+	)
+	.await;
+	for code in [tonic::Code::Unavailable, tonic::Code::PermissionDenied] {
+		check_tcp_egress(
+			Err(tonic::Status::new(code, "policy failed")),
+			None,
+			true,
+			false,
+		)
+		.await;
+	}
+}
+
+#[tokio::test]
+async fn substrate_tcp_ingress_routes_tls_and_opaque_connections_to_atunnel() {
+	for tls in [false, true] {
+		let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+		let address = listener.local_addr().unwrap();
+		let calls = Arc::new(AtomicUsize::new(0));
+		let api = ateapimock::AteApiMock::new({
+			let calls = calls.clone();
+			move || IngressHandler {
+				pod_ip: address.ip().to_string(),
+				calls: calls.clone(),
+				resumed: true,
+				uid: ACTOR_UID,
+			}
+		})
+		.spawn()
+		.await;
+		let dynamic_backend = Backend::Dynamic(ResourceName::new("dynamic".into(), "".into()), None);
+		let dynamic_name = dynamic_backend.name();
+		let dynamic = BackendWithPolicies {
+			backend: dynamic_backend,
+			inline_policies: vec![BackendTrafficPolicy::Tunnel(backend::Tunnel {
+				proxy: Arc::new(SimpleBackendReference::Backend(dynamic_name)),
+				mode: backend::TunnelMode::Connect,
+				policies: vec![],
+			})],
+		};
+		let mut outer = simple_bind();
+		outer.key = strng::literal!("outer");
+		outer.address = "127.0.0.1:15012".parse().unwrap();
+		let mut gateway = setup_proxy_test("{}")
+			.unwrap()
+			.with_raw_backend(dynamic)
+			.with_bind(outer)
+			.with_bind(substrate_tcp_bind(tls))
+			.with_tcp_route(basic_named_tcp_route(strng::literal!("/dynamic")))
+			.with_connect_mode_on_port(agentgateway::types::frontend::ConnectMode::Tunnel, 15012);
+		gateway.attach_route_policy(json!({"substrateTcpIngress": {"host": api.address.to_string(), "connectTargetPort": address.port()}})).await;
+		let payload = if tls {
+			tcp_client_hello("application.example")
+		} else {
+			b"opaque actor bytes".to_vec()
+		};
+		let expected = payload.clone();
+		let atunnel = tokio::spawn(async move {
+			for _ in 0..2 {
+				let (mut downstream, _) = listener.accept().await.unwrap();
+				let mut request = Vec::new();
+				loop {
+					let mut byte = [0];
+					downstream.read_exact(&mut byte).await.unwrap();
+					request.push(byte[0]);
+					if request.ends_with(b"\r\n\r\n") {
+						break;
+					}
+				}
+				let request = String::from_utf8(request).unwrap();
+				assert!(
+					request.starts_with("CONNECT application.example:18080 HTTP/1.1\r\n"),
+					"{request}"
+				);
+				assert!(
+					request.contains("ate-target-actor: demo/my-actor\r\n"),
+					"{request}"
+				);
+				downstream
+					.write_all(b"HTTP/1.1 200 Connection Established\r\n\r\n")
+					.await
+					.unwrap();
+				let mut received = vec![0; expected.len()];
+				downstream.read_exact(&mut received).await.unwrap();
+				assert_eq!(received, expected);
+				downstream.write_all(b"actor reply").await.unwrap();
+			}
+			listener
+		});
+		for _ in 0..2 {
+			let mut io = open_substrate_tcp_tunnel(
+				&gateway,
+				Some("demo/my-actor"),
+				false,
+				"application.example:18080",
+			)
+			.await;
+			io.write_all(&payload).await.unwrap();
+			let mut reply = [0; 11];
+			tokio::time::timeout(Duration::from_secs(5), io.read_exact(&mut reply))
+				.await
+				.unwrap()
+				.unwrap();
+			assert_eq!(&reply, b"actor reply");
+		}
+		let listener = tokio::time::timeout(Duration::from_secs(5), atunnel)
+			.await
+			.unwrap()
+			.unwrap();
+		assert_eq!(
+			calls.load(Ordering::Relaxed),
+			1,
+			"worker assignment should be cached"
+		);
+		for target in [None, Some("bad/actor/name")] {
+			let mut io =
+				open_substrate_tcp_tunnel(&gateway, target, false, "application.example:18080").await;
+			let _ = io.write_all(&payload).await;
+			let mut received = [0];
+			let result = tokio::time::timeout(Duration::from_secs(5), io.read(&mut received))
+				.await
+				.unwrap();
+			assert!(matches!(result, Ok(0) | Err(_)));
+			assert!(
+				tokio::time::timeout(Duration::from_millis(50), listener.accept())
+					.await
+					.is_err()
+			);
+		}
+		assert_eq!(
+			calls.load(Ordering::Relaxed),
+			1,
+			"invalid actor metadata must not trigger a lookup"
+		);
+	}
+}

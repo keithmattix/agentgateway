@@ -112,49 +112,55 @@ impl RequestPolicyTrait for SubstrateEgress {
 			.ok_or_else(|| {
 				ProxyError::SubstrateEgressDenied("missing CONNECT-authorized actor identity".to_owned())
 			})?;
-		let actor = ActorRef {
-			atespace: identity.atespace.clone(),
-			name: identity.actor_name.clone(),
-		};
-		log.ate_actor_name = Some(actor.name.clone());
-		log.ate_actor_uid = Some(identity.actor_uid.clone());
-		log.ate_atespace = Some(actor.atespace.clone());
-		let channel = self
-			.target
-			.grpc_channel(client.with_outbound(OutboundCallKind::Policy, OutboundCallSubtype::Substrate));
-		let mut control = protos::ateapi::control_client::ControlClient::new(channel);
-		let policy = crate::proxy::dtrace::scope_future(
-			Some(TRACE_POLICY_KIND),
-			control.get_actor_egress_policy(protos::ateapi::GetActorEgressPolicyRequest {
-				actor: Some(protos::ateapi::ObjectRef {
-					atespace: actor.atespace,
-					name: actor.name,
-				}),
-			}),
-		)
-		.await;
-		let policy = match policy {
-			Ok(response) => response.into_inner(),
-			Err(status) if matches!(status.code(), Code::Unavailable | Code::DeadlineExceeded) => {
-				return Err(
-					ProxyError::SubstrateEgressUnavailable(format!(
-						"actor egress policy unavailable: {status}"
-					))
-					.into(),
-				);
-			},
-			Err(status) => {
-				return Err(
-					ProxyError::SubstrateEgressDenied(format!("actor egress policy denied: {status}")).into(),
-				);
-			},
-		};
+		let policy = fetch_policy(&self.target, client, log, &identity).await?;
 		let matched_rule = matching_rule(&policy, req)?;
 		self
 			.apply_effects(client, &identity, matched_rule, req)
 			.await?;
 		Ok(PolicyResponse::default())
 	}
+}
+
+pub(super) async fn fetch_policy(
+	target: &SimpleBackendReferenceWithPolicies,
+	client: &PolicyClient,
+	log: &mut RequestLog,
+	identity: &ActorIdentity,
+) -> Result<protos::ateapi::EgressPolicy, ProxyError> {
+	let actor = ActorRef {
+		atespace: identity.atespace.clone(),
+		name: identity.actor_name.clone(),
+	};
+	log.ate_actor_name = Some(actor.name.clone());
+	log.ate_actor_uid = Some(identity.actor_uid.clone());
+	log.ate_atespace = Some(actor.atespace.clone());
+	let channel = target
+		.grpc_channel(client.with_outbound(OutboundCallKind::Policy, OutboundCallSubtype::Substrate));
+	let mut control = protos::ateapi::control_client::ControlClient::new(channel);
+	let policy = crate::proxy::dtrace::scope_future(
+		Some(TRACE_POLICY_KIND),
+		control.get_actor_egress_policy(protos::ateapi::GetActorEgressPolicyRequest {
+			actor: Some(protos::ateapi::ObjectRef {
+				atespace: actor.atespace,
+				name: actor.name,
+			}),
+		}),
+	)
+	.await;
+	let policy = match policy {
+		Ok(response) => response.into_inner(),
+		Err(status) if matches!(status.code(), Code::Unavailable | Code::DeadlineExceeded) => {
+			return Err(ProxyError::SubstrateEgressUnavailable(format!(
+				"actor egress policy unavailable: {status}"
+			)));
+		},
+		Err(status) => {
+			return Err(ProxyError::SubstrateEgressDenied(format!(
+				"actor egress policy denied: {status}"
+			)));
+		},
+	};
+	Ok(policy)
 }
 
 impl SubstrateEgress {
@@ -325,18 +331,27 @@ fn matching_rule<'a>(
 		.ok_or_else(|| {
 			ProxyError::SubstrateEgressDenied("missing egress destination context".to_owned())
 		})?;
+	matching_destination_rule(policy, destination).map_err(Into::into)
+}
+
+pub(super) fn matching_destination_rule<'a>(
+	policy: &'a protos::ateapi::EgressPolicy,
+	destination: &cel::DestinationContext,
+) -> Result<&'a protos::ateapi::EgressRule, ProxyError> {
 	for rule in &policy.rules {
 		if rule_matches(rule, destination)? {
 			return Ok(rule);
 		}
 	}
-	Err(ProxyError::SubstrateEgressDenied("actor egress policy denied destination".to_owned()).into())
+	Err(ProxyError::SubstrateEgressDenied(
+		"actor egress policy denied destination".to_owned(),
+	))
 }
 
 fn rule_matches(
 	rule: &protos::ateapi::EgressRule,
 	destination: &cel::DestinationContext,
-) -> Result<bool, ProxyResponse> {
+) -> Result<bool, ProxyError> {
 	if let Some(hostnames) = &rule.hostnames {
 		return Ok(destination.hostname.as_deref().is_some_and(|hostname| {
 			hostnames

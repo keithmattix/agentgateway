@@ -169,8 +169,26 @@ impl TCPProxy {
 			routes: vec![&selected_route.name],
 			service: selected_route.service_key.as_ref(),
 			listener: &selected_listener.name,
-			route_inlines: vec![&[]],
+			route_inlines: vec![&selected_route.inline_policies],
 		};
+
+		let route_policies = self.inputs.stores.read_binds().route_policies(&route_path);
+		let destination = crate::cel::DestinationContext {
+			address: self.target_address.ip(),
+			port: self.target_address.port(),
+			hostname: sni.as_deref().map(strng::new),
+		};
+		let policy_client = httpproxy::PolicyClient::new(inputs.clone());
+		if let Some(policy) = &route_policies.substrate_tcp_egress {
+			policy
+				.apply(
+					&policy_client,
+					log,
+					connection.ext::<http::substrate::ActorIdentity>(),
+					&destination,
+				)
+				.await?;
+		}
 
 		debug!(bind=%bind_name, listener=%selected_listener.key, route=%selected_route.key, "selected route");
 		let selected_backend =
@@ -187,27 +205,58 @@ impl TCPProxy {
 			.ext::<WaypointService>()
 			.map(|_| crate::client::HboneSourceRole::Waypoint)
 			.or(Some(crate::client::HboneSourceRole::Gateway));
-		let destination = crate::cel::DestinationContext {
-			address: self.target_address.ip(),
-			port: self.target_address.port(),
-			hostname: sni.as_deref().map(strng::new),
-		};
-		let mut backend_call = Self::build_backend_call(
-			&mut Some(log),
-			Some(&destination),
-			&inputs,
-			&selected_backend.backend.backend,
-			backend_policies,
-			hbone_source,
-		)?;
-		if let Some(tunnel) = backend_call.backend_policies.tunnel.clone() {
-			backend_call.set_tunnel_proxy(resolve_tunnel_backend_call(
+
+		let backend_call = if let Some(policy) = &route_policies.substrate_tcp_ingress {
+			let tunnel = backend_policies.tunnel.clone().ok_or_else(|| {
+				ProxyError::ProcessingString(
+					"substrateTcpIngress requires a CONNECT backend tunnel".to_owned(),
+				)
+			})?;
+			if tunnel.mode != crate::types::backend::TunnelMode::Connect {
+				return Err(ProxyError::ProcessingString(
+					"substrateTcpIngress requires backendTunnel.mode: connect".to_owned(),
+				));
+			}
+			let backend = super::resolve_tunnel_backend(&tunnel.proxy, &inputs)?;
+			if !matches!(backend.backend, Backend::Dynamic(_, None)) {
+				return Err(ProxyError::ProcessingString(
+					"substrateTcpIngress requires a dynamic tunnel proxy".to_owned(),
+				));
+			}
+			let source = connection
+				.ext::<SourceContext>()
+				.expect("source context must be set");
+			let target = policy
+				.apply(&policy_client, log, source, &destination)
+				.await?;
+			let policies = get_backend_policies(&inputs, &backend, &tunnel.policies, None);
+			let mut backend_call = BackendCall::new(target.authority, backend_policies);
+			backend_call.connect_headers = vec![(
+				::http::HeaderName::from_static("ate-target-actor"),
+				target.actor_header,
+			)];
+			backend_call.set_tunnel_proxy(BackendCall::new(target.worker, policies));
+
+			backend_call
+		} else {
+			let mut backend_call = Self::build_backend_call(
 				&mut Some(log),
 				Some(&destination),
 				&inputs,
-				&tunnel,
-			)?);
-		}
+				&selected_backend.backend.backend,
+				backend_policies,
+				hbone_source,
+			)?;
+			if let Some(tunnel) = backend_call.backend_policies.tunnel.clone() {
+				backend_call.set_tunnel_proxy(resolve_tunnel_backend_call(
+					&mut Some(log),
+					Some(&destination),
+					&inputs,
+					&tunnel,
+				)?);
+			}
+			backend_call
+		};
 
 		let bi = selected_backend.backend.backend.backend_info();
 		log.endpoint = Some(backend_call.target.clone());
@@ -448,6 +497,7 @@ fn select_best_route(
 
 		// No service-keyed routes: generate default passthrough
 		return Some(Arc::new(TCPRoute {
+			inline_policies: Vec::new(),
 			key: strng::literal!("_waypoint-default-tcp"),
 			service_key: None,
 			service_port: 0,
@@ -893,6 +943,7 @@ mod tests {
 			let mut binds = stores.binds.write();
 			binds.insert_service_tcp_route(
 				crate::types::agent::TCPRoute {
+					inline_policies: Vec::new(),
 					key: strng::literal!("mysql-tcp-route"),
 					service_key: Some(svc_key.clone()),
 					service_port: 0,
@@ -943,6 +994,7 @@ mod tests {
 			hostname: strng::new("mysql-db.default.svc.cluster.local"),
 		};
 		let route = |key: &'static str, port: u16| crate::types::agent::TCPRoute {
+			inline_policies: Vec::new(),
 			key: strng::new(key),
 			service_key: Some(svc_key.clone()),
 			service_port: port,

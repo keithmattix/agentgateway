@@ -5929,6 +5929,571 @@
 |`binds[].listeners[].routes[].policies.substrateEgress.credentialProviders[].target.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
 |`binds[].listeners[].routes[].policies.substrateEgress.credentialProviders[].target.policies.backendTunnel.mode`|enum|How requests are sent through the proxy.<br>Possible values: `auto`, `connect`.|
 |`binds[].listeners[].routes[].policies.substrateEgress.credentialProviders[].target.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress`|object|Resolve an actor selected by CONNECT metadata for a TCP connection.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.service`|object|Service reference. Service must be defined in the top level services list.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.service.port`|integer|Port on the target Service to route to.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.host`|string|Hostname or IP address|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies`|object|Backend policies used when connecting to the service.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.requestHeaderModifier`|object|Modify request headers before forwarding to this backend.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.requestHeaderModifier.add`|object|Headers to append without replacing existing values.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.requestHeaderModifier.set`|object|Headers to set, replacing any existing values.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.requestHeaderModifier.remove`|[]string|Header names to remove.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.transformations`|object|Modify request and response data for this backend.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.transformations.request`|object|Transform the request before it is forwarded.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.transformations.request.add`|object|Headers to append using CEL expressions for values.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.transformations.request.set`|object|Headers to set using CEL expressions for values.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.transformations.request.remove`|[]string|Header names to remove.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.transformations.request.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.transformations.request.body`|string|CEL expression that computes a replacement body.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.transformations.request.metadata`|object|Metadata values to add using CEL expressions.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.transformations.response`|object|Transform the response before it is returned.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.transformations.response.add`|object|Headers to append using CEL expressions for values.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.transformations.response.set`|object|Headers to set using CEL expressions for values.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.transformations.response.remove`|[]string|Header names to remove.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.transformations.response.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.transformations.response.body`|string|CEL expression that computes a replacement body.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.transformations.response.metadata`|object|Metadata values to add using CEL expressions.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendTLS`|object|TLS settings used when connecting to this backend.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendTLS.cert`|string|Client certificate file to present to the backend.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendTLS.key`|string|Private key file for the client certificate.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendTLS.root`|string|Root certificate bundle used to verify the backend certificate.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendTLS.hostname`|string|Server name to use for TLS verification and SNI.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendTLS.insecure`|boolean|Skip certificate trust verification for the backend connection.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendTLS.insecureHost`|boolean|Skip hostname verification for the backend certificate.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendTLS.alpn`|[]string|ALPN protocols to offer to the backend.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendTLS.subjectAltNames`|[]string|Additional subject alternative names accepted for the backend certificate.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendTLS.keyExchangeGroups`|[]enum|Key exchange groups allowed for negotiating TLS.<br>Possible values: `X25519`, `P-256`, `P-384`, `X25519_MLKEM768`.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendTLS.spiffe`|object|Get the gateway's client identity and trust roots from the SPIFFE Workload API.<br>Mutually exclusive with `cert`/`key`/`root`/`insecure`/`insecureHost`.<br>Pin specific upstream SPIFFE IDs via `subjectAltNames` (e.g. `spiffe://td/ns/foo/sa/bar`);<br>If `subjectAltNames` is omitted, any SVID chaining to the SPIFFE trust bundle is accepted|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth`|object|Authentication credentials sent to this backend.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.key`|object||
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.key.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.passthrough`|object|Forward the validated incoming JWT to the backend.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location`|object|Where to place the forwarded credential in the backend request.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.header`|object|Read the credential from an HTTP header.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.header.name`|string|Header name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.cookie`|object|Read the credential from a request cookie.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.cookie.name`|string|Cookie name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.key`|object|Send a configured secret value to the backend.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.key.value`|object|Secret value to send to the backend. File references are watched, so<br>rotating the file reloads it without a restart.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.key.value.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.key.location`|object|Where to place the secret in the backend request.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.key.location.header`|object|Read the credential from an HTTP header.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.key.location.header.name`|string|Header name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.key.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.key.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.key.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.key.location.cookie`|object|Read the credential from a request cookie.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.key.location.cookie.name`|string|Cookie name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.key.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.gcp`|object|Authenticate to Google Cloud services.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.gcp.type`|enum|Possible values: `idToken`.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.gcp.audience`|string|Audience for the token. If not set, the destination host will be used.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.gcp.credential`|object|ADC-compatible Google credential JSON. If not set, ambient credentials are used.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.gcp.credential.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.gcp.type`|enum|Possible values: `accessToken`, `null`.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.aws`|object|Sign backend requests with AWS credentials.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.aws.accessKeyId`|string||
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.aws.secretAccessKey`|string||
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.aws.region`|string||
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.aws.sessionToken`|string||
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.aws.serviceName`|string|AWS SigV4 signing service name (for example, "bedrock", "bedrock-agentcore", or "execute-api").|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.aws.region`|string|AWS SigV4 signing region (for example, "us-east-1"). If unset, typed AWS<br>backends may provide this automatically; otherwise the ambient AWS region<br>is used.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole`|object|Optional AWS STS role to assume before signing requests.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.roleArn`|string|AWS IAM role ARN to assume.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.sessionName`|string|Custom session name (RoleSessionName) for CloudTrail and Cost & Usage Report<br>attribution. Either a static string or `{expression: ...}` with a CEL<br>expression evaluated against each request. Max 64 chars, matching<br>`[\w+=,.@-]`. If unset, the AWS SDK generates a random session name.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.sessionName.expression`|string|CEL expression evaluated against each request to produce the session<br>name, for example `jwt.sub` or `request.headers["x-team"]`. If the<br>expression does not produce a valid session name at request time, the<br>request is rejected.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.tags`|[]object|Session tags passed to STS AssumeRole for cost attribution. Once activated as<br>cost allocation tags, each tag surfaces in the AWS Cost & Usage Report under<br>`resourceTags/user:TagKey`. A tag value is either static (`value`) or a CEL<br>expression evaluated against each request (`expression`).|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.tags[].key`|string|Tag key.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.tags[].value`|string|Static tag value.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.tags[].expression`|string|CEL expression evaluated against each request to produce the tag value, for<br>example `jwt.sub` or `request.headers["x-app"]`. If the expression does not<br>produce a valid tag value at request time, the request is rejected.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.azure`|object|Authenticate to Azure services.<br>Exactly one of explicitConfig, developerImplicit, or implicit may be set.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig`|object|Use explicit Azure credentials<br>Exactly one of clientSecret, managedIdentity, or workloadIdentity may be set.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.clientSecret`|object||
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.clientSecret.tenant_id`|string||
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.clientSecret.client_id`|string||
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.clientSecret.client_secret`|string||
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.managedIdentity`|object||
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity`|object||
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.clientId`|string||
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.objectId`|string||
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.resourceId`|string||
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.workloadIdentity`|object||
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.azure.developerImplicit`|object|Use implicit Azure auth. Note that this is for developer use-cases only!|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.azure.implicit`|object|Automatically detect authentication method based on environment.<br>Uses Workload Identity on K8s, Managed Identity on Azure VMs, or Developer Tools locally.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.azure.scopes`|[]string|Scopes requested for the Azure access token. When unset, the scope is<br>inferred from the backend hostname.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign`|object|Sign a short-lived JWT with a private key on each request.<br>Signs a short-lived JWT with a private key on each request and sends it to<br>the backend. For upstreams that require per-request keypair JWTs (e.g. the<br>Snowflake SQL API) rather than a static credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.alg`|enum|JWS signing algorithm. Defaults to RS256.<br>Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.kid`|string|Optional JWS key ID header.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.claims`|object|Static claims added to every token (e.g. iss, sub, aud). Values may be<br>any JSON value (e.g. a string, number, bool, or array). `iat`, `exp`,<br>and `nbf` are reserved for the signer and cannot be configured here.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.claims.*`|any||
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.ttl`|string|Token lifetime used for `exp`. Defaults to 300s.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location`|object|Where the signed token is written. Defaults to the Authorization<br>header with a `Bearer ` prefix.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.header`|object|Read the credential from an HTTP header.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.header.name`|string|Header name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.cookie`|object|Read the credential from a request cookie.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.cookie.name`|string|Cookie name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange`|object|Use OAuth token exchange flows to obtain a backend access token.<br>Exactly one of service, host, or backend may be set.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.service`|object|Service reference. Service must be defined in the top level services list.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.service.port`|integer|Port on the target Service to route to.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.host`|string|Hostname or IP address|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.policies`|any|Backend policies used when connecting to the service.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.grantType`|enum|Selects which RFC the request follows; defaults to token exchange (RFC 8693).<br>Possible values: `tokenExchange`, `jwtBearer`.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken`|object|Where the subject token is read from, and its token type. Defaults to the<br>Authorization Bearer header with token type access_token.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source`|object|Where the token is read from in the incoming request. The CEL `expression`<br>source is permitted (extraction only).<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.tokenType`|string|RFC 8693 token type URN; when omitted defaults to access_token|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken`|object|RFC 8693 delegation actor token. Token-exchange grant only.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source`|object|Where the actor token is read from in the incoming request. The CEL<br>`expression` source is permitted (extraction only). Unlike subject tokens,<br>actor tokens have no default source.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.header`|object|Read the credential from an HTTP header.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.header.name`|string|Header name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.cookie`|object|Read the credential from a request cookie.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.tokenType`|string|RFC 8693 actor token type URN; when omitted defaults to access_token and is still sent|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.enforceMayAct`|boolean|Enforce that the subject's `may_act` claim authorizes the actor before exchanging.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.audiences`|[]string|`audience` parameters naming the target services at the authorization server.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.scopes`|[]string|`scope` values for the requested token, sent space-delimited.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.resources`|[]string|`resource` parameters with the target service URIs.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.requestedTokenType`|string|`requested_token_type` parameter. When unset it is omitted from the request<br>(RFC 8693 makes it optional). Some providers (e.g. Auth0 custom token exchange)<br>reject an explicit access_token value paired with a custom `subject_token_type`.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth`|object|Client authentication used when calling the token endpoint.<br>When unset, no client authentication fields are sent.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object||
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.kid`|string||
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.assertionAudience`|string||
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.additionalParams`|object|Extra form parameters appended to the token request.<br>Values are CEL expressions evaluated against the incoming request.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation`|object|Where to place the exchanged token in the backend request. Defaults to the<br>Authorization header with a "Bearer " prefix. The CEL `expression` source is<br>not valid here (it cannot insert).<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header`|object|Read the credential from an HTTP header.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header.name`|string|Header name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.queryParameter`|object|Read the credential from a URL query parameter.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.queryParameter.name`|string|Query parameter name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.cookie`|object|Read the credential from a request cookie.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.cookie.name`|string|Cookie name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess`|object|Use Cross App Access (Identity Assertion / ID-JAG) to obtain a backend access token.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider`|object|The user's IdP authorization server, used for the RFC 8693 token exchange.<br>Exactly one of service, host, or backend may be set.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.service`|object|Service reference. Service must be defined in the top level services list.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.service.port`|integer|Port on the target Service to route to.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.host`|string|Hostname or IP address|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.policies`|any|Backend policies used when connecting to the service.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth`|object|Client authentication used when calling the token endpoint.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret`|object||
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.kid`|string||
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.assertionAudience`|string||
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer`|object|The resource authorization server, which exchanges the ID-JAG for an access token.<br>Exactly one of service, host, or backend may be set.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service`|object|Service reference. Service must be defined in the top level services list.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service.port`|integer|Port on the target Service to route to.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.host`|string|Hostname or IP address|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.policies`|any|Backend policies used when connecting to the service.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth`|object|Client authentication used when calling the token endpoint.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object||
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.kid`|string||
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.assertionAudience`|string||
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.audience`|string|Identifier of the resource authorization server. The issued ID-JAG is bound to this audience.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resources`|[]string|`resource` parameters naming the protected resource APIs.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.scopes`|[]string|`scope` values requested when obtaining the ID-JAG from the identity provider, sent<br>space-delimited.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.accessTokenScopes`|[]string|`scope` values requested when exchanging the ID-JAG for an access token. When unset,<br>inherits `scopes`. When empty, omits `scope`.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken`|object|Subject token sent to the identity provider. Defaults to an OpenID Connect ID token read<br>from the Authorization Bearer header.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source`|object|Where to read the subject token. Defaults to the Authorization Bearer header.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.tokenType`|string|RFC 8693 subject token type URI. Defaults to an OpenID Connect ID token.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.credentials`|[]object||
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location`|object|Where the credential is inserted on the backend request.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.header`|object|Read the credential from an HTTP header.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.header.name`|string|Header name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.cookie`|object|Read the credential from a request cookie.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.cookie.name`|string|Cookie name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].key`|object|Credential value.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].key.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.http`|object|HTTP protocol settings for this backend.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.http.version`|string|HTTP version to use when connecting to the backend.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.http.requestTimeout`|string|Maximum time allowed for a backend HTTP request.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.http.maxConnectionDuration`|string|Maximum time a connection to the backend may stay open. A connection past this duration is<br>not reused for new requests; a fresh connection is established instead, while in-flight<br>requests are not interrupted.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.tcp`|object|TCP protocol settings for this backend.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.tcp.keepalives`|object|TCP keepalive settings for backend connections.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.tcp.keepalives.enabled`|boolean|Enable TCP keepalive probes on backend connections. Defaults to true.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.tcp.keepalives.time`|string|Idle time before the first keepalive probe is sent.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.tcp.keepalives.interval`|string|Time between successive keepalive probes.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.tcp.keepalives.retries`|integer|Number of unacknowledged probes before the connection is considered dead.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.tcp.connectTimeout`|string|Maximum time allowed to establish a backend TCP connection.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendTunnel`|object|Tunnel settings used when connecting to this backend.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendTunnel.proxy`|object|Proxy backend used to tunnel the connection.<br>Exactly one of service, host, or backend may be set.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendTunnel.proxy.service`|object|Service reference. Service must be defined in the top level services list.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendTunnel.proxy.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendTunnel.proxy.service.port`|integer|Port on the target Service to route to.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendTunnel.proxy.host`|string|Hostname or IP address|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendTunnel.mode`|enum|How requests are sent through the proxy.<br>Possible values: `auto`, `connect`.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.connectTargetPort`|integer|Port on the resumed worker pod's atunnel CONNECT listener. Defaults to 8443.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.cacheTtl`|string|How long successful actor assignments are reused. Defaults to 5s; 0s disables reuse.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.requestParking`|object|Bounded request parking while a suspended actor is waiting for worker capacity.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.requestParking.budget`|string|Maximum time to wait for the actor to become routable.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.requestParking.max`|integer|Maximum concurrent requests that may wait for actor resumption. Set to 0 to disable parking.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.requestParking.retryInterval`|string|Initial delay between ResumeActor retries while parked.|
+|`binds[].listeners[].routes[].policies.substrateTcpIngress.requestParking.retryFactor`|number|Multiplier applied to the delay after each parked retry.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress`|object|Enforce actor egress policy before forwarding a TCP connection.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.service`|object|Service reference. Service must be defined in the top level services list.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.service.port`|integer|Port on the target Service to route to.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.host`|string|Hostname or IP address|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies`|object|Enforces the actor's egress policy once before forwarding a TCP connection.<br>Backend policies used when connecting to the service.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.requestHeaderModifier`|object|Modify request headers before forwarding to this backend.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.requestHeaderModifier.add`|object|Headers to append without replacing existing values.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.requestHeaderModifier.set`|object|Headers to set, replacing any existing values.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.requestHeaderModifier.remove`|[]string|Header names to remove.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.transformations`|object|Modify request and response data for this backend.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.transformations.request`|object|Transform the request before it is forwarded.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.transformations.request.add`|object|Headers to append using CEL expressions for values.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.transformations.request.set`|object|Headers to set using CEL expressions for values.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.transformations.request.remove`|[]string|Header names to remove.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.transformations.request.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.transformations.request.body`|string|CEL expression that computes a replacement body.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.transformations.request.metadata`|object|Metadata values to add using CEL expressions.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.transformations.response`|object|Transform the response before it is returned.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.transformations.response.add`|object|Headers to append using CEL expressions for values.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.transformations.response.set`|object|Headers to set using CEL expressions for values.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.transformations.response.remove`|[]string|Header names to remove.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.transformations.response.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.transformations.response.body`|string|CEL expression that computes a replacement body.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.transformations.response.metadata`|object|Metadata values to add using CEL expressions.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendTLS`|object|TLS settings used when connecting to this backend.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendTLS.cert`|string|Client certificate file to present to the backend.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendTLS.key`|string|Private key file for the client certificate.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendTLS.root`|string|Root certificate bundle used to verify the backend certificate.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendTLS.hostname`|string|Server name to use for TLS verification and SNI.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendTLS.insecure`|boolean|Skip certificate trust verification for the backend connection.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendTLS.insecureHost`|boolean|Skip hostname verification for the backend certificate.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendTLS.alpn`|[]string|ALPN protocols to offer to the backend.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendTLS.subjectAltNames`|[]string|Additional subject alternative names accepted for the backend certificate.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendTLS.keyExchangeGroups`|[]enum|Key exchange groups allowed for negotiating TLS.<br>Possible values: `X25519`, `P-256`, `P-384`, `X25519_MLKEM768`.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendTLS.spiffe`|object|Get the gateway's client identity and trust roots from the SPIFFE Workload API.<br>Mutually exclusive with `cert`/`key`/`root`/`insecure`/`insecureHost`.<br>Pin specific upstream SPIFFE IDs via `subjectAltNames` (e.g. `spiffe://td/ns/foo/sa/bar`);<br>If `subjectAltNames` is omitted, any SVID chaining to the SPIFFE trust bundle is accepted|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth`|object|Authentication credentials sent to this backend.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.key`|object||
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.key.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.passthrough`|object|Forward the validated incoming JWT to the backend.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location`|object|Where to place the forwarded credential in the backend request.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.header`|object|Read the credential from an HTTP header.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.header.name`|string|Header name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.cookie`|object|Read the credential from a request cookie.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.cookie.name`|string|Cookie name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.key`|object|Send a configured secret value to the backend.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.key.value`|object|Secret value to send to the backend. File references are watched, so<br>rotating the file reloads it without a restart.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.key.value.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.key.location`|object|Where to place the secret in the backend request.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.key.location.header`|object|Read the credential from an HTTP header.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.key.location.header.name`|string|Header name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.key.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.key.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.key.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.key.location.cookie`|object|Read the credential from a request cookie.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.key.location.cookie.name`|string|Cookie name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.key.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.gcp`|object|Authenticate to Google Cloud services.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.gcp.type`|enum|Possible values: `idToken`.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.gcp.audience`|string|Audience for the token. If not set, the destination host will be used.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.gcp.credential`|object|ADC-compatible Google credential JSON. If not set, ambient credentials are used.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.gcp.credential.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.gcp.type`|enum|Possible values: `accessToken`, `null`.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.aws`|object|Sign backend requests with AWS credentials.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.aws.accessKeyId`|string||
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.aws.secretAccessKey`|string||
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.aws.region`|string||
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.aws.sessionToken`|string||
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.aws.serviceName`|string|AWS SigV4 signing service name (for example, "bedrock", "bedrock-agentcore", or "execute-api").|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.aws.region`|string|AWS SigV4 signing region (for example, "us-east-1"). If unset, typed AWS<br>backends may provide this automatically; otherwise the ambient AWS region<br>is used.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole`|object|Optional AWS STS role to assume before signing requests.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.roleArn`|string|AWS IAM role ARN to assume.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.sessionName`|string|Custom session name (RoleSessionName) for CloudTrail and Cost & Usage Report<br>attribution. Either a static string or `{expression: ...}` with a CEL<br>expression evaluated against each request. Max 64 chars, matching<br>`[\w+=,.@-]`. If unset, the AWS SDK generates a random session name.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.sessionName.expression`|string|CEL expression evaluated against each request to produce the session<br>name, for example `jwt.sub` or `request.headers["x-team"]`. If the<br>expression does not produce a valid session name at request time, the<br>request is rejected.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.tags`|[]object|Session tags passed to STS AssumeRole for cost attribution. Once activated as<br>cost allocation tags, each tag surfaces in the AWS Cost & Usage Report under<br>`resourceTags/user:TagKey`. A tag value is either static (`value`) or a CEL<br>expression evaluated against each request (`expression`).|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.tags[].key`|string|Tag key.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.tags[].value`|string|Static tag value.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.tags[].expression`|string|CEL expression evaluated against each request to produce the tag value, for<br>example `jwt.sub` or `request.headers["x-app"]`. If the expression does not<br>produce a valid tag value at request time, the request is rejected.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.azure`|object|Authenticate to Azure services.<br>Exactly one of explicitConfig, developerImplicit, or implicit may be set.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig`|object|Use explicit Azure credentials<br>Exactly one of clientSecret, managedIdentity, or workloadIdentity may be set.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.clientSecret`|object||
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.clientSecret.tenant_id`|string||
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.clientSecret.client_id`|string||
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.clientSecret.client_secret`|string||
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.managedIdentity`|object||
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity`|object||
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.clientId`|string||
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.objectId`|string||
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.resourceId`|string||
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.workloadIdentity`|object||
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.azure.developerImplicit`|object|Use implicit Azure auth. Note that this is for developer use-cases only!|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.azure.implicit`|object|Automatically detect authentication method based on environment.<br>Uses Workload Identity on K8s, Managed Identity on Azure VMs, or Developer Tools locally.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.azure.scopes`|[]string|Scopes requested for the Azure access token. When unset, the scope is<br>inferred from the backend hostname.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign`|object|Sign a short-lived JWT with a private key on each request.<br>Signs a short-lived JWT with a private key on each request and sends it to<br>the backend. For upstreams that require per-request keypair JWTs (e.g. the<br>Snowflake SQL API) rather than a static credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.alg`|enum|JWS signing algorithm. Defaults to RS256.<br>Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.kid`|string|Optional JWS key ID header.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.claims`|object|Static claims added to every token (e.g. iss, sub, aud). Values may be<br>any JSON value (e.g. a string, number, bool, or array). `iat`, `exp`,<br>and `nbf` are reserved for the signer and cannot be configured here.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.claims.*`|any||
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.ttl`|string|Token lifetime used for `exp`. Defaults to 300s.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location`|object|Where the signed token is written. Defaults to the Authorization<br>header with a `Bearer ` prefix.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.header`|object|Read the credential from an HTTP header.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.header.name`|string|Header name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.cookie`|object|Read the credential from a request cookie.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.cookie.name`|string|Cookie name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange`|object|Use OAuth token exchange flows to obtain a backend access token.<br>Exactly one of service, host, or backend may be set.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.service`|object|Service reference. Service must be defined in the top level services list.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.service.port`|integer|Port on the target Service to route to.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.host`|string|Hostname or IP address|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.policies`|any|Backend policies used when connecting to the service.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.grantType`|enum|Selects which RFC the request follows; defaults to token exchange (RFC 8693).<br>Possible values: `tokenExchange`, `jwtBearer`.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken`|object|Where the subject token is read from, and its token type. Defaults to the<br>Authorization Bearer header with token type access_token.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source`|object|Where the token is read from in the incoming request. The CEL `expression`<br>source is permitted (extraction only).<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.tokenType`|string|RFC 8693 token type URN; when omitted defaults to access_token|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken`|object|RFC 8693 delegation actor token. Token-exchange grant only.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source`|object|Where the actor token is read from in the incoming request. The CEL<br>`expression` source is permitted (extraction only). Unlike subject tokens,<br>actor tokens have no default source.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.header`|object|Read the credential from an HTTP header.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.header.name`|string|Header name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.cookie`|object|Read the credential from a request cookie.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.tokenType`|string|RFC 8693 actor token type URN; when omitted defaults to access_token and is still sent|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.enforceMayAct`|boolean|Enforce that the subject's `may_act` claim authorizes the actor before exchanging.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.audiences`|[]string|`audience` parameters naming the target services at the authorization server.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.scopes`|[]string|`scope` values for the requested token, sent space-delimited.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.resources`|[]string|`resource` parameters with the target service URIs.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.requestedTokenType`|string|`requested_token_type` parameter. When unset it is omitted from the request<br>(RFC 8693 makes it optional). Some providers (e.g. Auth0 custom token exchange)<br>reject an explicit access_token value paired with a custom `subject_token_type`.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth`|object|Client authentication used when calling the token endpoint.<br>When unset, no client authentication fields are sent.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object||
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.kid`|string||
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.assertionAudience`|string||
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.additionalParams`|object|Extra form parameters appended to the token request.<br>Values are CEL expressions evaluated against the incoming request.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation`|object|Where to place the exchanged token in the backend request. Defaults to the<br>Authorization header with a "Bearer " prefix. The CEL `expression` source is<br>not valid here (it cannot insert).<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header`|object|Read the credential from an HTTP header.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header.name`|string|Header name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.queryParameter`|object|Read the credential from a URL query parameter.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.queryParameter.name`|string|Query parameter name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.cookie`|object|Read the credential from a request cookie.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.cookie.name`|string|Cookie name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess`|object|Use Cross App Access (Identity Assertion / ID-JAG) to obtain a backend access token.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider`|object|The user's IdP authorization server, used for the RFC 8693 token exchange.<br>Exactly one of service, host, or backend may be set.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.service`|object|Service reference. Service must be defined in the top level services list.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.service.port`|integer|Port on the target Service to route to.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.host`|string|Hostname or IP address|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.policies`|any|Backend policies used when connecting to the service.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth`|object|Client authentication used when calling the token endpoint.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret`|object||
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.kid`|string||
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.assertionAudience`|string||
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer`|object|The resource authorization server, which exchanges the ID-JAG for an access token.<br>Exactly one of service, host, or backend may be set.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service`|object|Service reference. Service must be defined in the top level services list.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service.port`|integer|Port on the target Service to route to.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.host`|string|Hostname or IP address|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.policies`|any|Backend policies used when connecting to the service.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth`|object|Client authentication used when calling the token endpoint.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object||
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.kid`|string||
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.assertionAudience`|string||
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.audience`|string|Identifier of the resource authorization server. The issued ID-JAG is bound to this audience.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resources`|[]string|`resource` parameters naming the protected resource APIs.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.scopes`|[]string|`scope` values requested when obtaining the ID-JAG from the identity provider, sent<br>space-delimited.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.accessTokenScopes`|[]string|`scope` values requested when exchanging the ID-JAG for an access token. When unset,<br>inherits `scopes`. When empty, omits `scope`.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken`|object|Subject token sent to the identity provider. Defaults to an OpenID Connect ID token read<br>from the Authorization Bearer header.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source`|object|Where to read the subject token. Defaults to the Authorization Bearer header.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.tokenType`|string|RFC 8693 subject token type URI. Defaults to an OpenID Connect ID token.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.credentials`|[]object||
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location`|object|Where the credential is inserted on the backend request.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.header`|object|Read the credential from an HTTP header.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.header.name`|string|Header name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.cookie`|object|Read the credential from a request cookie.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.cookie.name`|string|Cookie name containing the credential.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].key`|object|Credential value.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].key.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.http`|object|HTTP protocol settings for this backend.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.http.version`|string|HTTP version to use when connecting to the backend.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.http.requestTimeout`|string|Maximum time allowed for a backend HTTP request.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.http.maxConnectionDuration`|string|Maximum time a connection to the backend may stay open. A connection past this duration is<br>not reused for new requests; a fresh connection is established instead, while in-flight<br>requests are not interrupted.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.tcp`|object|TCP protocol settings for this backend.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.tcp.keepalives`|object|TCP keepalive settings for backend connections.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.tcp.keepalives.enabled`|boolean|Enable TCP keepalive probes on backend connections. Defaults to true.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.tcp.keepalives.time`|string|Idle time before the first keepalive probe is sent.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.tcp.keepalives.interval`|string|Time between successive keepalive probes.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.tcp.keepalives.retries`|integer|Number of unacknowledged probes before the connection is considered dead.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.tcp.connectTimeout`|string|Maximum time allowed to establish a backend TCP connection.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendTunnel`|object|Tunnel settings used when connecting to this backend.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendTunnel.proxy`|object|Proxy backend used to tunnel the connection.<br>Exactly one of service, host, or backend may be set.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendTunnel.proxy.service`|object|Service reference. Service must be defined in the top level services list.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendTunnel.proxy.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendTunnel.proxy.service.port`|integer|Port on the target Service to route to.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendTunnel.proxy.host`|string|Hostname or IP address|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendTunnel.mode`|enum|How requests are sent through the proxy.<br>Possible values: `auto`, `connect`.|
+|`binds[].listeners[].routes[].policies.substrateTcpEgress.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
 |`binds[].listeners[].routes[].policies.transformations`|object|Modify request and response headers, bodies, or metadata.|
 |`binds[].listeners[].routes[].policies.transformations.conditional`|[]object|conditional policy entries. An entry without a condition must be the final fallback.|
 |`binds[].listeners[].routes[].policies.transformations.conditional[].condition`|string|condition must evaluate to true for this policy to execute. If unset, the policy is the fallback.|
@@ -16465,6 +17030,571 @@
 |`binds[].listeners[].tcpRoutes[].ruleName`|string|Specific rule within this route.|
 |`binds[].listeners[].tcpRoutes[].hostnames`|[]string|Can be a wildcard|
 |`binds[].listeners[].tcpRoutes[].policies`|object|TCP-level policies applied to traffic on this route.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress`|object|Resolve an actor selected by CONNECT metadata for a TCP connection.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.service`|object|Service reference. Service must be defined in the top level services list.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.service.port`|integer|Port on the target Service to route to.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.host`|string|Hostname or IP address|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies`|object|Backend policies used when connecting to the service.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.requestHeaderModifier`|object|Modify request headers before forwarding to this backend.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.requestHeaderModifier.add`|object|Headers to append without replacing existing values.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.requestHeaderModifier.set`|object|Headers to set, replacing any existing values.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.requestHeaderModifier.remove`|[]string|Header names to remove.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.transformations`|object|Modify request and response data for this backend.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.transformations.request`|object|Transform the request before it is forwarded.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.transformations.request.add`|object|Headers to append using CEL expressions for values.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.transformations.request.set`|object|Headers to set using CEL expressions for values.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.transformations.request.remove`|[]string|Header names to remove.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.transformations.request.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.transformations.request.body`|string|CEL expression that computes a replacement body.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.transformations.request.metadata`|object|Metadata values to add using CEL expressions.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.transformations.response`|object|Transform the response before it is returned.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.transformations.response.add`|object|Headers to append using CEL expressions for values.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.transformations.response.set`|object|Headers to set using CEL expressions for values.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.transformations.response.remove`|[]string|Header names to remove.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.transformations.response.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.transformations.response.body`|string|CEL expression that computes a replacement body.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.transformations.response.metadata`|object|Metadata values to add using CEL expressions.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendTLS`|object|TLS settings used when connecting to this backend.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendTLS.cert`|string|Client certificate file to present to the backend.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendTLS.key`|string|Private key file for the client certificate.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendTLS.root`|string|Root certificate bundle used to verify the backend certificate.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendTLS.hostname`|string|Server name to use for TLS verification and SNI.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendTLS.insecure`|boolean|Skip certificate trust verification for the backend connection.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendTLS.insecureHost`|boolean|Skip hostname verification for the backend certificate.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendTLS.alpn`|[]string|ALPN protocols to offer to the backend.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendTLS.subjectAltNames`|[]string|Additional subject alternative names accepted for the backend certificate.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendTLS.keyExchangeGroups`|[]enum|Key exchange groups allowed for negotiating TLS.<br>Possible values: `X25519`, `P-256`, `P-384`, `X25519_MLKEM768`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendTLS.spiffe`|object|Get the gateway's client identity and trust roots from the SPIFFE Workload API.<br>Mutually exclusive with `cert`/`key`/`root`/`insecure`/`insecureHost`.<br>Pin specific upstream SPIFFE IDs via `subjectAltNames` (e.g. `spiffe://td/ns/foo/sa/bar`);<br>If `subjectAltNames` is omitted, any SVID chaining to the SPIFFE trust bundle is accepted|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth`|object|Authentication credentials sent to this backend.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.key`|object||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.key.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.passthrough`|object|Forward the validated incoming JWT to the backend.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location`|object|Where to place the forwarded credential in the backend request.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.header`|object|Read the credential from an HTTP header.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.header.name`|string|Header name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.cookie`|object|Read the credential from a request cookie.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.cookie.name`|string|Cookie name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.key`|object|Send a configured secret value to the backend.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.key.value`|object|Secret value to send to the backend. File references are watched, so<br>rotating the file reloads it without a restart.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.key.value.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.key.location`|object|Where to place the secret in the backend request.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.key.location.header`|object|Read the credential from an HTTP header.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.key.location.header.name`|string|Header name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.key.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.key.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.key.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.key.location.cookie`|object|Read the credential from a request cookie.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.key.location.cookie.name`|string|Cookie name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.key.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.gcp`|object|Authenticate to Google Cloud services.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.gcp.type`|enum|Possible values: `idToken`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.gcp.audience`|string|Audience for the token. If not set, the destination host will be used.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.gcp.credential`|object|ADC-compatible Google credential JSON. If not set, ambient credentials are used.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.gcp.credential.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.gcp.type`|enum|Possible values: `accessToken`, `null`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.aws`|object|Sign backend requests with AWS credentials.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.aws.accessKeyId`|string||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.aws.secretAccessKey`|string||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.aws.region`|string||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.aws.sessionToken`|string||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.aws.serviceName`|string|AWS SigV4 signing service name (for example, "bedrock", "bedrock-agentcore", or "execute-api").|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.aws.region`|string|AWS SigV4 signing region (for example, "us-east-1"). If unset, typed AWS<br>backends may provide this automatically; otherwise the ambient AWS region<br>is used.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole`|object|Optional AWS STS role to assume before signing requests.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.roleArn`|string|AWS IAM role ARN to assume.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.sessionName`|string|Custom session name (RoleSessionName) for CloudTrail and Cost & Usage Report<br>attribution. Either a static string or `{expression: ...}` with a CEL<br>expression evaluated against each request. Max 64 chars, matching<br>`[\w+=,.@-]`. If unset, the AWS SDK generates a random session name.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.sessionName.expression`|string|CEL expression evaluated against each request to produce the session<br>name, for example `jwt.sub` or `request.headers["x-team"]`. If the<br>expression does not produce a valid session name at request time, the<br>request is rejected.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.tags`|[]object|Session tags passed to STS AssumeRole for cost attribution. Once activated as<br>cost allocation tags, each tag surfaces in the AWS Cost & Usage Report under<br>`resourceTags/user:TagKey`. A tag value is either static (`value`) or a CEL<br>expression evaluated against each request (`expression`).|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.tags[].key`|string|Tag key.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.tags[].value`|string|Static tag value.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.tags[].expression`|string|CEL expression evaluated against each request to produce the tag value, for<br>example `jwt.sub` or `request.headers["x-app"]`. If the expression does not<br>produce a valid tag value at request time, the request is rejected.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.azure`|object|Authenticate to Azure services.<br>Exactly one of explicitConfig, developerImplicit, or implicit may be set.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig`|object|Use explicit Azure credentials<br>Exactly one of clientSecret, managedIdentity, or workloadIdentity may be set.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.clientSecret`|object||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.clientSecret.tenant_id`|string||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.clientSecret.client_id`|string||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.clientSecret.client_secret`|string||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.managedIdentity`|object||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity`|object||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.clientId`|string||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.objectId`|string||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.resourceId`|string||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.workloadIdentity`|object||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.azure.developerImplicit`|object|Use implicit Azure auth. Note that this is for developer use-cases only!|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.azure.implicit`|object|Automatically detect authentication method based on environment.<br>Uses Workload Identity on K8s, Managed Identity on Azure VMs, or Developer Tools locally.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.azure.scopes`|[]string|Scopes requested for the Azure access token. When unset, the scope is<br>inferred from the backend hostname.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign`|object|Sign a short-lived JWT with a private key on each request.<br>Signs a short-lived JWT with a private key on each request and sends it to<br>the backend. For upstreams that require per-request keypair JWTs (e.g. the<br>Snowflake SQL API) rather than a static credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.alg`|enum|JWS signing algorithm. Defaults to RS256.<br>Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.kid`|string|Optional JWS key ID header.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.claims`|object|Static claims added to every token (e.g. iss, sub, aud). Values may be<br>any JSON value (e.g. a string, number, bool, or array). `iat`, `exp`,<br>and `nbf` are reserved for the signer and cannot be configured here.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.claims.*`|any||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.ttl`|string|Token lifetime used for `exp`. Defaults to 300s.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location`|object|Where the signed token is written. Defaults to the Authorization<br>header with a `Bearer ` prefix.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.header`|object|Read the credential from an HTTP header.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.header.name`|string|Header name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.cookie`|object|Read the credential from a request cookie.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.cookie.name`|string|Cookie name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange`|object|Use OAuth token exchange flows to obtain a backend access token.<br>Exactly one of service, host, or backend may be set.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.service`|object|Service reference. Service must be defined in the top level services list.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.service.port`|integer|Port on the target Service to route to.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.host`|string|Hostname or IP address|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.policies`|any|Backend policies used when connecting to the service.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.grantType`|enum|Selects which RFC the request follows; defaults to token exchange (RFC 8693).<br>Possible values: `tokenExchange`, `jwtBearer`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken`|object|Where the subject token is read from, and its token type. Defaults to the<br>Authorization Bearer header with token type access_token.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source`|object|Where the token is read from in the incoming request. The CEL `expression`<br>source is permitted (extraction only).<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.tokenType`|string|RFC 8693 token type URN; when omitted defaults to access_token|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken`|object|RFC 8693 delegation actor token. Token-exchange grant only.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source`|object|Where the actor token is read from in the incoming request. The CEL<br>`expression` source is permitted (extraction only). Unlike subject tokens,<br>actor tokens have no default source.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.header`|object|Read the credential from an HTTP header.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.header.name`|string|Header name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.cookie`|object|Read the credential from a request cookie.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.tokenType`|string|RFC 8693 actor token type URN; when omitted defaults to access_token and is still sent|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.enforceMayAct`|boolean|Enforce that the subject's `may_act` claim authorizes the actor before exchanging.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.audiences`|[]string|`audience` parameters naming the target services at the authorization server.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.scopes`|[]string|`scope` values for the requested token, sent space-delimited.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.resources`|[]string|`resource` parameters with the target service URIs.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.requestedTokenType`|string|`requested_token_type` parameter. When unset it is omitted from the request<br>(RFC 8693 makes it optional). Some providers (e.g. Auth0 custom token exchange)<br>reject an explicit access_token value paired with a custom `subject_token_type`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth`|object|Client authentication used when calling the token endpoint.<br>When unset, no client authentication fields are sent.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.kid`|string||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.assertionAudience`|string||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.additionalParams`|object|Extra form parameters appended to the token request.<br>Values are CEL expressions evaluated against the incoming request.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation`|object|Where to place the exchanged token in the backend request. Defaults to the<br>Authorization header with a "Bearer " prefix. The CEL `expression` source is<br>not valid here (it cannot insert).<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header`|object|Read the credential from an HTTP header.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header.name`|string|Header name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.queryParameter`|object|Read the credential from a URL query parameter.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.queryParameter.name`|string|Query parameter name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.cookie`|object|Read the credential from a request cookie.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.cookie.name`|string|Cookie name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess`|object|Use Cross App Access (Identity Assertion / ID-JAG) to obtain a backend access token.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider`|object|The user's IdP authorization server, used for the RFC 8693 token exchange.<br>Exactly one of service, host, or backend may be set.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.service`|object|Service reference. Service must be defined in the top level services list.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.service.port`|integer|Port on the target Service to route to.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.host`|string|Hostname or IP address|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.policies`|any|Backend policies used when connecting to the service.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth`|object|Client authentication used when calling the token endpoint.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret`|object||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.kid`|string||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.assertionAudience`|string||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer`|object|The resource authorization server, which exchanges the ID-JAG for an access token.<br>Exactly one of service, host, or backend may be set.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service`|object|Service reference. Service must be defined in the top level services list.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service.port`|integer|Port on the target Service to route to.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.host`|string|Hostname or IP address|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.policies`|any|Backend policies used when connecting to the service.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth`|object|Client authentication used when calling the token endpoint.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.kid`|string||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.assertionAudience`|string||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.audience`|string|Identifier of the resource authorization server. The issued ID-JAG is bound to this audience.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resources`|[]string|`resource` parameters naming the protected resource APIs.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.scopes`|[]string|`scope` values requested when obtaining the ID-JAG from the identity provider, sent<br>space-delimited.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.accessTokenScopes`|[]string|`scope` values requested when exchanging the ID-JAG for an access token. When unset,<br>inherits `scopes`. When empty, omits `scope`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken`|object|Subject token sent to the identity provider. Defaults to an OpenID Connect ID token read<br>from the Authorization Bearer header.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source`|object|Where to read the subject token. Defaults to the Authorization Bearer header.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.tokenType`|string|RFC 8693 subject token type URI. Defaults to an OpenID Connect ID token.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.credentials`|[]object||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location`|object|Where the credential is inserted on the backend request.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.header`|object|Read the credential from an HTTP header.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.header.name`|string|Header name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.cookie`|object|Read the credential from a request cookie.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.cookie.name`|string|Cookie name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].key`|object|Credential value.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].key.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.http`|object|HTTP protocol settings for this backend.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.http.version`|string|HTTP version to use when connecting to the backend.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.http.requestTimeout`|string|Maximum time allowed for a backend HTTP request.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.http.maxConnectionDuration`|string|Maximum time a connection to the backend may stay open. A connection past this duration is<br>not reused for new requests; a fresh connection is established instead, while in-flight<br>requests are not interrupted.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.tcp`|object|TCP protocol settings for this backend.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.tcp.keepalives`|object|TCP keepalive settings for backend connections.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.tcp.keepalives.enabled`|boolean|Enable TCP keepalive probes on backend connections. Defaults to true.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.tcp.keepalives.time`|string|Idle time before the first keepalive probe is sent.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.tcp.keepalives.interval`|string|Time between successive keepalive probes.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.tcp.keepalives.retries`|integer|Number of unacknowledged probes before the connection is considered dead.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.tcp.connectTimeout`|string|Maximum time allowed to establish a backend TCP connection.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendTunnel`|object|Tunnel settings used when connecting to this backend.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendTunnel.proxy`|object|Proxy backend used to tunnel the connection.<br>Exactly one of service, host, or backend may be set.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendTunnel.proxy.service`|object|Service reference. Service must be defined in the top level services list.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendTunnel.proxy.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendTunnel.proxy.service.port`|integer|Port on the target Service to route to.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendTunnel.proxy.host`|string|Hostname or IP address|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendTunnel.mode`|enum|How requests are sent through the proxy.<br>Possible values: `auto`, `connect`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.connectTargetPort`|integer|Port on the resumed worker pod's atunnel CONNECT listener. Defaults to 8443.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.cacheTtl`|string|How long successful actor assignments are reused. Defaults to 5s; 0s disables reuse.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.requestParking`|object|Bounded request parking while a suspended actor is waiting for worker capacity.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.requestParking.budget`|string|Maximum time to wait for the actor to become routable.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.requestParking.max`|integer|Maximum concurrent requests that may wait for actor resumption. Set to 0 to disable parking.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.requestParking.retryInterval`|string|Initial delay between ResumeActor retries while parked.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpIngress.requestParking.retryFactor`|number|Multiplier applied to the delay after each parked retry.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress`|object|Enforce actor egress policy before forwarding a TCP connection.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.service`|object|Service reference. Service must be defined in the top level services list.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.service.port`|integer|Port on the target Service to route to.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.host`|string|Hostname or IP address|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies`|object|Enforces the actor's egress policy once before forwarding a TCP connection.<br>Backend policies used when connecting to the service.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.requestHeaderModifier`|object|Modify request headers before forwarding to this backend.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.requestHeaderModifier.add`|object|Headers to append without replacing existing values.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.requestHeaderModifier.set`|object|Headers to set, replacing any existing values.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.requestHeaderModifier.remove`|[]string|Header names to remove.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.transformations`|object|Modify request and response data for this backend.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.transformations.request`|object|Transform the request before it is forwarded.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.transformations.request.add`|object|Headers to append using CEL expressions for values.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.transformations.request.set`|object|Headers to set using CEL expressions for values.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.transformations.request.remove`|[]string|Header names to remove.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.transformations.request.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.transformations.request.body`|string|CEL expression that computes a replacement body.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.transformations.request.metadata`|object|Metadata values to add using CEL expressions.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.transformations.response`|object|Transform the response before it is returned.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.transformations.response.add`|object|Headers to append using CEL expressions for values.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.transformations.response.set`|object|Headers to set using CEL expressions for values.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.transformations.response.remove`|[]string|Header names to remove.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.transformations.response.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.transformations.response.body`|string|CEL expression that computes a replacement body.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.transformations.response.metadata`|object|Metadata values to add using CEL expressions.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendTLS`|object|TLS settings used when connecting to this backend.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendTLS.cert`|string|Client certificate file to present to the backend.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendTLS.key`|string|Private key file for the client certificate.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendTLS.root`|string|Root certificate bundle used to verify the backend certificate.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendTLS.hostname`|string|Server name to use for TLS verification and SNI.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendTLS.insecure`|boolean|Skip certificate trust verification for the backend connection.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendTLS.insecureHost`|boolean|Skip hostname verification for the backend certificate.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendTLS.alpn`|[]string|ALPN protocols to offer to the backend.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendTLS.subjectAltNames`|[]string|Additional subject alternative names accepted for the backend certificate.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendTLS.keyExchangeGroups`|[]enum|Key exchange groups allowed for negotiating TLS.<br>Possible values: `X25519`, `P-256`, `P-384`, `X25519_MLKEM768`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendTLS.spiffe`|object|Get the gateway's client identity and trust roots from the SPIFFE Workload API.<br>Mutually exclusive with `cert`/`key`/`root`/`insecure`/`insecureHost`.<br>Pin specific upstream SPIFFE IDs via `subjectAltNames` (e.g. `spiffe://td/ns/foo/sa/bar`);<br>If `subjectAltNames` is omitted, any SVID chaining to the SPIFFE trust bundle is accepted|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth`|object|Authentication credentials sent to this backend.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.key`|object||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.key.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.passthrough`|object|Forward the validated incoming JWT to the backend.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location`|object|Where to place the forwarded credential in the backend request.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.header`|object|Read the credential from an HTTP header.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.header.name`|string|Header name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.cookie`|object|Read the credential from a request cookie.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.cookie.name`|string|Cookie name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.key`|object|Send a configured secret value to the backend.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.key.value`|object|Secret value to send to the backend. File references are watched, so<br>rotating the file reloads it without a restart.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.key.value.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.key.location`|object|Where to place the secret in the backend request.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.key.location.header`|object|Read the credential from an HTTP header.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.key.location.header.name`|string|Header name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.key.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.key.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.key.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.key.location.cookie`|object|Read the credential from a request cookie.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.key.location.cookie.name`|string|Cookie name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.key.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.gcp`|object|Authenticate to Google Cloud services.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.gcp.type`|enum|Possible values: `idToken`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.gcp.audience`|string|Audience for the token. If not set, the destination host will be used.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.gcp.credential`|object|ADC-compatible Google credential JSON. If not set, ambient credentials are used.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.gcp.credential.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.gcp.type`|enum|Possible values: `accessToken`, `null`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.aws`|object|Sign backend requests with AWS credentials.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.aws.accessKeyId`|string||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.aws.secretAccessKey`|string||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.aws.region`|string||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.aws.sessionToken`|string||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.aws.serviceName`|string|AWS SigV4 signing service name (for example, "bedrock", "bedrock-agentcore", or "execute-api").|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.aws.region`|string|AWS SigV4 signing region (for example, "us-east-1"). If unset, typed AWS<br>backends may provide this automatically; otherwise the ambient AWS region<br>is used.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole`|object|Optional AWS STS role to assume before signing requests.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.roleArn`|string|AWS IAM role ARN to assume.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.sessionName`|string|Custom session name (RoleSessionName) for CloudTrail and Cost & Usage Report<br>attribution. Either a static string or `{expression: ...}` with a CEL<br>expression evaluated against each request. Max 64 chars, matching<br>`[\w+=,.@-]`. If unset, the AWS SDK generates a random session name.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.sessionName.expression`|string|CEL expression evaluated against each request to produce the session<br>name, for example `jwt.sub` or `request.headers["x-team"]`. If the<br>expression does not produce a valid session name at request time, the<br>request is rejected.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.tags`|[]object|Session tags passed to STS AssumeRole for cost attribution. Once activated as<br>cost allocation tags, each tag surfaces in the AWS Cost & Usage Report under<br>`resourceTags/user:TagKey`. A tag value is either static (`value`) or a CEL<br>expression evaluated against each request (`expression`).|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.tags[].key`|string|Tag key.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.tags[].value`|string|Static tag value.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.tags[].expression`|string|CEL expression evaluated against each request to produce the tag value, for<br>example `jwt.sub` or `request.headers["x-app"]`. If the expression does not<br>produce a valid tag value at request time, the request is rejected.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.azure`|object|Authenticate to Azure services.<br>Exactly one of explicitConfig, developerImplicit, or implicit may be set.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig`|object|Use explicit Azure credentials<br>Exactly one of clientSecret, managedIdentity, or workloadIdentity may be set.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.clientSecret`|object||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.clientSecret.tenant_id`|string||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.clientSecret.client_id`|string||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.clientSecret.client_secret`|string||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.managedIdentity`|object||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity`|object||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.clientId`|string||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.objectId`|string||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.resourceId`|string||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.workloadIdentity`|object||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.azure.developerImplicit`|object|Use implicit Azure auth. Note that this is for developer use-cases only!|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.azure.implicit`|object|Automatically detect authentication method based on environment.<br>Uses Workload Identity on K8s, Managed Identity on Azure VMs, or Developer Tools locally.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.azure.scopes`|[]string|Scopes requested for the Azure access token. When unset, the scope is<br>inferred from the backend hostname.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign`|object|Sign a short-lived JWT with a private key on each request.<br>Signs a short-lived JWT with a private key on each request and sends it to<br>the backend. For upstreams that require per-request keypair JWTs (e.g. the<br>Snowflake SQL API) rather than a static credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.alg`|enum|JWS signing algorithm. Defaults to RS256.<br>Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.kid`|string|Optional JWS key ID header.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.claims`|object|Static claims added to every token (e.g. iss, sub, aud). Values may be<br>any JSON value (e.g. a string, number, bool, or array). `iat`, `exp`,<br>and `nbf` are reserved for the signer and cannot be configured here.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.claims.*`|any||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.ttl`|string|Token lifetime used for `exp`. Defaults to 300s.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location`|object|Where the signed token is written. Defaults to the Authorization<br>header with a `Bearer ` prefix.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.header`|object|Read the credential from an HTTP header.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.header.name`|string|Header name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.cookie`|object|Read the credential from a request cookie.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.cookie.name`|string|Cookie name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange`|object|Use OAuth token exchange flows to obtain a backend access token.<br>Exactly one of service, host, or backend may be set.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.service`|object|Service reference. Service must be defined in the top level services list.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.service.port`|integer|Port on the target Service to route to.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.host`|string|Hostname or IP address|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.policies`|any|Backend policies used when connecting to the service.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.grantType`|enum|Selects which RFC the request follows; defaults to token exchange (RFC 8693).<br>Possible values: `tokenExchange`, `jwtBearer`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken`|object|Where the subject token is read from, and its token type. Defaults to the<br>Authorization Bearer header with token type access_token.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source`|object|Where the token is read from in the incoming request. The CEL `expression`<br>source is permitted (extraction only).<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.tokenType`|string|RFC 8693 token type URN; when omitted defaults to access_token|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken`|object|RFC 8693 delegation actor token. Token-exchange grant only.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source`|object|Where the actor token is read from in the incoming request. The CEL<br>`expression` source is permitted (extraction only). Unlike subject tokens,<br>actor tokens have no default source.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.header`|object|Read the credential from an HTTP header.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.header.name`|string|Header name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.cookie`|object|Read the credential from a request cookie.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.tokenType`|string|RFC 8693 actor token type URN; when omitted defaults to access_token and is still sent|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.enforceMayAct`|boolean|Enforce that the subject's `may_act` claim authorizes the actor before exchanging.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.audiences`|[]string|`audience` parameters naming the target services at the authorization server.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.scopes`|[]string|`scope` values for the requested token, sent space-delimited.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.resources`|[]string|`resource` parameters with the target service URIs.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.requestedTokenType`|string|`requested_token_type` parameter. When unset it is omitted from the request<br>(RFC 8693 makes it optional). Some providers (e.g. Auth0 custom token exchange)<br>reject an explicit access_token value paired with a custom `subject_token_type`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth`|object|Client authentication used when calling the token endpoint.<br>When unset, no client authentication fields are sent.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.kid`|string||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.assertionAudience`|string||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.additionalParams`|object|Extra form parameters appended to the token request.<br>Values are CEL expressions evaluated against the incoming request.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation`|object|Where to place the exchanged token in the backend request. Defaults to the<br>Authorization header with a "Bearer " prefix. The CEL `expression` source is<br>not valid here (it cannot insert).<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header`|object|Read the credential from an HTTP header.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header.name`|string|Header name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.queryParameter`|object|Read the credential from a URL query parameter.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.queryParameter.name`|string|Query parameter name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.cookie`|object|Read the credential from a request cookie.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.cookie.name`|string|Cookie name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess`|object|Use Cross App Access (Identity Assertion / ID-JAG) to obtain a backend access token.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider`|object|The user's IdP authorization server, used for the RFC 8693 token exchange.<br>Exactly one of service, host, or backend may be set.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.service`|object|Service reference. Service must be defined in the top level services list.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.service.port`|integer|Port on the target Service to route to.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.host`|string|Hostname or IP address|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.policies`|any|Backend policies used when connecting to the service.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth`|object|Client authentication used when calling the token endpoint.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret`|object||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.kid`|string||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.assertionAudience`|string||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer`|object|The resource authorization server, which exchanges the ID-JAG for an access token.<br>Exactly one of service, host, or backend may be set.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service`|object|Service reference. Service must be defined in the top level services list.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service.port`|integer|Port on the target Service to route to.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.host`|string|Hostname or IP address|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.policies`|any|Backend policies used when connecting to the service.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth`|object|Client authentication used when calling the token endpoint.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.kid`|string||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.assertionAudience`|string||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.audience`|string|Identifier of the resource authorization server. The issued ID-JAG is bound to this audience.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resources`|[]string|`resource` parameters naming the protected resource APIs.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.scopes`|[]string|`scope` values requested when obtaining the ID-JAG from the identity provider, sent<br>space-delimited.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.accessTokenScopes`|[]string|`scope` values requested when exchanging the ID-JAG for an access token. When unset,<br>inherits `scopes`. When empty, omits `scope`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken`|object|Subject token sent to the identity provider. Defaults to an OpenID Connect ID token read<br>from the Authorization Bearer header.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source`|object|Where to read the subject token. Defaults to the Authorization Bearer header.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.tokenType`|string|RFC 8693 subject token type URI. Defaults to an OpenID Connect ID token.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.credentials`|[]object||
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location`|object|Where the credential is inserted on the backend request.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.header`|object|Read the credential from an HTTP header.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.header.name`|string|Header name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.cookie`|object|Read the credential from a request cookie.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.cookie.name`|string|Cookie name containing the credential.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].key`|object|Credential value.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].key.file`|string|Path to a file on disk to load the value from.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.http`|object|HTTP protocol settings for this backend.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.http.version`|string|HTTP version to use when connecting to the backend.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.http.requestTimeout`|string|Maximum time allowed for a backend HTTP request.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.http.maxConnectionDuration`|string|Maximum time a connection to the backend may stay open. A connection past this duration is<br>not reused for new requests; a fresh connection is established instead, while in-flight<br>requests are not interrupted.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.tcp`|object|TCP protocol settings for this backend.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.tcp.keepalives`|object|TCP keepalive settings for backend connections.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.tcp.keepalives.enabled`|boolean|Enable TCP keepalive probes on backend connections. Defaults to true.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.tcp.keepalives.time`|string|Idle time before the first keepalive probe is sent.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.tcp.keepalives.interval`|string|Time between successive keepalive probes.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.tcp.keepalives.retries`|integer|Number of unacknowledged probes before the connection is considered dead.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.tcp.connectTimeout`|string|Maximum time allowed to establish a backend TCP connection.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendTunnel`|object|Tunnel settings used when connecting to this backend.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendTunnel.proxy`|object|Proxy backend used to tunnel the connection.<br>Exactly one of service, host, or backend may be set.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendTunnel.proxy.service`|object|Service reference. Service must be defined in the top level services list.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendTunnel.proxy.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendTunnel.proxy.service.port`|integer|Port on the target Service to route to.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendTunnel.proxy.host`|string|Hostname or IP address|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendTunnel.mode`|enum|How requests are sent through the proxy.<br>Possible values: `auto`, `connect`.|
+|`binds[].listeners[].tcpRoutes[].policies.substrateTcpEgress.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
 |`binds[].listeners[].tcpRoutes[].policies.backendTLS`|object|TLS configuration for connections to the TCP route's backend.|
 |`binds[].listeners[].tcpRoutes[].policies.backendTLS.cert`|string|Client certificate file to present to the backend.|
 |`binds[].listeners[].tcpRoutes[].policies.backendTLS.key`|string|Private key file for the client certificate.|
@@ -25382,6 +26512,571 @@
 |`policies[].policy.substrateEgress.credentialProviders[].target.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
 |`policies[].policy.substrateEgress.credentialProviders[].target.policies.backendTunnel.mode`|enum|How requests are sent through the proxy.<br>Possible values: `auto`, `connect`.|
 |`policies[].policy.substrateEgress.credentialProviders[].target.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
+|`policies[].policy.substrateTcpIngress`|object|Resolve an actor selected by CONNECT metadata for a TCP connection.|
+|`policies[].policy.substrateTcpIngress.service`|object|Service reference. Service must be defined in the top level services list.|
+|`policies[].policy.substrateTcpIngress.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`policies[].policy.substrateTcpIngress.service.port`|integer|Port on the target Service to route to.|
+|`policies[].policy.substrateTcpIngress.host`|string|Hostname or IP address|
+|`policies[].policy.substrateTcpIngress.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`policies[].policy.substrateTcpIngress.policies`|object|Backend policies used when connecting to the service.|
+|`policies[].policy.substrateTcpIngress.policies.requestHeaderModifier`|object|Modify request headers before forwarding to this backend.|
+|`policies[].policy.substrateTcpIngress.policies.requestHeaderModifier.add`|object|Headers to append without replacing existing values.|
+|`policies[].policy.substrateTcpIngress.policies.requestHeaderModifier.set`|object|Headers to set, replacing any existing values.|
+|`policies[].policy.substrateTcpIngress.policies.requestHeaderModifier.remove`|[]string|Header names to remove.|
+|`policies[].policy.substrateTcpIngress.policies.transformations`|object|Modify request and response data for this backend.|
+|`policies[].policy.substrateTcpIngress.policies.transformations.request`|object|Transform the request before it is forwarded.|
+|`policies[].policy.substrateTcpIngress.policies.transformations.request.add`|object|Headers to append using CEL expressions for values.|
+|`policies[].policy.substrateTcpIngress.policies.transformations.request.set`|object|Headers to set using CEL expressions for values.|
+|`policies[].policy.substrateTcpIngress.policies.transformations.request.remove`|[]string|Header names to remove.|
+|`policies[].policy.substrateTcpIngress.policies.transformations.request.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
+|`policies[].policy.substrateTcpIngress.policies.transformations.request.body`|string|CEL expression that computes a replacement body.|
+|`policies[].policy.substrateTcpIngress.policies.transformations.request.metadata`|object|Metadata values to add using CEL expressions.|
+|`policies[].policy.substrateTcpIngress.policies.transformations.response`|object|Transform the response before it is returned.|
+|`policies[].policy.substrateTcpIngress.policies.transformations.response.add`|object|Headers to append using CEL expressions for values.|
+|`policies[].policy.substrateTcpIngress.policies.transformations.response.set`|object|Headers to set using CEL expressions for values.|
+|`policies[].policy.substrateTcpIngress.policies.transformations.response.remove`|[]string|Header names to remove.|
+|`policies[].policy.substrateTcpIngress.policies.transformations.response.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
+|`policies[].policy.substrateTcpIngress.policies.transformations.response.body`|string|CEL expression that computes a replacement body.|
+|`policies[].policy.substrateTcpIngress.policies.transformations.response.metadata`|object|Metadata values to add using CEL expressions.|
+|`policies[].policy.substrateTcpIngress.policies.backendTLS`|object|TLS settings used when connecting to this backend.|
+|`policies[].policy.substrateTcpIngress.policies.backendTLS.cert`|string|Client certificate file to present to the backend.|
+|`policies[].policy.substrateTcpIngress.policies.backendTLS.key`|string|Private key file for the client certificate.|
+|`policies[].policy.substrateTcpIngress.policies.backendTLS.root`|string|Root certificate bundle used to verify the backend certificate.|
+|`policies[].policy.substrateTcpIngress.policies.backendTLS.hostname`|string|Server name to use for TLS verification and SNI.|
+|`policies[].policy.substrateTcpIngress.policies.backendTLS.insecure`|boolean|Skip certificate trust verification for the backend connection.|
+|`policies[].policy.substrateTcpIngress.policies.backendTLS.insecureHost`|boolean|Skip hostname verification for the backend certificate.|
+|`policies[].policy.substrateTcpIngress.policies.backendTLS.alpn`|[]string|ALPN protocols to offer to the backend.|
+|`policies[].policy.substrateTcpIngress.policies.backendTLS.subjectAltNames`|[]string|Additional subject alternative names accepted for the backend certificate.|
+|`policies[].policy.substrateTcpIngress.policies.backendTLS.keyExchangeGroups`|[]enum|Key exchange groups allowed for negotiating TLS.<br>Possible values: `X25519`, `P-256`, `P-384`, `X25519_MLKEM768`.|
+|`policies[].policy.substrateTcpIngress.policies.backendTLS.spiffe`|object|Get the gateway's client identity and trust roots from the SPIFFE Workload API.<br>Mutually exclusive with `cert`/`key`/`root`/`insecure`/`insecureHost`.<br>Pin specific upstream SPIFFE IDs via `subjectAltNames` (e.g. `spiffe://td/ns/foo/sa/bar`);<br>If `subjectAltNames` is omitted, any SVID chaining to the SPIFFE trust bundle is accepted|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth`|object|Authentication credentials sent to this backend.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.key`|object||
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.key.file`|string|Path to a file on disk to load the value from.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.passthrough`|object|Forward the validated incoming JWT to the backend.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.passthrough.location`|object|Where to place the forwarded credential in the backend request.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.passthrough.location.header`|object|Read the credential from an HTTP header.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.passthrough.location.header.name`|string|Header name containing the credential.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.passthrough.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.passthrough.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.passthrough.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.passthrough.location.cookie`|object|Read the credential from a request cookie.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.passthrough.location.cookie.name`|string|Cookie name containing the credential.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.passthrough.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.key`|object|Send a configured secret value to the backend.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.key.value`|object|Secret value to send to the backend. File references are watched, so<br>rotating the file reloads it without a restart.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.key.value.file`|string|Path to a file on disk to load the value from.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.key.location`|object|Where to place the secret in the backend request.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.key.location.header`|object|Read the credential from an HTTP header.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.key.location.header.name`|string|Header name containing the credential.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.key.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.key.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.key.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.key.location.cookie`|object|Read the credential from a request cookie.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.key.location.cookie.name`|string|Cookie name containing the credential.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.key.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.gcp`|object|Authenticate to Google Cloud services.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.gcp.type`|enum|Possible values: `idToken`.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.gcp.audience`|string|Audience for the token. If not set, the destination host will be used.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.gcp.credential`|object|ADC-compatible Google credential JSON. If not set, ambient credentials are used.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.gcp.credential.file`|string|Path to a file on disk to load the value from.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.gcp.type`|enum|Possible values: `accessToken`, `null`.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.aws`|object|Sign backend requests with AWS credentials.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.aws.accessKeyId`|string||
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.aws.secretAccessKey`|string||
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.aws.region`|string||
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.aws.sessionToken`|string||
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.aws.serviceName`|string|AWS SigV4 signing service name (for example, "bedrock", "bedrock-agentcore", or "execute-api").|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.aws.region`|string|AWS SigV4 signing region (for example, "us-east-1"). If unset, typed AWS<br>backends may provide this automatically; otherwise the ambient AWS region<br>is used.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.aws.assumeRole`|object|Optional AWS STS role to assume before signing requests.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.aws.assumeRole.roleArn`|string|AWS IAM role ARN to assume.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.aws.assumeRole.sessionName`|string|Custom session name (RoleSessionName) for CloudTrail and Cost & Usage Report<br>attribution. Either a static string or `{expression: ...}` with a CEL<br>expression evaluated against each request. Max 64 chars, matching<br>`[\w+=,.@-]`. If unset, the AWS SDK generates a random session name.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.aws.assumeRole.sessionName.expression`|string|CEL expression evaluated against each request to produce the session<br>name, for example `jwt.sub` or `request.headers["x-team"]`. If the<br>expression does not produce a valid session name at request time, the<br>request is rejected.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.aws.assumeRole.tags`|[]object|Session tags passed to STS AssumeRole for cost attribution. Once activated as<br>cost allocation tags, each tag surfaces in the AWS Cost & Usage Report under<br>`resourceTags/user:TagKey`. A tag value is either static (`value`) or a CEL<br>expression evaluated against each request (`expression`).|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.aws.assumeRole.tags[].key`|string|Tag key.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.aws.assumeRole.tags[].value`|string|Static tag value.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.aws.assumeRole.tags[].expression`|string|CEL expression evaluated against each request to produce the tag value, for<br>example `jwt.sub` or `request.headers["x-app"]`. If the expression does not<br>produce a valid tag value at request time, the request is rejected.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.azure`|object|Authenticate to Azure services.<br>Exactly one of explicitConfig, developerImplicit, or implicit may be set.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.azure.explicitConfig`|object|Use explicit Azure credentials<br>Exactly one of clientSecret, managedIdentity, or workloadIdentity may be set.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.clientSecret`|object||
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.clientSecret.tenant_id`|string||
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.clientSecret.client_id`|string||
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.clientSecret.client_secret`|string||
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.managedIdentity`|object||
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity`|object||
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.clientId`|string||
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.objectId`|string||
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.resourceId`|string||
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.workloadIdentity`|object||
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.azure.developerImplicit`|object|Use implicit Azure auth. Note that this is for developer use-cases only!|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.azure.implicit`|object|Automatically detect authentication method based on environment.<br>Uses Workload Identity on K8s, Managed Identity on Azure VMs, or Developer Tools locally.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.azure.scopes`|[]string|Scopes requested for the Azure access token. When unset, the scope is<br>inferred from the backend hostname.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.jwtSign`|object|Sign a short-lived JWT with a private key on each request.<br>Signs a short-lived JWT with a private key on each request and sends it to<br>the backend. For upstreams that require per-request keypair JWTs (e.g. the<br>Snowflake SQL API) rather than a static credential.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.jwtSign.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.jwtSign.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.jwtSign.alg`|enum|JWS signing algorithm. Defaults to RS256.<br>Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.jwtSign.kid`|string|Optional JWS key ID header.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.jwtSign.claims`|object|Static claims added to every token (e.g. iss, sub, aud). Values may be<br>any JSON value (e.g. a string, number, bool, or array). `iat`, `exp`,<br>and `nbf` are reserved for the signer and cannot be configured here.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.jwtSign.claims.*`|any||
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.jwtSign.ttl`|string|Token lifetime used for `exp`. Defaults to 300s.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.jwtSign.location`|object|Where the signed token is written. Defaults to the Authorization<br>header with a `Bearer ` prefix.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.jwtSign.location.header`|object|Read the credential from an HTTP header.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.jwtSign.location.header.name`|string|Header name containing the credential.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.jwtSign.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.jwtSign.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.jwtSign.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.jwtSign.location.cookie`|object|Read the credential from a request cookie.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.jwtSign.location.cookie.name`|string|Cookie name containing the credential.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.jwtSign.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange`|object|Use OAuth token exchange flows to obtain a backend access token.<br>Exactly one of service, host, or backend may be set.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.service`|object|Service reference. Service must be defined in the top level services list.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.service.port`|integer|Port on the target Service to route to.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.host`|string|Hostname or IP address|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.policies`|any|Backend policies used when connecting to the service.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.grantType`|enum|Selects which RFC the request follows; defaults to token exchange (RFC 8693).<br>Possible values: `tokenExchange`, `jwtBearer`.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken`|object|Where the subject token is read from, and its token type. Defaults to the<br>Authorization Bearer header with token type access_token.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source`|object|Where the token is read from in the incoming request. The CEL `expression`<br>source is permitted (extraction only).<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.tokenType`|string|RFC 8693 token type URN; when omitted defaults to access_token|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken`|object|RFC 8693 delegation actor token. Token-exchange grant only.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source`|object|Where the actor token is read from in the incoming request. The CEL<br>`expression` source is permitted (extraction only). Unlike subject tokens,<br>actor tokens have no default source.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.header`|object|Read the credential from an HTTP header.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.header.name`|string|Header name containing the credential.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.cookie`|object|Read the credential from a request cookie.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.tokenType`|string|RFC 8693 actor token type URN; when omitted defaults to access_token and is still sent|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.enforceMayAct`|boolean|Enforce that the subject's `may_act` claim authorizes the actor before exchanging.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.audiences`|[]string|`audience` parameters naming the target services at the authorization server.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.scopes`|[]string|`scope` values for the requested token, sent space-delimited.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.resources`|[]string|`resource` parameters with the target service URIs.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.requestedTokenType`|string|`requested_token_type` parameter. When unset it is omitted from the request<br>(RFC 8693 makes it optional). Some providers (e.g. Auth0 custom token exchange)<br>reject an explicit access_token value paired with a custom `subject_token_type`.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth`|object|Client authentication used when calling the token endpoint.<br>When unset, no client authentication fields are sent.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object||
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.kid`|string||
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.assertionAudience`|string||
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.additionalParams`|object|Extra form parameters appended to the token request.<br>Values are CEL expressions evaluated against the incoming request.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation`|object|Where to place the exchanged token in the backend request. Defaults to the<br>Authorization header with a "Bearer " prefix. The CEL `expression` source is<br>not valid here (it cannot insert).<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header`|object|Read the credential from an HTTP header.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header.name`|string|Header name containing the credential.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.queryParameter`|object|Read the credential from a URL query parameter.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.queryParameter.name`|string|Query parameter name containing the credential.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.cookie`|object|Read the credential from a request cookie.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.cookie.name`|string|Cookie name containing the credential.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess`|object|Use Cross App Access (Identity Assertion / ID-JAG) to obtain a backend access token.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider`|object|The user's IdP authorization server, used for the RFC 8693 token exchange.<br>Exactly one of service, host, or backend may be set.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.service`|object|Service reference. Service must be defined in the top level services list.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.service.port`|integer|Port on the target Service to route to.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.host`|string|Hostname or IP address|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.policies`|any|Backend policies used when connecting to the service.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth`|object|Client authentication used when calling the token endpoint.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret`|object||
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.kid`|string||
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.assertionAudience`|string||
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer`|object|The resource authorization server, which exchanges the ID-JAG for an access token.<br>Exactly one of service, host, or backend may be set.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service`|object|Service reference. Service must be defined in the top level services list.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service.port`|integer|Port on the target Service to route to.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.host`|string|Hostname or IP address|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.policies`|any|Backend policies used when connecting to the service.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth`|object|Client authentication used when calling the token endpoint.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object||
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.kid`|string||
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.assertionAudience`|string||
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.audience`|string|Identifier of the resource authorization server. The issued ID-JAG is bound to this audience.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.resources`|[]string|`resource` parameters naming the protected resource APIs.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.scopes`|[]string|`scope` values requested when obtaining the ID-JAG from the identity provider, sent<br>space-delimited.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.accessTokenScopes`|[]string|`scope` values requested when exchanging the ID-JAG for an access token. When unset,<br>inherits `scopes`. When empty, omits `scope`.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken`|object|Subject token sent to the identity provider. Defaults to an OpenID Connect ID token read<br>from the Authorization Bearer header.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source`|object|Where to read the subject token. Defaults to the Authorization Bearer header.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.tokenType`|string|RFC 8693 subject token type URI. Defaults to an OpenID Connect ID token.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.crossAppAccess.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.credentials`|[]object||
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.credentials[].location`|object|Where the credential is inserted on the backend request.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.credentials[].location.header`|object|Read the credential from an HTTP header.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.credentials[].location.header.name`|string|Header name containing the credential.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.credentials[].location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.credentials[].location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.credentials[].location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.credentials[].location.cookie`|object|Read the credential from a request cookie.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.credentials[].location.cookie.name`|string|Cookie name containing the credential.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.credentials[].location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.credentials[].key`|object|Credential value.|
+|`policies[].policy.substrateTcpIngress.policies.backendAuth.credentials[].key.file`|string|Path to a file on disk to load the value from.|
+|`policies[].policy.substrateTcpIngress.policies.http`|object|HTTP protocol settings for this backend.|
+|`policies[].policy.substrateTcpIngress.policies.http.version`|string|HTTP version to use when connecting to the backend.|
+|`policies[].policy.substrateTcpIngress.policies.http.requestTimeout`|string|Maximum time allowed for a backend HTTP request.|
+|`policies[].policy.substrateTcpIngress.policies.http.maxConnectionDuration`|string|Maximum time a connection to the backend may stay open. A connection past this duration is<br>not reused for new requests; a fresh connection is established instead, while in-flight<br>requests are not interrupted.|
+|`policies[].policy.substrateTcpIngress.policies.tcp`|object|TCP protocol settings for this backend.|
+|`policies[].policy.substrateTcpIngress.policies.tcp.keepalives`|object|TCP keepalive settings for backend connections.|
+|`policies[].policy.substrateTcpIngress.policies.tcp.keepalives.enabled`|boolean|Enable TCP keepalive probes on backend connections. Defaults to true.|
+|`policies[].policy.substrateTcpIngress.policies.tcp.keepalives.time`|string|Idle time before the first keepalive probe is sent.|
+|`policies[].policy.substrateTcpIngress.policies.tcp.keepalives.interval`|string|Time between successive keepalive probes.|
+|`policies[].policy.substrateTcpIngress.policies.tcp.keepalives.retries`|integer|Number of unacknowledged probes before the connection is considered dead.|
+|`policies[].policy.substrateTcpIngress.policies.tcp.connectTimeout`|string|Maximum time allowed to establish a backend TCP connection.|
+|`policies[].policy.substrateTcpIngress.policies.backendTunnel`|object|Tunnel settings used when connecting to this backend.|
+|`policies[].policy.substrateTcpIngress.policies.backendTunnel.proxy`|object|Proxy backend used to tunnel the connection.<br>Exactly one of service, host, or backend may be set.|
+|`policies[].policy.substrateTcpIngress.policies.backendTunnel.proxy.service`|object|Service reference. Service must be defined in the top level services list.|
+|`policies[].policy.substrateTcpIngress.policies.backendTunnel.proxy.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`policies[].policy.substrateTcpIngress.policies.backendTunnel.proxy.service.port`|integer|Port on the target Service to route to.|
+|`policies[].policy.substrateTcpIngress.policies.backendTunnel.proxy.host`|string|Hostname or IP address|
+|`policies[].policy.substrateTcpIngress.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`policies[].policy.substrateTcpIngress.policies.backendTunnel.mode`|enum|How requests are sent through the proxy.<br>Possible values: `auto`, `connect`.|
+|`policies[].policy.substrateTcpIngress.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
+|`policies[].policy.substrateTcpIngress.connectTargetPort`|integer|Port on the resumed worker pod's atunnel CONNECT listener. Defaults to 8443.|
+|`policies[].policy.substrateTcpIngress.cacheTtl`|string|How long successful actor assignments are reused. Defaults to 5s; 0s disables reuse.|
+|`policies[].policy.substrateTcpIngress.requestParking`|object|Bounded request parking while a suspended actor is waiting for worker capacity.|
+|`policies[].policy.substrateTcpIngress.requestParking.budget`|string|Maximum time to wait for the actor to become routable.|
+|`policies[].policy.substrateTcpIngress.requestParking.max`|integer|Maximum concurrent requests that may wait for actor resumption. Set to 0 to disable parking.|
+|`policies[].policy.substrateTcpIngress.requestParking.retryInterval`|string|Initial delay between ResumeActor retries while parked.|
+|`policies[].policy.substrateTcpIngress.requestParking.retryFactor`|number|Multiplier applied to the delay after each parked retry.|
+|`policies[].policy.substrateTcpEgress`|object|Enforce actor egress policy before forwarding a TCP connection.|
+|`policies[].policy.substrateTcpEgress.service`|object|Service reference. Service must be defined in the top level services list.|
+|`policies[].policy.substrateTcpEgress.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`policies[].policy.substrateTcpEgress.service.port`|integer|Port on the target Service to route to.|
+|`policies[].policy.substrateTcpEgress.host`|string|Hostname or IP address|
+|`policies[].policy.substrateTcpEgress.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`policies[].policy.substrateTcpEgress.policies`|object|Enforces the actor's egress policy once before forwarding a TCP connection.<br>Backend policies used when connecting to the service.|
+|`policies[].policy.substrateTcpEgress.policies.requestHeaderModifier`|object|Modify request headers before forwarding to this backend.|
+|`policies[].policy.substrateTcpEgress.policies.requestHeaderModifier.add`|object|Headers to append without replacing existing values.|
+|`policies[].policy.substrateTcpEgress.policies.requestHeaderModifier.set`|object|Headers to set, replacing any existing values.|
+|`policies[].policy.substrateTcpEgress.policies.requestHeaderModifier.remove`|[]string|Header names to remove.|
+|`policies[].policy.substrateTcpEgress.policies.transformations`|object|Modify request and response data for this backend.|
+|`policies[].policy.substrateTcpEgress.policies.transformations.request`|object|Transform the request before it is forwarded.|
+|`policies[].policy.substrateTcpEgress.policies.transformations.request.add`|object|Headers to append using CEL expressions for values.|
+|`policies[].policy.substrateTcpEgress.policies.transformations.request.set`|object|Headers to set using CEL expressions for values.|
+|`policies[].policy.substrateTcpEgress.policies.transformations.request.remove`|[]string|Header names to remove.|
+|`policies[].policy.substrateTcpEgress.policies.transformations.request.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
+|`policies[].policy.substrateTcpEgress.policies.transformations.request.body`|string|CEL expression that computes a replacement body.|
+|`policies[].policy.substrateTcpEgress.policies.transformations.request.metadata`|object|Metadata values to add using CEL expressions.|
+|`policies[].policy.substrateTcpEgress.policies.transformations.response`|object|Transform the response before it is returned.|
+|`policies[].policy.substrateTcpEgress.policies.transformations.response.add`|object|Headers to append using CEL expressions for values.|
+|`policies[].policy.substrateTcpEgress.policies.transformations.response.set`|object|Headers to set using CEL expressions for values.|
+|`policies[].policy.substrateTcpEgress.policies.transformations.response.remove`|[]string|Header names to remove.|
+|`policies[].policy.substrateTcpEgress.policies.transformations.response.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
+|`policies[].policy.substrateTcpEgress.policies.transformations.response.body`|string|CEL expression that computes a replacement body.|
+|`policies[].policy.substrateTcpEgress.policies.transformations.response.metadata`|object|Metadata values to add using CEL expressions.|
+|`policies[].policy.substrateTcpEgress.policies.backendTLS`|object|TLS settings used when connecting to this backend.|
+|`policies[].policy.substrateTcpEgress.policies.backendTLS.cert`|string|Client certificate file to present to the backend.|
+|`policies[].policy.substrateTcpEgress.policies.backendTLS.key`|string|Private key file for the client certificate.|
+|`policies[].policy.substrateTcpEgress.policies.backendTLS.root`|string|Root certificate bundle used to verify the backend certificate.|
+|`policies[].policy.substrateTcpEgress.policies.backendTLS.hostname`|string|Server name to use for TLS verification and SNI.|
+|`policies[].policy.substrateTcpEgress.policies.backendTLS.insecure`|boolean|Skip certificate trust verification for the backend connection.|
+|`policies[].policy.substrateTcpEgress.policies.backendTLS.insecureHost`|boolean|Skip hostname verification for the backend certificate.|
+|`policies[].policy.substrateTcpEgress.policies.backendTLS.alpn`|[]string|ALPN protocols to offer to the backend.|
+|`policies[].policy.substrateTcpEgress.policies.backendTLS.subjectAltNames`|[]string|Additional subject alternative names accepted for the backend certificate.|
+|`policies[].policy.substrateTcpEgress.policies.backendTLS.keyExchangeGroups`|[]enum|Key exchange groups allowed for negotiating TLS.<br>Possible values: `X25519`, `P-256`, `P-384`, `X25519_MLKEM768`.|
+|`policies[].policy.substrateTcpEgress.policies.backendTLS.spiffe`|object|Get the gateway's client identity and trust roots from the SPIFFE Workload API.<br>Mutually exclusive with `cert`/`key`/`root`/`insecure`/`insecureHost`.<br>Pin specific upstream SPIFFE IDs via `subjectAltNames` (e.g. `spiffe://td/ns/foo/sa/bar`);<br>If `subjectAltNames` is omitted, any SVID chaining to the SPIFFE trust bundle is accepted|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth`|object|Authentication credentials sent to this backend.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.key`|object||
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.key.file`|string|Path to a file on disk to load the value from.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.passthrough`|object|Forward the validated incoming JWT to the backend.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.passthrough.location`|object|Where to place the forwarded credential in the backend request.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.passthrough.location.header`|object|Read the credential from an HTTP header.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.passthrough.location.header.name`|string|Header name containing the credential.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.passthrough.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.passthrough.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.passthrough.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.passthrough.location.cookie`|object|Read the credential from a request cookie.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.passthrough.location.cookie.name`|string|Cookie name containing the credential.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.passthrough.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.key`|object|Send a configured secret value to the backend.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.key.value`|object|Secret value to send to the backend. File references are watched, so<br>rotating the file reloads it without a restart.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.key.value.file`|string|Path to a file on disk to load the value from.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.key.location`|object|Where to place the secret in the backend request.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.key.location.header`|object|Read the credential from an HTTP header.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.key.location.header.name`|string|Header name containing the credential.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.key.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.key.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.key.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.key.location.cookie`|object|Read the credential from a request cookie.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.key.location.cookie.name`|string|Cookie name containing the credential.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.key.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.gcp`|object|Authenticate to Google Cloud services.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.gcp.type`|enum|Possible values: `idToken`.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.gcp.audience`|string|Audience for the token. If not set, the destination host will be used.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.gcp.credential`|object|ADC-compatible Google credential JSON. If not set, ambient credentials are used.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.gcp.credential.file`|string|Path to a file on disk to load the value from.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.gcp.type`|enum|Possible values: `accessToken`, `null`.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.aws`|object|Sign backend requests with AWS credentials.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.aws.accessKeyId`|string||
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.aws.secretAccessKey`|string||
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.aws.region`|string||
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.aws.sessionToken`|string||
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.aws.serviceName`|string|AWS SigV4 signing service name (for example, "bedrock", "bedrock-agentcore", or "execute-api").|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.aws.region`|string|AWS SigV4 signing region (for example, "us-east-1"). If unset, typed AWS<br>backends may provide this automatically; otherwise the ambient AWS region<br>is used.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.aws.assumeRole`|object|Optional AWS STS role to assume before signing requests.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.aws.assumeRole.roleArn`|string|AWS IAM role ARN to assume.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.aws.assumeRole.sessionName`|string|Custom session name (RoleSessionName) for CloudTrail and Cost & Usage Report<br>attribution. Either a static string or `{expression: ...}` with a CEL<br>expression evaluated against each request. Max 64 chars, matching<br>`[\w+=,.@-]`. If unset, the AWS SDK generates a random session name.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.aws.assumeRole.sessionName.expression`|string|CEL expression evaluated against each request to produce the session<br>name, for example `jwt.sub` or `request.headers["x-team"]`. If the<br>expression does not produce a valid session name at request time, the<br>request is rejected.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.aws.assumeRole.tags`|[]object|Session tags passed to STS AssumeRole for cost attribution. Once activated as<br>cost allocation tags, each tag surfaces in the AWS Cost & Usage Report under<br>`resourceTags/user:TagKey`. A tag value is either static (`value`) or a CEL<br>expression evaluated against each request (`expression`).|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.aws.assumeRole.tags[].key`|string|Tag key.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.aws.assumeRole.tags[].value`|string|Static tag value.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.aws.assumeRole.tags[].expression`|string|CEL expression evaluated against each request to produce the tag value, for<br>example `jwt.sub` or `request.headers["x-app"]`. If the expression does not<br>produce a valid tag value at request time, the request is rejected.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.azure`|object|Authenticate to Azure services.<br>Exactly one of explicitConfig, developerImplicit, or implicit may be set.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.azure.explicitConfig`|object|Use explicit Azure credentials<br>Exactly one of clientSecret, managedIdentity, or workloadIdentity may be set.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.clientSecret`|object||
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.clientSecret.tenant_id`|string||
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.clientSecret.client_id`|string||
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.clientSecret.client_secret`|string||
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.managedIdentity`|object||
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity`|object||
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.clientId`|string||
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.objectId`|string||
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.resourceId`|string||
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.workloadIdentity`|object||
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.azure.developerImplicit`|object|Use implicit Azure auth. Note that this is for developer use-cases only!|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.azure.implicit`|object|Automatically detect authentication method based on environment.<br>Uses Workload Identity on K8s, Managed Identity on Azure VMs, or Developer Tools locally.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.azure.scopes`|[]string|Scopes requested for the Azure access token. When unset, the scope is<br>inferred from the backend hostname.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.jwtSign`|object|Sign a short-lived JWT with a private key on each request.<br>Signs a short-lived JWT with a private key on each request and sends it to<br>the backend. For upstreams that require per-request keypair JWTs (e.g. the<br>Snowflake SQL API) rather than a static credential.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.jwtSign.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.jwtSign.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.jwtSign.alg`|enum|JWS signing algorithm. Defaults to RS256.<br>Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.jwtSign.kid`|string|Optional JWS key ID header.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.jwtSign.claims`|object|Static claims added to every token (e.g. iss, sub, aud). Values may be<br>any JSON value (e.g. a string, number, bool, or array). `iat`, `exp`,<br>and `nbf` are reserved for the signer and cannot be configured here.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.jwtSign.claims.*`|any||
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.jwtSign.ttl`|string|Token lifetime used for `exp`. Defaults to 300s.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.jwtSign.location`|object|Where the signed token is written. Defaults to the Authorization<br>header with a `Bearer ` prefix.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.jwtSign.location.header`|object|Read the credential from an HTTP header.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.jwtSign.location.header.name`|string|Header name containing the credential.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.jwtSign.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.jwtSign.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.jwtSign.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.jwtSign.location.cookie`|object|Read the credential from a request cookie.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.jwtSign.location.cookie.name`|string|Cookie name containing the credential.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.jwtSign.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange`|object|Use OAuth token exchange flows to obtain a backend access token.<br>Exactly one of service, host, or backend may be set.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.service`|object|Service reference. Service must be defined in the top level services list.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.service.port`|integer|Port on the target Service to route to.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.host`|string|Hostname or IP address|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.policies`|any|Backend policies used when connecting to the service.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.grantType`|enum|Selects which RFC the request follows; defaults to token exchange (RFC 8693).<br>Possible values: `tokenExchange`, `jwtBearer`.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken`|object|Where the subject token is read from, and its token type. Defaults to the<br>Authorization Bearer header with token type access_token.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source`|object|Where the token is read from in the incoming request. The CEL `expression`<br>source is permitted (extraction only).<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.tokenType`|string|RFC 8693 token type URN; when omitted defaults to access_token|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken`|object|RFC 8693 delegation actor token. Token-exchange grant only.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source`|object|Where the actor token is read from in the incoming request. The CEL<br>`expression` source is permitted (extraction only). Unlike subject tokens,<br>actor tokens have no default source.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.header`|object|Read the credential from an HTTP header.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.header.name`|string|Header name containing the credential.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.cookie`|object|Read the credential from a request cookie.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.tokenType`|string|RFC 8693 actor token type URN; when omitted defaults to access_token and is still sent|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.enforceMayAct`|boolean|Enforce that the subject's `may_act` claim authorizes the actor before exchanging.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.audiences`|[]string|`audience` parameters naming the target services at the authorization server.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.scopes`|[]string|`scope` values for the requested token, sent space-delimited.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.resources`|[]string|`resource` parameters with the target service URIs.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.requestedTokenType`|string|`requested_token_type` parameter. When unset it is omitted from the request<br>(RFC 8693 makes it optional). Some providers (e.g. Auth0 custom token exchange)<br>reject an explicit access_token value paired with a custom `subject_token_type`.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth`|object|Client authentication used when calling the token endpoint.<br>When unset, no client authentication fields are sent.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object||
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.kid`|string||
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.assertionAudience`|string||
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.additionalParams`|object|Extra form parameters appended to the token request.<br>Values are CEL expressions evaluated against the incoming request.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation`|object|Where to place the exchanged token in the backend request. Defaults to the<br>Authorization header with a "Bearer " prefix. The CEL `expression` source is<br>not valid here (it cannot insert).<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header`|object|Read the credential from an HTTP header.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header.name`|string|Header name containing the credential.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.queryParameter`|object|Read the credential from a URL query parameter.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.queryParameter.name`|string|Query parameter name containing the credential.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.cookie`|object|Read the credential from a request cookie.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.cookie.name`|string|Cookie name containing the credential.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess`|object|Use Cross App Access (Identity Assertion / ID-JAG) to obtain a backend access token.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider`|object|The user's IdP authorization server, used for the RFC 8693 token exchange.<br>Exactly one of service, host, or backend may be set.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.service`|object|Service reference. Service must be defined in the top level services list.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.service.port`|integer|Port on the target Service to route to.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.host`|string|Hostname or IP address|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.policies`|any|Backend policies used when connecting to the service.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth`|object|Client authentication used when calling the token endpoint.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret`|object||
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.kid`|string||
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.assertionAudience`|string||
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer`|object|The resource authorization server, which exchanges the ID-JAG for an access token.<br>Exactly one of service, host, or backend may be set.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service`|object|Service reference. Service must be defined in the top level services list.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service.port`|integer|Port on the target Service to route to.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.host`|string|Hostname or IP address|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.policies`|any|Backend policies used when connecting to the service.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth`|object|Client authentication used when calling the token endpoint.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object||
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.kid`|string||
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.assertionAudience`|string||
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.audience`|string|Identifier of the resource authorization server. The issued ID-JAG is bound to this audience.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.resources`|[]string|`resource` parameters naming the protected resource APIs.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.scopes`|[]string|`scope` values requested when obtaining the ID-JAG from the identity provider, sent<br>space-delimited.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.accessTokenScopes`|[]string|`scope` values requested when exchanging the ID-JAG for an access token. When unset,<br>inherits `scopes`. When empty, omits `scope`.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken`|object|Subject token sent to the identity provider. Defaults to an OpenID Connect ID token read<br>from the Authorization Bearer header.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source`|object|Where to read the subject token. Defaults to the Authorization Bearer header.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.tokenType`|string|RFC 8693 subject token type URI. Defaults to an OpenID Connect ID token.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.crossAppAccess.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.credentials`|[]object||
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.credentials[].location`|object|Where the credential is inserted on the backend request.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.credentials[].location.header`|object|Read the credential from an HTTP header.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.credentials[].location.header.name`|string|Header name containing the credential.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.credentials[].location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.credentials[].location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.credentials[].location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.credentials[].location.cookie`|object|Read the credential from a request cookie.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.credentials[].location.cookie.name`|string|Cookie name containing the credential.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.credentials[].location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.credentials[].key`|object|Credential value.|
+|`policies[].policy.substrateTcpEgress.policies.backendAuth.credentials[].key.file`|string|Path to a file on disk to load the value from.|
+|`policies[].policy.substrateTcpEgress.policies.http`|object|HTTP protocol settings for this backend.|
+|`policies[].policy.substrateTcpEgress.policies.http.version`|string|HTTP version to use when connecting to the backend.|
+|`policies[].policy.substrateTcpEgress.policies.http.requestTimeout`|string|Maximum time allowed for a backend HTTP request.|
+|`policies[].policy.substrateTcpEgress.policies.http.maxConnectionDuration`|string|Maximum time a connection to the backend may stay open. A connection past this duration is<br>not reused for new requests; a fresh connection is established instead, while in-flight<br>requests are not interrupted.|
+|`policies[].policy.substrateTcpEgress.policies.tcp`|object|TCP protocol settings for this backend.|
+|`policies[].policy.substrateTcpEgress.policies.tcp.keepalives`|object|TCP keepalive settings for backend connections.|
+|`policies[].policy.substrateTcpEgress.policies.tcp.keepalives.enabled`|boolean|Enable TCP keepalive probes on backend connections. Defaults to true.|
+|`policies[].policy.substrateTcpEgress.policies.tcp.keepalives.time`|string|Idle time before the first keepalive probe is sent.|
+|`policies[].policy.substrateTcpEgress.policies.tcp.keepalives.interval`|string|Time between successive keepalive probes.|
+|`policies[].policy.substrateTcpEgress.policies.tcp.keepalives.retries`|integer|Number of unacknowledged probes before the connection is considered dead.|
+|`policies[].policy.substrateTcpEgress.policies.tcp.connectTimeout`|string|Maximum time allowed to establish a backend TCP connection.|
+|`policies[].policy.substrateTcpEgress.policies.backendTunnel`|object|Tunnel settings used when connecting to this backend.|
+|`policies[].policy.substrateTcpEgress.policies.backendTunnel.proxy`|object|Proxy backend used to tunnel the connection.<br>Exactly one of service, host, or backend may be set.|
+|`policies[].policy.substrateTcpEgress.policies.backendTunnel.proxy.service`|object|Service reference. Service must be defined in the top level services list.|
+|`policies[].policy.substrateTcpEgress.policies.backendTunnel.proxy.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`policies[].policy.substrateTcpEgress.policies.backendTunnel.proxy.service.port`|integer|Port on the target Service to route to.|
+|`policies[].policy.substrateTcpEgress.policies.backendTunnel.proxy.host`|string|Hostname or IP address|
+|`policies[].policy.substrateTcpEgress.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`policies[].policy.substrateTcpEgress.policies.backendTunnel.mode`|enum|How requests are sent through the proxy.<br>Possible values: `auto`, `connect`.|
+|`policies[].policy.substrateTcpEgress.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
 |`policies[].policy.transformations`|object|Modify request and response headers, bodies, or metadata.|
 |`policies[].policy.transformations.conditional`|[]object|conditional policy entries. An entry without a condition must be the final fallback.|
 |`policies[].policy.transformations.conditional[].condition`|string|condition must evaluate to true for this policy to execute. If unset, the policy is the fallback.|
@@ -41709,6 +43404,571 @@
 |`routeGroups[].routes[].policies.substrateEgress.credentialProviders[].target.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
 |`routeGroups[].routes[].policies.substrateEgress.credentialProviders[].target.policies.backendTunnel.mode`|enum|How requests are sent through the proxy.<br>Possible values: `auto`, `connect`.|
 |`routeGroups[].routes[].policies.substrateEgress.credentialProviders[].target.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
+|`routeGroups[].routes[].policies.substrateTcpIngress`|object|Resolve an actor selected by CONNECT metadata for a TCP connection.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.service`|object|Service reference. Service must be defined in the top level services list.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.service.port`|integer|Port on the target Service to route to.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.host`|string|Hostname or IP address|
+|`routeGroups[].routes[].policies.substrateTcpIngress.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies`|object|Backend policies used when connecting to the service.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.requestHeaderModifier`|object|Modify request headers before forwarding to this backend.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.requestHeaderModifier.add`|object|Headers to append without replacing existing values.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.requestHeaderModifier.set`|object|Headers to set, replacing any existing values.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.requestHeaderModifier.remove`|[]string|Header names to remove.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.transformations`|object|Modify request and response data for this backend.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.transformations.request`|object|Transform the request before it is forwarded.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.transformations.request.add`|object|Headers to append using CEL expressions for values.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.transformations.request.set`|object|Headers to set using CEL expressions for values.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.transformations.request.remove`|[]string|Header names to remove.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.transformations.request.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.transformations.request.body`|string|CEL expression that computes a replacement body.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.transformations.request.metadata`|object|Metadata values to add using CEL expressions.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.transformations.response`|object|Transform the response before it is returned.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.transformations.response.add`|object|Headers to append using CEL expressions for values.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.transformations.response.set`|object|Headers to set using CEL expressions for values.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.transformations.response.remove`|[]string|Header names to remove.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.transformations.response.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.transformations.response.body`|string|CEL expression that computes a replacement body.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.transformations.response.metadata`|object|Metadata values to add using CEL expressions.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendTLS`|object|TLS settings used when connecting to this backend.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendTLS.cert`|string|Client certificate file to present to the backend.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendTLS.key`|string|Private key file for the client certificate.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendTLS.root`|string|Root certificate bundle used to verify the backend certificate.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendTLS.hostname`|string|Server name to use for TLS verification and SNI.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendTLS.insecure`|boolean|Skip certificate trust verification for the backend connection.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendTLS.insecureHost`|boolean|Skip hostname verification for the backend certificate.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendTLS.alpn`|[]string|ALPN protocols to offer to the backend.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendTLS.subjectAltNames`|[]string|Additional subject alternative names accepted for the backend certificate.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendTLS.keyExchangeGroups`|[]enum|Key exchange groups allowed for negotiating TLS.<br>Possible values: `X25519`, `P-256`, `P-384`, `X25519_MLKEM768`.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendTLS.spiffe`|object|Get the gateway's client identity and trust roots from the SPIFFE Workload API.<br>Mutually exclusive with `cert`/`key`/`root`/`insecure`/`insecureHost`.<br>Pin specific upstream SPIFFE IDs via `subjectAltNames` (e.g. `spiffe://td/ns/foo/sa/bar`);<br>If `subjectAltNames` is omitted, any SVID chaining to the SPIFFE trust bundle is accepted|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth`|object|Authentication credentials sent to this backend.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.key`|object||
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.key.file`|string|Path to a file on disk to load the value from.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.passthrough`|object|Forward the validated incoming JWT to the backend.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location`|object|Where to place the forwarded credential in the backend request.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.header`|object|Read the credential from an HTTP header.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.header.name`|string|Header name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.cookie`|object|Read the credential from a request cookie.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.cookie.name`|string|Cookie name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.key`|object|Send a configured secret value to the backend.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.key.value`|object|Secret value to send to the backend. File references are watched, so<br>rotating the file reloads it without a restart.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.key.value.file`|string|Path to a file on disk to load the value from.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.key.location`|object|Where to place the secret in the backend request.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.key.location.header`|object|Read the credential from an HTTP header.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.key.location.header.name`|string|Header name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.key.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.key.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.key.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.key.location.cookie`|object|Read the credential from a request cookie.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.key.location.cookie.name`|string|Cookie name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.key.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.gcp`|object|Authenticate to Google Cloud services.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.gcp.type`|enum|Possible values: `idToken`.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.gcp.audience`|string|Audience for the token. If not set, the destination host will be used.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.gcp.credential`|object|ADC-compatible Google credential JSON. If not set, ambient credentials are used.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.gcp.credential.file`|string|Path to a file on disk to load the value from.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.gcp.type`|enum|Possible values: `accessToken`, `null`.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.aws`|object|Sign backend requests with AWS credentials.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.aws.accessKeyId`|string||
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.aws.secretAccessKey`|string||
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.aws.region`|string||
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.aws.sessionToken`|string||
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.aws.serviceName`|string|AWS SigV4 signing service name (for example, "bedrock", "bedrock-agentcore", or "execute-api").|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.aws.region`|string|AWS SigV4 signing region (for example, "us-east-1"). If unset, typed AWS<br>backends may provide this automatically; otherwise the ambient AWS region<br>is used.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole`|object|Optional AWS STS role to assume before signing requests.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.roleArn`|string|AWS IAM role ARN to assume.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.sessionName`|string|Custom session name (RoleSessionName) for CloudTrail and Cost & Usage Report<br>attribution. Either a static string or `{expression: ...}` with a CEL<br>expression evaluated against each request. Max 64 chars, matching<br>`[\w+=,.@-]`. If unset, the AWS SDK generates a random session name.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.sessionName.expression`|string|CEL expression evaluated against each request to produce the session<br>name, for example `jwt.sub` or `request.headers["x-team"]`. If the<br>expression does not produce a valid session name at request time, the<br>request is rejected.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.tags`|[]object|Session tags passed to STS AssumeRole for cost attribution. Once activated as<br>cost allocation tags, each tag surfaces in the AWS Cost & Usage Report under<br>`resourceTags/user:TagKey`. A tag value is either static (`value`) or a CEL<br>expression evaluated against each request (`expression`).|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.tags[].key`|string|Tag key.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.tags[].value`|string|Static tag value.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.tags[].expression`|string|CEL expression evaluated against each request to produce the tag value, for<br>example `jwt.sub` or `request.headers["x-app"]`. If the expression does not<br>produce a valid tag value at request time, the request is rejected.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.azure`|object|Authenticate to Azure services.<br>Exactly one of explicitConfig, developerImplicit, or implicit may be set.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig`|object|Use explicit Azure credentials<br>Exactly one of clientSecret, managedIdentity, or workloadIdentity may be set.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.clientSecret`|object||
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.clientSecret.tenant_id`|string||
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.clientSecret.client_id`|string||
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.clientSecret.client_secret`|string||
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.managedIdentity`|object||
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity`|object||
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.clientId`|string||
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.objectId`|string||
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.resourceId`|string||
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.workloadIdentity`|object||
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.azure.developerImplicit`|object|Use implicit Azure auth. Note that this is for developer use-cases only!|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.azure.implicit`|object|Automatically detect authentication method based on environment.<br>Uses Workload Identity on K8s, Managed Identity on Azure VMs, or Developer Tools locally.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.azure.scopes`|[]string|Scopes requested for the Azure access token. When unset, the scope is<br>inferred from the backend hostname.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign`|object|Sign a short-lived JWT with a private key on each request.<br>Signs a short-lived JWT with a private key on each request and sends it to<br>the backend. For upstreams that require per-request keypair JWTs (e.g. the<br>Snowflake SQL API) rather than a static credential.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.alg`|enum|JWS signing algorithm. Defaults to RS256.<br>Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.kid`|string|Optional JWS key ID header.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.claims`|object|Static claims added to every token (e.g. iss, sub, aud). Values may be<br>any JSON value (e.g. a string, number, bool, or array). `iat`, `exp`,<br>and `nbf` are reserved for the signer and cannot be configured here.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.claims.*`|any||
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.ttl`|string|Token lifetime used for `exp`. Defaults to 300s.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location`|object|Where the signed token is written. Defaults to the Authorization<br>header with a `Bearer ` prefix.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.header`|object|Read the credential from an HTTP header.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.header.name`|string|Header name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.cookie`|object|Read the credential from a request cookie.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.cookie.name`|string|Cookie name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange`|object|Use OAuth token exchange flows to obtain a backend access token.<br>Exactly one of service, host, or backend may be set.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.service`|object|Service reference. Service must be defined in the top level services list.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.service.port`|integer|Port on the target Service to route to.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.host`|string|Hostname or IP address|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.policies`|any|Backend policies used when connecting to the service.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.grantType`|enum|Selects which RFC the request follows; defaults to token exchange (RFC 8693).<br>Possible values: `tokenExchange`, `jwtBearer`.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken`|object|Where the subject token is read from, and its token type. Defaults to the<br>Authorization Bearer header with token type access_token.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source`|object|Where the token is read from in the incoming request. The CEL `expression`<br>source is permitted (extraction only).<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.tokenType`|string|RFC 8693 token type URN; when omitted defaults to access_token|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken`|object|RFC 8693 delegation actor token. Token-exchange grant only.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source`|object|Where the actor token is read from in the incoming request. The CEL<br>`expression` source is permitted (extraction only). Unlike subject tokens,<br>actor tokens have no default source.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.header`|object|Read the credential from an HTTP header.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.header.name`|string|Header name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.cookie`|object|Read the credential from a request cookie.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.tokenType`|string|RFC 8693 actor token type URN; when omitted defaults to access_token and is still sent|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.enforceMayAct`|boolean|Enforce that the subject's `may_act` claim authorizes the actor before exchanging.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.audiences`|[]string|`audience` parameters naming the target services at the authorization server.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.scopes`|[]string|`scope` values for the requested token, sent space-delimited.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.resources`|[]string|`resource` parameters with the target service URIs.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.requestedTokenType`|string|`requested_token_type` parameter. When unset it is omitted from the request<br>(RFC 8693 makes it optional). Some providers (e.g. Auth0 custom token exchange)<br>reject an explicit access_token value paired with a custom `subject_token_type`.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth`|object|Client authentication used when calling the token endpoint.<br>When unset, no client authentication fields are sent.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object||
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.kid`|string||
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.assertionAudience`|string||
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.additionalParams`|object|Extra form parameters appended to the token request.<br>Values are CEL expressions evaluated against the incoming request.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation`|object|Where to place the exchanged token in the backend request. Defaults to the<br>Authorization header with a "Bearer " prefix. The CEL `expression` source is<br>not valid here (it cannot insert).<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header`|object|Read the credential from an HTTP header.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header.name`|string|Header name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.cookie`|object|Read the credential from a request cookie.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.cookie.name`|string|Cookie name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess`|object|Use Cross App Access (Identity Assertion / ID-JAG) to obtain a backend access token.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider`|object|The user's IdP authorization server, used for the RFC 8693 token exchange.<br>Exactly one of service, host, or backend may be set.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.service`|object|Service reference. Service must be defined in the top level services list.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.service.port`|integer|Port on the target Service to route to.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.host`|string|Hostname or IP address|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.policies`|any|Backend policies used when connecting to the service.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth`|object|Client authentication used when calling the token endpoint.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret`|object||
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.kid`|string||
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.assertionAudience`|string||
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer`|object|The resource authorization server, which exchanges the ID-JAG for an access token.<br>Exactly one of service, host, or backend may be set.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service`|object|Service reference. Service must be defined in the top level services list.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service.port`|integer|Port on the target Service to route to.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.host`|string|Hostname or IP address|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.policies`|any|Backend policies used when connecting to the service.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth`|object|Client authentication used when calling the token endpoint.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object||
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.kid`|string||
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.assertionAudience`|string||
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.audience`|string|Identifier of the resource authorization server. The issued ID-JAG is bound to this audience.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resources`|[]string|`resource` parameters naming the protected resource APIs.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.scopes`|[]string|`scope` values requested when obtaining the ID-JAG from the identity provider, sent<br>space-delimited.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.accessTokenScopes`|[]string|`scope` values requested when exchanging the ID-JAG for an access token. When unset,<br>inherits `scopes`. When empty, omits `scope`.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken`|object|Subject token sent to the identity provider. Defaults to an OpenID Connect ID token read<br>from the Authorization Bearer header.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source`|object|Where to read the subject token. Defaults to the Authorization Bearer header.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.tokenType`|string|RFC 8693 subject token type URI. Defaults to an OpenID Connect ID token.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.credentials`|[]object||
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location`|object|Where the credential is inserted on the backend request.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.header`|object|Read the credential from an HTTP header.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.header.name`|string|Header name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.cookie`|object|Read the credential from a request cookie.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.cookie.name`|string|Cookie name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].key`|object|Credential value.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].key.file`|string|Path to a file on disk to load the value from.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.http`|object|HTTP protocol settings for this backend.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.http.version`|string|HTTP version to use when connecting to the backend.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.http.requestTimeout`|string|Maximum time allowed for a backend HTTP request.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.http.maxConnectionDuration`|string|Maximum time a connection to the backend may stay open. A connection past this duration is<br>not reused for new requests; a fresh connection is established instead, while in-flight<br>requests are not interrupted.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.tcp`|object|TCP protocol settings for this backend.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.tcp.keepalives`|object|TCP keepalive settings for backend connections.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.tcp.keepalives.enabled`|boolean|Enable TCP keepalive probes on backend connections. Defaults to true.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.tcp.keepalives.time`|string|Idle time before the first keepalive probe is sent.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.tcp.keepalives.interval`|string|Time between successive keepalive probes.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.tcp.keepalives.retries`|integer|Number of unacknowledged probes before the connection is considered dead.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.tcp.connectTimeout`|string|Maximum time allowed to establish a backend TCP connection.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendTunnel`|object|Tunnel settings used when connecting to this backend.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendTunnel.proxy`|object|Proxy backend used to tunnel the connection.<br>Exactly one of service, host, or backend may be set.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendTunnel.proxy.service`|object|Service reference. Service must be defined in the top level services list.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendTunnel.proxy.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendTunnel.proxy.service.port`|integer|Port on the target Service to route to.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendTunnel.proxy.host`|string|Hostname or IP address|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendTunnel.mode`|enum|How requests are sent through the proxy.<br>Possible values: `auto`, `connect`.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
+|`routeGroups[].routes[].policies.substrateTcpIngress.connectTargetPort`|integer|Port on the resumed worker pod's atunnel CONNECT listener. Defaults to 8443.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.cacheTtl`|string|How long successful actor assignments are reused. Defaults to 5s; 0s disables reuse.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.requestParking`|object|Bounded request parking while a suspended actor is waiting for worker capacity.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.requestParking.budget`|string|Maximum time to wait for the actor to become routable.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.requestParking.max`|integer|Maximum concurrent requests that may wait for actor resumption. Set to 0 to disable parking.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.requestParking.retryInterval`|string|Initial delay between ResumeActor retries while parked.|
+|`routeGroups[].routes[].policies.substrateTcpIngress.requestParking.retryFactor`|number|Multiplier applied to the delay after each parked retry.|
+|`routeGroups[].routes[].policies.substrateTcpEgress`|object|Enforce actor egress policy before forwarding a TCP connection.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.service`|object|Service reference. Service must be defined in the top level services list.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.service.port`|integer|Port on the target Service to route to.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.host`|string|Hostname or IP address|
+|`routeGroups[].routes[].policies.substrateTcpEgress.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies`|object|Enforces the actor's egress policy once before forwarding a TCP connection.<br>Backend policies used when connecting to the service.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.requestHeaderModifier`|object|Modify request headers before forwarding to this backend.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.requestHeaderModifier.add`|object|Headers to append without replacing existing values.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.requestHeaderModifier.set`|object|Headers to set, replacing any existing values.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.requestHeaderModifier.remove`|[]string|Header names to remove.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.transformations`|object|Modify request and response data for this backend.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.transformations.request`|object|Transform the request before it is forwarded.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.transformations.request.add`|object|Headers to append using CEL expressions for values.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.transformations.request.set`|object|Headers to set using CEL expressions for values.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.transformations.request.remove`|[]string|Header names to remove.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.transformations.request.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.transformations.request.body`|string|CEL expression that computes a replacement body.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.transformations.request.metadata`|object|Metadata values to add using CEL expressions.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.transformations.response`|object|Transform the response before it is returned.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.transformations.response.add`|object|Headers to append using CEL expressions for values.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.transformations.response.set`|object|Headers to set using CEL expressions for values.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.transformations.response.remove`|[]string|Header names to remove.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.transformations.response.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.transformations.response.body`|string|CEL expression that computes a replacement body.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.transformations.response.metadata`|object|Metadata values to add using CEL expressions.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendTLS`|object|TLS settings used when connecting to this backend.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendTLS.cert`|string|Client certificate file to present to the backend.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendTLS.key`|string|Private key file for the client certificate.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendTLS.root`|string|Root certificate bundle used to verify the backend certificate.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendTLS.hostname`|string|Server name to use for TLS verification and SNI.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendTLS.insecure`|boolean|Skip certificate trust verification for the backend connection.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendTLS.insecureHost`|boolean|Skip hostname verification for the backend certificate.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendTLS.alpn`|[]string|ALPN protocols to offer to the backend.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendTLS.subjectAltNames`|[]string|Additional subject alternative names accepted for the backend certificate.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendTLS.keyExchangeGroups`|[]enum|Key exchange groups allowed for negotiating TLS.<br>Possible values: `X25519`, `P-256`, `P-384`, `X25519_MLKEM768`.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendTLS.spiffe`|object|Get the gateway's client identity and trust roots from the SPIFFE Workload API.<br>Mutually exclusive with `cert`/`key`/`root`/`insecure`/`insecureHost`.<br>Pin specific upstream SPIFFE IDs via `subjectAltNames` (e.g. `spiffe://td/ns/foo/sa/bar`);<br>If `subjectAltNames` is omitted, any SVID chaining to the SPIFFE trust bundle is accepted|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth`|object|Authentication credentials sent to this backend.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.key`|object||
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.key.file`|string|Path to a file on disk to load the value from.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.passthrough`|object|Forward the validated incoming JWT to the backend.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location`|object|Where to place the forwarded credential in the backend request.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.header`|object|Read the credential from an HTTP header.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.header.name`|string|Header name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.cookie`|object|Read the credential from a request cookie.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.cookie.name`|string|Cookie name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.key`|object|Send a configured secret value to the backend.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.key.value`|object|Secret value to send to the backend. File references are watched, so<br>rotating the file reloads it without a restart.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.key.value.file`|string|Path to a file on disk to load the value from.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.key.location`|object|Where to place the secret in the backend request.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.key.location.header`|object|Read the credential from an HTTP header.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.key.location.header.name`|string|Header name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.key.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.key.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.key.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.key.location.cookie`|object|Read the credential from a request cookie.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.key.location.cookie.name`|string|Cookie name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.key.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.gcp`|object|Authenticate to Google Cloud services.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.gcp.type`|enum|Possible values: `idToken`.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.gcp.audience`|string|Audience for the token. If not set, the destination host will be used.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.gcp.credential`|object|ADC-compatible Google credential JSON. If not set, ambient credentials are used.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.gcp.credential.file`|string|Path to a file on disk to load the value from.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.gcp.type`|enum|Possible values: `accessToken`, `null`.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.aws`|object|Sign backend requests with AWS credentials.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.aws.accessKeyId`|string||
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.aws.secretAccessKey`|string||
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.aws.region`|string||
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.aws.sessionToken`|string||
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.aws.serviceName`|string|AWS SigV4 signing service name (for example, "bedrock", "bedrock-agentcore", or "execute-api").|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.aws.region`|string|AWS SigV4 signing region (for example, "us-east-1"). If unset, typed AWS<br>backends may provide this automatically; otherwise the ambient AWS region<br>is used.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole`|object|Optional AWS STS role to assume before signing requests.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.roleArn`|string|AWS IAM role ARN to assume.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.sessionName`|string|Custom session name (RoleSessionName) for CloudTrail and Cost & Usage Report<br>attribution. Either a static string or `{expression: ...}` with a CEL<br>expression evaluated against each request. Max 64 chars, matching<br>`[\w+=,.@-]`. If unset, the AWS SDK generates a random session name.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.sessionName.expression`|string|CEL expression evaluated against each request to produce the session<br>name, for example `jwt.sub` or `request.headers["x-team"]`. If the<br>expression does not produce a valid session name at request time, the<br>request is rejected.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.tags`|[]object|Session tags passed to STS AssumeRole for cost attribution. Once activated as<br>cost allocation tags, each tag surfaces in the AWS Cost & Usage Report under<br>`resourceTags/user:TagKey`. A tag value is either static (`value`) or a CEL<br>expression evaluated against each request (`expression`).|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.tags[].key`|string|Tag key.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.tags[].value`|string|Static tag value.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.tags[].expression`|string|CEL expression evaluated against each request to produce the tag value, for<br>example `jwt.sub` or `request.headers["x-app"]`. If the expression does not<br>produce a valid tag value at request time, the request is rejected.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.azure`|object|Authenticate to Azure services.<br>Exactly one of explicitConfig, developerImplicit, or implicit may be set.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig`|object|Use explicit Azure credentials<br>Exactly one of clientSecret, managedIdentity, or workloadIdentity may be set.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.clientSecret`|object||
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.clientSecret.tenant_id`|string||
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.clientSecret.client_id`|string||
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.clientSecret.client_secret`|string||
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.managedIdentity`|object||
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity`|object||
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.clientId`|string||
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.objectId`|string||
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.resourceId`|string||
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.workloadIdentity`|object||
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.azure.developerImplicit`|object|Use implicit Azure auth. Note that this is for developer use-cases only!|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.azure.implicit`|object|Automatically detect authentication method based on environment.<br>Uses Workload Identity on K8s, Managed Identity on Azure VMs, or Developer Tools locally.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.azure.scopes`|[]string|Scopes requested for the Azure access token. When unset, the scope is<br>inferred from the backend hostname.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign`|object|Sign a short-lived JWT with a private key on each request.<br>Signs a short-lived JWT with a private key on each request and sends it to<br>the backend. For upstreams that require per-request keypair JWTs (e.g. the<br>Snowflake SQL API) rather than a static credential.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.alg`|enum|JWS signing algorithm. Defaults to RS256.<br>Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.kid`|string|Optional JWS key ID header.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.claims`|object|Static claims added to every token (e.g. iss, sub, aud). Values may be<br>any JSON value (e.g. a string, number, bool, or array). `iat`, `exp`,<br>and `nbf` are reserved for the signer and cannot be configured here.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.claims.*`|any||
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.ttl`|string|Token lifetime used for `exp`. Defaults to 300s.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location`|object|Where the signed token is written. Defaults to the Authorization<br>header with a `Bearer ` prefix.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.header`|object|Read the credential from an HTTP header.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.header.name`|string|Header name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.cookie`|object|Read the credential from a request cookie.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.cookie.name`|string|Cookie name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange`|object|Use OAuth token exchange flows to obtain a backend access token.<br>Exactly one of service, host, or backend may be set.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.service`|object|Service reference. Service must be defined in the top level services list.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.service.port`|integer|Port on the target Service to route to.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.host`|string|Hostname or IP address|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.policies`|any|Backend policies used when connecting to the service.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.grantType`|enum|Selects which RFC the request follows; defaults to token exchange (RFC 8693).<br>Possible values: `tokenExchange`, `jwtBearer`.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken`|object|Where the subject token is read from, and its token type. Defaults to the<br>Authorization Bearer header with token type access_token.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source`|object|Where the token is read from in the incoming request. The CEL `expression`<br>source is permitted (extraction only).<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.tokenType`|string|RFC 8693 token type URN; when omitted defaults to access_token|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken`|object|RFC 8693 delegation actor token. Token-exchange grant only.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source`|object|Where the actor token is read from in the incoming request. The CEL<br>`expression` source is permitted (extraction only). Unlike subject tokens,<br>actor tokens have no default source.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.header`|object|Read the credential from an HTTP header.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.header.name`|string|Header name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.cookie`|object|Read the credential from a request cookie.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.tokenType`|string|RFC 8693 actor token type URN; when omitted defaults to access_token and is still sent|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.enforceMayAct`|boolean|Enforce that the subject's `may_act` claim authorizes the actor before exchanging.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.audiences`|[]string|`audience` parameters naming the target services at the authorization server.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.scopes`|[]string|`scope` values for the requested token, sent space-delimited.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.resources`|[]string|`resource` parameters with the target service URIs.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.requestedTokenType`|string|`requested_token_type` parameter. When unset it is omitted from the request<br>(RFC 8693 makes it optional). Some providers (e.g. Auth0 custom token exchange)<br>reject an explicit access_token value paired with a custom `subject_token_type`.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth`|object|Client authentication used when calling the token endpoint.<br>When unset, no client authentication fields are sent.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object||
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.kid`|string||
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.assertionAudience`|string||
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.additionalParams`|object|Extra form parameters appended to the token request.<br>Values are CEL expressions evaluated against the incoming request.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation`|object|Where to place the exchanged token in the backend request. Defaults to the<br>Authorization header with a "Bearer " prefix. The CEL `expression` source is<br>not valid here (it cannot insert).<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header`|object|Read the credential from an HTTP header.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header.name`|string|Header name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.cookie`|object|Read the credential from a request cookie.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.cookie.name`|string|Cookie name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess`|object|Use Cross App Access (Identity Assertion / ID-JAG) to obtain a backend access token.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider`|object|The user's IdP authorization server, used for the RFC 8693 token exchange.<br>Exactly one of service, host, or backend may be set.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.service`|object|Service reference. Service must be defined in the top level services list.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.service.port`|integer|Port on the target Service to route to.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.host`|string|Hostname or IP address|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.policies`|any|Backend policies used when connecting to the service.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth`|object|Client authentication used when calling the token endpoint.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret`|object||
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.kid`|string||
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.assertionAudience`|string||
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer`|object|The resource authorization server, which exchanges the ID-JAG for an access token.<br>Exactly one of service, host, or backend may be set.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service`|object|Service reference. Service must be defined in the top level services list.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service.port`|integer|Port on the target Service to route to.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.host`|string|Hostname or IP address|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.policies`|any|Backend policies used when connecting to the service.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth`|object|Client authentication used when calling the token endpoint.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object||
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.kid`|string||
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.assertionAudience`|string||
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.audience`|string|Identifier of the resource authorization server. The issued ID-JAG is bound to this audience.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resources`|[]string|`resource` parameters naming the protected resource APIs.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.scopes`|[]string|`scope` values requested when obtaining the ID-JAG from the identity provider, sent<br>space-delimited.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.accessTokenScopes`|[]string|`scope` values requested when exchanging the ID-JAG for an access token. When unset,<br>inherits `scopes`. When empty, omits `scope`.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken`|object|Subject token sent to the identity provider. Defaults to an OpenID Connect ID token read<br>from the Authorization Bearer header.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source`|object|Where to read the subject token. Defaults to the Authorization Bearer header.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.tokenType`|string|RFC 8693 subject token type URI. Defaults to an OpenID Connect ID token.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.credentials`|[]object||
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location`|object|Where the credential is inserted on the backend request.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.header`|object|Read the credential from an HTTP header.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.header.name`|string|Header name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.cookie`|object|Read the credential from a request cookie.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.cookie.name`|string|Cookie name containing the credential.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].key`|object|Credential value.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].key.file`|string|Path to a file on disk to load the value from.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.http`|object|HTTP protocol settings for this backend.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.http.version`|string|HTTP version to use when connecting to the backend.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.http.requestTimeout`|string|Maximum time allowed for a backend HTTP request.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.http.maxConnectionDuration`|string|Maximum time a connection to the backend may stay open. A connection past this duration is<br>not reused for new requests; a fresh connection is established instead, while in-flight<br>requests are not interrupted.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.tcp`|object|TCP protocol settings for this backend.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.tcp.keepalives`|object|TCP keepalive settings for backend connections.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.tcp.keepalives.enabled`|boolean|Enable TCP keepalive probes on backend connections. Defaults to true.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.tcp.keepalives.time`|string|Idle time before the first keepalive probe is sent.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.tcp.keepalives.interval`|string|Time between successive keepalive probes.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.tcp.keepalives.retries`|integer|Number of unacknowledged probes before the connection is considered dead.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.tcp.connectTimeout`|string|Maximum time allowed to establish a backend TCP connection.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendTunnel`|object|Tunnel settings used when connecting to this backend.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendTunnel.proxy`|object|Proxy backend used to tunnel the connection.<br>Exactly one of service, host, or backend may be set.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendTunnel.proxy.service`|object|Service reference. Service must be defined in the top level services list.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendTunnel.proxy.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendTunnel.proxy.service.port`|integer|Port on the target Service to route to.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendTunnel.proxy.host`|string|Hostname or IP address|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendTunnel.mode`|enum|How requests are sent through the proxy.<br>Possible values: `auto`, `connect`.|
+|`routeGroups[].routes[].policies.substrateTcpEgress.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
 |`routeGroups[].routes[].policies.transformations`|object|Modify request and response headers, bodies, or metadata.|
 |`routeGroups[].routes[].policies.transformations.conditional`|[]object|conditional policy entries. An entry without a condition must be the final fallback.|
 |`routeGroups[].routes[].policies.transformations.conditional[].condition`|string|condition must evaluate to true for this policy to execute. If unset, the policy is the fallback.|
@@ -60687,6 +62947,571 @@
 |`routes[].policies.substrateEgress.credentialProviders[].target.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
 |`routes[].policies.substrateEgress.credentialProviders[].target.policies.backendTunnel.mode`|enum|How requests are sent through the proxy.<br>Possible values: `auto`, `connect`.|
 |`routes[].policies.substrateEgress.credentialProviders[].target.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
+|`routes[].policies.substrateTcpIngress`|object|Resolve an actor selected by CONNECT metadata for a TCP connection.|
+|`routes[].policies.substrateTcpIngress.service`|object|Service reference. Service must be defined in the top level services list.|
+|`routes[].policies.substrateTcpIngress.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`routes[].policies.substrateTcpIngress.service.port`|integer|Port on the target Service to route to.|
+|`routes[].policies.substrateTcpIngress.host`|string|Hostname or IP address|
+|`routes[].policies.substrateTcpIngress.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`routes[].policies.substrateTcpIngress.policies`|object|Backend policies used when connecting to the service.|
+|`routes[].policies.substrateTcpIngress.policies.requestHeaderModifier`|object|Modify request headers before forwarding to this backend.|
+|`routes[].policies.substrateTcpIngress.policies.requestHeaderModifier.add`|object|Headers to append without replacing existing values.|
+|`routes[].policies.substrateTcpIngress.policies.requestHeaderModifier.set`|object|Headers to set, replacing any existing values.|
+|`routes[].policies.substrateTcpIngress.policies.requestHeaderModifier.remove`|[]string|Header names to remove.|
+|`routes[].policies.substrateTcpIngress.policies.transformations`|object|Modify request and response data for this backend.|
+|`routes[].policies.substrateTcpIngress.policies.transformations.request`|object|Transform the request before it is forwarded.|
+|`routes[].policies.substrateTcpIngress.policies.transformations.request.add`|object|Headers to append using CEL expressions for values.|
+|`routes[].policies.substrateTcpIngress.policies.transformations.request.set`|object|Headers to set using CEL expressions for values.|
+|`routes[].policies.substrateTcpIngress.policies.transformations.request.remove`|[]string|Header names to remove.|
+|`routes[].policies.substrateTcpIngress.policies.transformations.request.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
+|`routes[].policies.substrateTcpIngress.policies.transformations.request.body`|string|CEL expression that computes a replacement body.|
+|`routes[].policies.substrateTcpIngress.policies.transformations.request.metadata`|object|Metadata values to add using CEL expressions.|
+|`routes[].policies.substrateTcpIngress.policies.transformations.response`|object|Transform the response before it is returned.|
+|`routes[].policies.substrateTcpIngress.policies.transformations.response.add`|object|Headers to append using CEL expressions for values.|
+|`routes[].policies.substrateTcpIngress.policies.transformations.response.set`|object|Headers to set using CEL expressions for values.|
+|`routes[].policies.substrateTcpIngress.policies.transformations.response.remove`|[]string|Header names to remove.|
+|`routes[].policies.substrateTcpIngress.policies.transformations.response.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
+|`routes[].policies.substrateTcpIngress.policies.transformations.response.body`|string|CEL expression that computes a replacement body.|
+|`routes[].policies.substrateTcpIngress.policies.transformations.response.metadata`|object|Metadata values to add using CEL expressions.|
+|`routes[].policies.substrateTcpIngress.policies.backendTLS`|object|TLS settings used when connecting to this backend.|
+|`routes[].policies.substrateTcpIngress.policies.backendTLS.cert`|string|Client certificate file to present to the backend.|
+|`routes[].policies.substrateTcpIngress.policies.backendTLS.key`|string|Private key file for the client certificate.|
+|`routes[].policies.substrateTcpIngress.policies.backendTLS.root`|string|Root certificate bundle used to verify the backend certificate.|
+|`routes[].policies.substrateTcpIngress.policies.backendTLS.hostname`|string|Server name to use for TLS verification and SNI.|
+|`routes[].policies.substrateTcpIngress.policies.backendTLS.insecure`|boolean|Skip certificate trust verification for the backend connection.|
+|`routes[].policies.substrateTcpIngress.policies.backendTLS.insecureHost`|boolean|Skip hostname verification for the backend certificate.|
+|`routes[].policies.substrateTcpIngress.policies.backendTLS.alpn`|[]string|ALPN protocols to offer to the backend.|
+|`routes[].policies.substrateTcpIngress.policies.backendTLS.subjectAltNames`|[]string|Additional subject alternative names accepted for the backend certificate.|
+|`routes[].policies.substrateTcpIngress.policies.backendTLS.keyExchangeGroups`|[]enum|Key exchange groups allowed for negotiating TLS.<br>Possible values: `X25519`, `P-256`, `P-384`, `X25519_MLKEM768`.|
+|`routes[].policies.substrateTcpIngress.policies.backendTLS.spiffe`|object|Get the gateway's client identity and trust roots from the SPIFFE Workload API.<br>Mutually exclusive with `cert`/`key`/`root`/`insecure`/`insecureHost`.<br>Pin specific upstream SPIFFE IDs via `subjectAltNames` (e.g. `spiffe://td/ns/foo/sa/bar`);<br>If `subjectAltNames` is omitted, any SVID chaining to the SPIFFE trust bundle is accepted|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth`|object|Authentication credentials sent to this backend.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.key`|object||
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.key.file`|string|Path to a file on disk to load the value from.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.passthrough`|object|Forward the validated incoming JWT to the backend.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location`|object|Where to place the forwarded credential in the backend request.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.header`|object|Read the credential from an HTTP header.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.header.name`|string|Header name containing the credential.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.cookie`|object|Read the credential from a request cookie.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.cookie.name`|string|Cookie name containing the credential.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.key`|object|Send a configured secret value to the backend.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.key.value`|object|Secret value to send to the backend. File references are watched, so<br>rotating the file reloads it without a restart.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.key.value.file`|string|Path to a file on disk to load the value from.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.key.location`|object|Where to place the secret in the backend request.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.key.location.header`|object|Read the credential from an HTTP header.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.key.location.header.name`|string|Header name containing the credential.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.key.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.key.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.key.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.key.location.cookie`|object|Read the credential from a request cookie.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.key.location.cookie.name`|string|Cookie name containing the credential.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.key.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.gcp`|object|Authenticate to Google Cloud services.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.gcp.type`|enum|Possible values: `idToken`.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.gcp.audience`|string|Audience for the token. If not set, the destination host will be used.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.gcp.credential`|object|ADC-compatible Google credential JSON. If not set, ambient credentials are used.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.gcp.credential.file`|string|Path to a file on disk to load the value from.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.gcp.type`|enum|Possible values: `accessToken`, `null`.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.aws`|object|Sign backend requests with AWS credentials.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.aws.accessKeyId`|string||
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.aws.secretAccessKey`|string||
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.aws.region`|string||
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.aws.sessionToken`|string||
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.aws.serviceName`|string|AWS SigV4 signing service name (for example, "bedrock", "bedrock-agentcore", or "execute-api").|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.aws.region`|string|AWS SigV4 signing region (for example, "us-east-1"). If unset, typed AWS<br>backends may provide this automatically; otherwise the ambient AWS region<br>is used.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole`|object|Optional AWS STS role to assume before signing requests.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.roleArn`|string|AWS IAM role ARN to assume.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.sessionName`|string|Custom session name (RoleSessionName) for CloudTrail and Cost & Usage Report<br>attribution. Either a static string or `{expression: ...}` with a CEL<br>expression evaluated against each request. Max 64 chars, matching<br>`[\w+=,.@-]`. If unset, the AWS SDK generates a random session name.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.sessionName.expression`|string|CEL expression evaluated against each request to produce the session<br>name, for example `jwt.sub` or `request.headers["x-team"]`. If the<br>expression does not produce a valid session name at request time, the<br>request is rejected.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.tags`|[]object|Session tags passed to STS AssumeRole for cost attribution. Once activated as<br>cost allocation tags, each tag surfaces in the AWS Cost & Usage Report under<br>`resourceTags/user:TagKey`. A tag value is either static (`value`) or a CEL<br>expression evaluated against each request (`expression`).|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.tags[].key`|string|Tag key.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.tags[].value`|string|Static tag value.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.tags[].expression`|string|CEL expression evaluated against each request to produce the tag value, for<br>example `jwt.sub` or `request.headers["x-app"]`. If the expression does not<br>produce a valid tag value at request time, the request is rejected.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.azure`|object|Authenticate to Azure services.<br>Exactly one of explicitConfig, developerImplicit, or implicit may be set.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig`|object|Use explicit Azure credentials<br>Exactly one of clientSecret, managedIdentity, or workloadIdentity may be set.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.clientSecret`|object||
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.clientSecret.tenant_id`|string||
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.clientSecret.client_id`|string||
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.clientSecret.client_secret`|string||
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.managedIdentity`|object||
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity`|object||
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.clientId`|string||
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.objectId`|string||
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.resourceId`|string||
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.workloadIdentity`|object||
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.azure.developerImplicit`|object|Use implicit Azure auth. Note that this is for developer use-cases only!|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.azure.implicit`|object|Automatically detect authentication method based on environment.<br>Uses Workload Identity on K8s, Managed Identity on Azure VMs, or Developer Tools locally.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.azure.scopes`|[]string|Scopes requested for the Azure access token. When unset, the scope is<br>inferred from the backend hostname.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign`|object|Sign a short-lived JWT with a private key on each request.<br>Signs a short-lived JWT with a private key on each request and sends it to<br>the backend. For upstreams that require per-request keypair JWTs (e.g. the<br>Snowflake SQL API) rather than a static credential.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.alg`|enum|JWS signing algorithm. Defaults to RS256.<br>Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.kid`|string|Optional JWS key ID header.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.claims`|object|Static claims added to every token (e.g. iss, sub, aud). Values may be<br>any JSON value (e.g. a string, number, bool, or array). `iat`, `exp`,<br>and `nbf` are reserved for the signer and cannot be configured here.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.claims.*`|any||
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.ttl`|string|Token lifetime used for `exp`. Defaults to 300s.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location`|object|Where the signed token is written. Defaults to the Authorization<br>header with a `Bearer ` prefix.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.header`|object|Read the credential from an HTTP header.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.header.name`|string|Header name containing the credential.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.cookie`|object|Read the credential from a request cookie.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.cookie.name`|string|Cookie name containing the credential.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange`|object|Use OAuth token exchange flows to obtain a backend access token.<br>Exactly one of service, host, or backend may be set.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.service`|object|Service reference. Service must be defined in the top level services list.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.service.port`|integer|Port on the target Service to route to.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.host`|string|Hostname or IP address|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.policies`|any|Backend policies used when connecting to the service.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.grantType`|enum|Selects which RFC the request follows; defaults to token exchange (RFC 8693).<br>Possible values: `tokenExchange`, `jwtBearer`.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken`|object|Where the subject token is read from, and its token type. Defaults to the<br>Authorization Bearer header with token type access_token.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source`|object|Where the token is read from in the incoming request. The CEL `expression`<br>source is permitted (extraction only).<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.tokenType`|string|RFC 8693 token type URN; when omitted defaults to access_token|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken`|object|RFC 8693 delegation actor token. Token-exchange grant only.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source`|object|Where the actor token is read from in the incoming request. The CEL<br>`expression` source is permitted (extraction only). Unlike subject tokens,<br>actor tokens have no default source.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.header`|object|Read the credential from an HTTP header.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.header.name`|string|Header name containing the credential.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.cookie`|object|Read the credential from a request cookie.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.tokenType`|string|RFC 8693 actor token type URN; when omitted defaults to access_token and is still sent|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.enforceMayAct`|boolean|Enforce that the subject's `may_act` claim authorizes the actor before exchanging.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.audiences`|[]string|`audience` parameters naming the target services at the authorization server.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.scopes`|[]string|`scope` values for the requested token, sent space-delimited.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.resources`|[]string|`resource` parameters with the target service URIs.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.requestedTokenType`|string|`requested_token_type` parameter. When unset it is omitted from the request<br>(RFC 8693 makes it optional). Some providers (e.g. Auth0 custom token exchange)<br>reject an explicit access_token value paired with a custom `subject_token_type`.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth`|object|Client authentication used when calling the token endpoint.<br>When unset, no client authentication fields are sent.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object||
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.kid`|string||
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.assertionAudience`|string||
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.additionalParams`|object|Extra form parameters appended to the token request.<br>Values are CEL expressions evaluated against the incoming request.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation`|object|Where to place the exchanged token in the backend request. Defaults to the<br>Authorization header with a "Bearer " prefix. The CEL `expression` source is<br>not valid here (it cannot insert).<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header`|object|Read the credential from an HTTP header.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header.name`|string|Header name containing the credential.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.cookie`|object|Read the credential from a request cookie.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.cookie.name`|string|Cookie name containing the credential.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess`|object|Use Cross App Access (Identity Assertion / ID-JAG) to obtain a backend access token.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider`|object|The user's IdP authorization server, used for the RFC 8693 token exchange.<br>Exactly one of service, host, or backend may be set.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.service`|object|Service reference. Service must be defined in the top level services list.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.service.port`|integer|Port on the target Service to route to.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.host`|string|Hostname or IP address|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.policies`|any|Backend policies used when connecting to the service.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth`|object|Client authentication used when calling the token endpoint.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret`|object||
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.kid`|string||
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.assertionAudience`|string||
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer`|object|The resource authorization server, which exchanges the ID-JAG for an access token.<br>Exactly one of service, host, or backend may be set.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service`|object|Service reference. Service must be defined in the top level services list.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service.port`|integer|Port on the target Service to route to.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.host`|string|Hostname or IP address|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.policies`|any|Backend policies used when connecting to the service.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth`|object|Client authentication used when calling the token endpoint.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object||
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.kid`|string||
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.assertionAudience`|string||
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.audience`|string|Identifier of the resource authorization server. The issued ID-JAG is bound to this audience.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resources`|[]string|`resource` parameters naming the protected resource APIs.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.scopes`|[]string|`scope` values requested when obtaining the ID-JAG from the identity provider, sent<br>space-delimited.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.accessTokenScopes`|[]string|`scope` values requested when exchanging the ID-JAG for an access token. When unset,<br>inherits `scopes`. When empty, omits `scope`.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken`|object|Subject token sent to the identity provider. Defaults to an OpenID Connect ID token read<br>from the Authorization Bearer header.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source`|object|Where to read the subject token. Defaults to the Authorization Bearer header.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.tokenType`|string|RFC 8693 subject token type URI. Defaults to an OpenID Connect ID token.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.credentials`|[]object||
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location`|object|Where the credential is inserted on the backend request.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.header`|object|Read the credential from an HTTP header.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.header.name`|string|Header name containing the credential.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.cookie`|object|Read the credential from a request cookie.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.cookie.name`|string|Cookie name containing the credential.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].key`|object|Credential value.|
+|`routes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].key.file`|string|Path to a file on disk to load the value from.|
+|`routes[].policies.substrateTcpIngress.policies.http`|object|HTTP protocol settings for this backend.|
+|`routes[].policies.substrateTcpIngress.policies.http.version`|string|HTTP version to use when connecting to the backend.|
+|`routes[].policies.substrateTcpIngress.policies.http.requestTimeout`|string|Maximum time allowed for a backend HTTP request.|
+|`routes[].policies.substrateTcpIngress.policies.http.maxConnectionDuration`|string|Maximum time a connection to the backend may stay open. A connection past this duration is<br>not reused for new requests; a fresh connection is established instead, while in-flight<br>requests are not interrupted.|
+|`routes[].policies.substrateTcpIngress.policies.tcp`|object|TCP protocol settings for this backend.|
+|`routes[].policies.substrateTcpIngress.policies.tcp.keepalives`|object|TCP keepalive settings for backend connections.|
+|`routes[].policies.substrateTcpIngress.policies.tcp.keepalives.enabled`|boolean|Enable TCP keepalive probes on backend connections. Defaults to true.|
+|`routes[].policies.substrateTcpIngress.policies.tcp.keepalives.time`|string|Idle time before the first keepalive probe is sent.|
+|`routes[].policies.substrateTcpIngress.policies.tcp.keepalives.interval`|string|Time between successive keepalive probes.|
+|`routes[].policies.substrateTcpIngress.policies.tcp.keepalives.retries`|integer|Number of unacknowledged probes before the connection is considered dead.|
+|`routes[].policies.substrateTcpIngress.policies.tcp.connectTimeout`|string|Maximum time allowed to establish a backend TCP connection.|
+|`routes[].policies.substrateTcpIngress.policies.backendTunnel`|object|Tunnel settings used when connecting to this backend.|
+|`routes[].policies.substrateTcpIngress.policies.backendTunnel.proxy`|object|Proxy backend used to tunnel the connection.<br>Exactly one of service, host, or backend may be set.|
+|`routes[].policies.substrateTcpIngress.policies.backendTunnel.proxy.service`|object|Service reference. Service must be defined in the top level services list.|
+|`routes[].policies.substrateTcpIngress.policies.backendTunnel.proxy.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`routes[].policies.substrateTcpIngress.policies.backendTunnel.proxy.service.port`|integer|Port on the target Service to route to.|
+|`routes[].policies.substrateTcpIngress.policies.backendTunnel.proxy.host`|string|Hostname or IP address|
+|`routes[].policies.substrateTcpIngress.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`routes[].policies.substrateTcpIngress.policies.backendTunnel.mode`|enum|How requests are sent through the proxy.<br>Possible values: `auto`, `connect`.|
+|`routes[].policies.substrateTcpIngress.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
+|`routes[].policies.substrateTcpIngress.connectTargetPort`|integer|Port on the resumed worker pod's atunnel CONNECT listener. Defaults to 8443.|
+|`routes[].policies.substrateTcpIngress.cacheTtl`|string|How long successful actor assignments are reused. Defaults to 5s; 0s disables reuse.|
+|`routes[].policies.substrateTcpIngress.requestParking`|object|Bounded request parking while a suspended actor is waiting for worker capacity.|
+|`routes[].policies.substrateTcpIngress.requestParking.budget`|string|Maximum time to wait for the actor to become routable.|
+|`routes[].policies.substrateTcpIngress.requestParking.max`|integer|Maximum concurrent requests that may wait for actor resumption. Set to 0 to disable parking.|
+|`routes[].policies.substrateTcpIngress.requestParking.retryInterval`|string|Initial delay between ResumeActor retries while parked.|
+|`routes[].policies.substrateTcpIngress.requestParking.retryFactor`|number|Multiplier applied to the delay after each parked retry.|
+|`routes[].policies.substrateTcpEgress`|object|Enforce actor egress policy before forwarding a TCP connection.|
+|`routes[].policies.substrateTcpEgress.service`|object|Service reference. Service must be defined in the top level services list.|
+|`routes[].policies.substrateTcpEgress.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`routes[].policies.substrateTcpEgress.service.port`|integer|Port on the target Service to route to.|
+|`routes[].policies.substrateTcpEgress.host`|string|Hostname or IP address|
+|`routes[].policies.substrateTcpEgress.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`routes[].policies.substrateTcpEgress.policies`|object|Enforces the actor's egress policy once before forwarding a TCP connection.<br>Backend policies used when connecting to the service.|
+|`routes[].policies.substrateTcpEgress.policies.requestHeaderModifier`|object|Modify request headers before forwarding to this backend.|
+|`routes[].policies.substrateTcpEgress.policies.requestHeaderModifier.add`|object|Headers to append without replacing existing values.|
+|`routes[].policies.substrateTcpEgress.policies.requestHeaderModifier.set`|object|Headers to set, replacing any existing values.|
+|`routes[].policies.substrateTcpEgress.policies.requestHeaderModifier.remove`|[]string|Header names to remove.|
+|`routes[].policies.substrateTcpEgress.policies.transformations`|object|Modify request and response data for this backend.|
+|`routes[].policies.substrateTcpEgress.policies.transformations.request`|object|Transform the request before it is forwarded.|
+|`routes[].policies.substrateTcpEgress.policies.transformations.request.add`|object|Headers to append using CEL expressions for values.|
+|`routes[].policies.substrateTcpEgress.policies.transformations.request.set`|object|Headers to set using CEL expressions for values.|
+|`routes[].policies.substrateTcpEgress.policies.transformations.request.remove`|[]string|Header names to remove.|
+|`routes[].policies.substrateTcpEgress.policies.transformations.request.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
+|`routes[].policies.substrateTcpEgress.policies.transformations.request.body`|string|CEL expression that computes a replacement body.|
+|`routes[].policies.substrateTcpEgress.policies.transformations.request.metadata`|object|Metadata values to add using CEL expressions.|
+|`routes[].policies.substrateTcpEgress.policies.transformations.response`|object|Transform the response before it is returned.|
+|`routes[].policies.substrateTcpEgress.policies.transformations.response.add`|object|Headers to append using CEL expressions for values.|
+|`routes[].policies.substrateTcpEgress.policies.transformations.response.set`|object|Headers to set using CEL expressions for values.|
+|`routes[].policies.substrateTcpEgress.policies.transformations.response.remove`|[]string|Header names to remove.|
+|`routes[].policies.substrateTcpEgress.policies.transformations.response.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
+|`routes[].policies.substrateTcpEgress.policies.transformations.response.body`|string|CEL expression that computes a replacement body.|
+|`routes[].policies.substrateTcpEgress.policies.transformations.response.metadata`|object|Metadata values to add using CEL expressions.|
+|`routes[].policies.substrateTcpEgress.policies.backendTLS`|object|TLS settings used when connecting to this backend.|
+|`routes[].policies.substrateTcpEgress.policies.backendTLS.cert`|string|Client certificate file to present to the backend.|
+|`routes[].policies.substrateTcpEgress.policies.backendTLS.key`|string|Private key file for the client certificate.|
+|`routes[].policies.substrateTcpEgress.policies.backendTLS.root`|string|Root certificate bundle used to verify the backend certificate.|
+|`routes[].policies.substrateTcpEgress.policies.backendTLS.hostname`|string|Server name to use for TLS verification and SNI.|
+|`routes[].policies.substrateTcpEgress.policies.backendTLS.insecure`|boolean|Skip certificate trust verification for the backend connection.|
+|`routes[].policies.substrateTcpEgress.policies.backendTLS.insecureHost`|boolean|Skip hostname verification for the backend certificate.|
+|`routes[].policies.substrateTcpEgress.policies.backendTLS.alpn`|[]string|ALPN protocols to offer to the backend.|
+|`routes[].policies.substrateTcpEgress.policies.backendTLS.subjectAltNames`|[]string|Additional subject alternative names accepted for the backend certificate.|
+|`routes[].policies.substrateTcpEgress.policies.backendTLS.keyExchangeGroups`|[]enum|Key exchange groups allowed for negotiating TLS.<br>Possible values: `X25519`, `P-256`, `P-384`, `X25519_MLKEM768`.|
+|`routes[].policies.substrateTcpEgress.policies.backendTLS.spiffe`|object|Get the gateway's client identity and trust roots from the SPIFFE Workload API.<br>Mutually exclusive with `cert`/`key`/`root`/`insecure`/`insecureHost`.<br>Pin specific upstream SPIFFE IDs via `subjectAltNames` (e.g. `spiffe://td/ns/foo/sa/bar`);<br>If `subjectAltNames` is omitted, any SVID chaining to the SPIFFE trust bundle is accepted|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth`|object|Authentication credentials sent to this backend.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.key`|object||
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.key.file`|string|Path to a file on disk to load the value from.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.passthrough`|object|Forward the validated incoming JWT to the backend.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location`|object|Where to place the forwarded credential in the backend request.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.header`|object|Read the credential from an HTTP header.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.header.name`|string|Header name containing the credential.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.cookie`|object|Read the credential from a request cookie.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.cookie.name`|string|Cookie name containing the credential.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.key`|object|Send a configured secret value to the backend.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.key.value`|object|Secret value to send to the backend. File references are watched, so<br>rotating the file reloads it without a restart.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.key.value.file`|string|Path to a file on disk to load the value from.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.key.location`|object|Where to place the secret in the backend request.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.key.location.header`|object|Read the credential from an HTTP header.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.key.location.header.name`|string|Header name containing the credential.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.key.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.key.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.key.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.key.location.cookie`|object|Read the credential from a request cookie.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.key.location.cookie.name`|string|Cookie name containing the credential.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.key.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.gcp`|object|Authenticate to Google Cloud services.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.gcp.type`|enum|Possible values: `idToken`.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.gcp.audience`|string|Audience for the token. If not set, the destination host will be used.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.gcp.credential`|object|ADC-compatible Google credential JSON. If not set, ambient credentials are used.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.gcp.credential.file`|string|Path to a file on disk to load the value from.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.gcp.type`|enum|Possible values: `accessToken`, `null`.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.aws`|object|Sign backend requests with AWS credentials.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.aws.accessKeyId`|string||
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.aws.secretAccessKey`|string||
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.aws.region`|string||
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.aws.sessionToken`|string||
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.aws.serviceName`|string|AWS SigV4 signing service name (for example, "bedrock", "bedrock-agentcore", or "execute-api").|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.aws.region`|string|AWS SigV4 signing region (for example, "us-east-1"). If unset, typed AWS<br>backends may provide this automatically; otherwise the ambient AWS region<br>is used.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole`|object|Optional AWS STS role to assume before signing requests.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.roleArn`|string|AWS IAM role ARN to assume.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.sessionName`|string|Custom session name (RoleSessionName) for CloudTrail and Cost & Usage Report<br>attribution. Either a static string or `{expression: ...}` with a CEL<br>expression evaluated against each request. Max 64 chars, matching<br>`[\w+=,.@-]`. If unset, the AWS SDK generates a random session name.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.sessionName.expression`|string|CEL expression evaluated against each request to produce the session<br>name, for example `jwt.sub` or `request.headers["x-team"]`. If the<br>expression does not produce a valid session name at request time, the<br>request is rejected.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.tags`|[]object|Session tags passed to STS AssumeRole for cost attribution. Once activated as<br>cost allocation tags, each tag surfaces in the AWS Cost & Usage Report under<br>`resourceTags/user:TagKey`. A tag value is either static (`value`) or a CEL<br>expression evaluated against each request (`expression`).|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.tags[].key`|string|Tag key.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.tags[].value`|string|Static tag value.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.tags[].expression`|string|CEL expression evaluated against each request to produce the tag value, for<br>example `jwt.sub` or `request.headers["x-app"]`. If the expression does not<br>produce a valid tag value at request time, the request is rejected.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.azure`|object|Authenticate to Azure services.<br>Exactly one of explicitConfig, developerImplicit, or implicit may be set.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig`|object|Use explicit Azure credentials<br>Exactly one of clientSecret, managedIdentity, or workloadIdentity may be set.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.clientSecret`|object||
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.clientSecret.tenant_id`|string||
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.clientSecret.client_id`|string||
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.clientSecret.client_secret`|string||
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.managedIdentity`|object||
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity`|object||
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.clientId`|string||
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.objectId`|string||
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.resourceId`|string||
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.workloadIdentity`|object||
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.azure.developerImplicit`|object|Use implicit Azure auth. Note that this is for developer use-cases only!|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.azure.implicit`|object|Automatically detect authentication method based on environment.<br>Uses Workload Identity on K8s, Managed Identity on Azure VMs, or Developer Tools locally.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.azure.scopes`|[]string|Scopes requested for the Azure access token. When unset, the scope is<br>inferred from the backend hostname.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign`|object|Sign a short-lived JWT with a private key on each request.<br>Signs a short-lived JWT with a private key on each request and sends it to<br>the backend. For upstreams that require per-request keypair JWTs (e.g. the<br>Snowflake SQL API) rather than a static credential.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.alg`|enum|JWS signing algorithm. Defaults to RS256.<br>Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.kid`|string|Optional JWS key ID header.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.claims`|object|Static claims added to every token (e.g. iss, sub, aud). Values may be<br>any JSON value (e.g. a string, number, bool, or array). `iat`, `exp`,<br>and `nbf` are reserved for the signer and cannot be configured here.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.claims.*`|any||
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.ttl`|string|Token lifetime used for `exp`. Defaults to 300s.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location`|object|Where the signed token is written. Defaults to the Authorization<br>header with a `Bearer ` prefix.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.header`|object|Read the credential from an HTTP header.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.header.name`|string|Header name containing the credential.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.cookie`|object|Read the credential from a request cookie.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.cookie.name`|string|Cookie name containing the credential.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange`|object|Use OAuth token exchange flows to obtain a backend access token.<br>Exactly one of service, host, or backend may be set.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.service`|object|Service reference. Service must be defined in the top level services list.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.service.port`|integer|Port on the target Service to route to.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.host`|string|Hostname or IP address|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.policies`|any|Backend policies used when connecting to the service.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.grantType`|enum|Selects which RFC the request follows; defaults to token exchange (RFC 8693).<br>Possible values: `tokenExchange`, `jwtBearer`.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken`|object|Where the subject token is read from, and its token type. Defaults to the<br>Authorization Bearer header with token type access_token.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source`|object|Where the token is read from in the incoming request. The CEL `expression`<br>source is permitted (extraction only).<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.tokenType`|string|RFC 8693 token type URN; when omitted defaults to access_token|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken`|object|RFC 8693 delegation actor token. Token-exchange grant only.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source`|object|Where the actor token is read from in the incoming request. The CEL<br>`expression` source is permitted (extraction only). Unlike subject tokens,<br>actor tokens have no default source.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.header`|object|Read the credential from an HTTP header.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.header.name`|string|Header name containing the credential.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.cookie`|object|Read the credential from a request cookie.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.tokenType`|string|RFC 8693 actor token type URN; when omitted defaults to access_token and is still sent|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.enforceMayAct`|boolean|Enforce that the subject's `may_act` claim authorizes the actor before exchanging.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.audiences`|[]string|`audience` parameters naming the target services at the authorization server.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.scopes`|[]string|`scope` values for the requested token, sent space-delimited.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.resources`|[]string|`resource` parameters with the target service URIs.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.requestedTokenType`|string|`requested_token_type` parameter. When unset it is omitted from the request<br>(RFC 8693 makes it optional). Some providers (e.g. Auth0 custom token exchange)<br>reject an explicit access_token value paired with a custom `subject_token_type`.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth`|object|Client authentication used when calling the token endpoint.<br>When unset, no client authentication fields are sent.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object||
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.kid`|string||
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.assertionAudience`|string||
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.additionalParams`|object|Extra form parameters appended to the token request.<br>Values are CEL expressions evaluated against the incoming request.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation`|object|Where to place the exchanged token in the backend request. Defaults to the<br>Authorization header with a "Bearer " prefix. The CEL `expression` source is<br>not valid here (it cannot insert).<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header`|object|Read the credential from an HTTP header.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header.name`|string|Header name containing the credential.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.cookie`|object|Read the credential from a request cookie.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.cookie.name`|string|Cookie name containing the credential.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess`|object|Use Cross App Access (Identity Assertion / ID-JAG) to obtain a backend access token.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider`|object|The user's IdP authorization server, used for the RFC 8693 token exchange.<br>Exactly one of service, host, or backend may be set.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.service`|object|Service reference. Service must be defined in the top level services list.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.service.port`|integer|Port on the target Service to route to.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.host`|string|Hostname or IP address|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.policies`|any|Backend policies used when connecting to the service.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth`|object|Client authentication used when calling the token endpoint.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret`|object||
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.kid`|string||
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.assertionAudience`|string||
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer`|object|The resource authorization server, which exchanges the ID-JAG for an access token.<br>Exactly one of service, host, or backend may be set.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service`|object|Service reference. Service must be defined in the top level services list.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service.port`|integer|Port on the target Service to route to.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.host`|string|Hostname or IP address|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.policies`|any|Backend policies used when connecting to the service.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth`|object|Client authentication used when calling the token endpoint.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object||
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.kid`|string||
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.assertionAudience`|string||
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.audience`|string|Identifier of the resource authorization server. The issued ID-JAG is bound to this audience.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resources`|[]string|`resource` parameters naming the protected resource APIs.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.scopes`|[]string|`scope` values requested when obtaining the ID-JAG from the identity provider, sent<br>space-delimited.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.accessTokenScopes`|[]string|`scope` values requested when exchanging the ID-JAG for an access token. When unset,<br>inherits `scopes`. When empty, omits `scope`.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken`|object|Subject token sent to the identity provider. Defaults to an OpenID Connect ID token read<br>from the Authorization Bearer header.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source`|object|Where to read the subject token. Defaults to the Authorization Bearer header.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.tokenType`|string|RFC 8693 subject token type URI. Defaults to an OpenID Connect ID token.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.credentials`|[]object||
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location`|object|Where the credential is inserted on the backend request.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.header`|object|Read the credential from an HTTP header.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.header.name`|string|Header name containing the credential.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.cookie`|object|Read the credential from a request cookie.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.cookie.name`|string|Cookie name containing the credential.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].key`|object|Credential value.|
+|`routes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].key.file`|string|Path to a file on disk to load the value from.|
+|`routes[].policies.substrateTcpEgress.policies.http`|object|HTTP protocol settings for this backend.|
+|`routes[].policies.substrateTcpEgress.policies.http.version`|string|HTTP version to use when connecting to the backend.|
+|`routes[].policies.substrateTcpEgress.policies.http.requestTimeout`|string|Maximum time allowed for a backend HTTP request.|
+|`routes[].policies.substrateTcpEgress.policies.http.maxConnectionDuration`|string|Maximum time a connection to the backend may stay open. A connection past this duration is<br>not reused for new requests; a fresh connection is established instead, while in-flight<br>requests are not interrupted.|
+|`routes[].policies.substrateTcpEgress.policies.tcp`|object|TCP protocol settings for this backend.|
+|`routes[].policies.substrateTcpEgress.policies.tcp.keepalives`|object|TCP keepalive settings for backend connections.|
+|`routes[].policies.substrateTcpEgress.policies.tcp.keepalives.enabled`|boolean|Enable TCP keepalive probes on backend connections. Defaults to true.|
+|`routes[].policies.substrateTcpEgress.policies.tcp.keepalives.time`|string|Idle time before the first keepalive probe is sent.|
+|`routes[].policies.substrateTcpEgress.policies.tcp.keepalives.interval`|string|Time between successive keepalive probes.|
+|`routes[].policies.substrateTcpEgress.policies.tcp.keepalives.retries`|integer|Number of unacknowledged probes before the connection is considered dead.|
+|`routes[].policies.substrateTcpEgress.policies.tcp.connectTimeout`|string|Maximum time allowed to establish a backend TCP connection.|
+|`routes[].policies.substrateTcpEgress.policies.backendTunnel`|object|Tunnel settings used when connecting to this backend.|
+|`routes[].policies.substrateTcpEgress.policies.backendTunnel.proxy`|object|Proxy backend used to tunnel the connection.<br>Exactly one of service, host, or backend may be set.|
+|`routes[].policies.substrateTcpEgress.policies.backendTunnel.proxy.service`|object|Service reference. Service must be defined in the top level services list.|
+|`routes[].policies.substrateTcpEgress.policies.backendTunnel.proxy.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`routes[].policies.substrateTcpEgress.policies.backendTunnel.proxy.service.port`|integer|Port on the target Service to route to.|
+|`routes[].policies.substrateTcpEgress.policies.backendTunnel.proxy.host`|string|Hostname or IP address|
+|`routes[].policies.substrateTcpEgress.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`routes[].policies.substrateTcpEgress.policies.backendTunnel.mode`|enum|How requests are sent through the proxy.<br>Possible values: `auto`, `connect`.|
+|`routes[].policies.substrateTcpEgress.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
 |`routes[].policies.transformations`|object|Modify request and response headers, bodies, or metadata.|
 |`routes[].policies.transformations.conditional`|[]object|conditional policy entries. An entry without a condition must be the final fallback.|
 |`routes[].policies.transformations.conditional[].condition`|string|condition must evaluate to true for this policy to execute. If unset, the policy is the fallback.|
@@ -71224,6 +74049,571 @@
 |`tcpRoutes[].ruleName`|string|Specific rule within this route.|
 |`tcpRoutes[].hostnames`|[]string|Can be a wildcard|
 |`tcpRoutes[].policies`|object|TCP-level policies applied to traffic on this route.|
+|`tcpRoutes[].policies.substrateTcpIngress`|object|Resolve an actor selected by CONNECT metadata for a TCP connection.|
+|`tcpRoutes[].policies.substrateTcpIngress.service`|object|Service reference. Service must be defined in the top level services list.|
+|`tcpRoutes[].policies.substrateTcpIngress.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`tcpRoutes[].policies.substrateTcpIngress.service.port`|integer|Port on the target Service to route to.|
+|`tcpRoutes[].policies.substrateTcpIngress.host`|string|Hostname or IP address|
+|`tcpRoutes[].policies.substrateTcpIngress.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`tcpRoutes[].policies.substrateTcpIngress.policies`|object|Backend policies used when connecting to the service.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.requestHeaderModifier`|object|Modify request headers before forwarding to this backend.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.requestHeaderModifier.add`|object|Headers to append without replacing existing values.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.requestHeaderModifier.set`|object|Headers to set, replacing any existing values.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.requestHeaderModifier.remove`|[]string|Header names to remove.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.transformations`|object|Modify request and response data for this backend.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.transformations.request`|object|Transform the request before it is forwarded.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.transformations.request.add`|object|Headers to append using CEL expressions for values.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.transformations.request.set`|object|Headers to set using CEL expressions for values.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.transformations.request.remove`|[]string|Header names to remove.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.transformations.request.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.transformations.request.body`|string|CEL expression that computes a replacement body.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.transformations.request.metadata`|object|Metadata values to add using CEL expressions.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.transformations.response`|object|Transform the response before it is returned.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.transformations.response.add`|object|Headers to append using CEL expressions for values.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.transformations.response.set`|object|Headers to set using CEL expressions for values.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.transformations.response.remove`|[]string|Header names to remove.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.transformations.response.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.transformations.response.body`|string|CEL expression that computes a replacement body.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.transformations.response.metadata`|object|Metadata values to add using CEL expressions.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendTLS`|object|TLS settings used when connecting to this backend.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendTLS.cert`|string|Client certificate file to present to the backend.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendTLS.key`|string|Private key file for the client certificate.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendTLS.root`|string|Root certificate bundle used to verify the backend certificate.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendTLS.hostname`|string|Server name to use for TLS verification and SNI.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendTLS.insecure`|boolean|Skip certificate trust verification for the backend connection.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendTLS.insecureHost`|boolean|Skip hostname verification for the backend certificate.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendTLS.alpn`|[]string|ALPN protocols to offer to the backend.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendTLS.subjectAltNames`|[]string|Additional subject alternative names accepted for the backend certificate.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendTLS.keyExchangeGroups`|[]enum|Key exchange groups allowed for negotiating TLS.<br>Possible values: `X25519`, `P-256`, `P-384`, `X25519_MLKEM768`.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendTLS.spiffe`|object|Get the gateway's client identity and trust roots from the SPIFFE Workload API.<br>Mutually exclusive with `cert`/`key`/`root`/`insecure`/`insecureHost`.<br>Pin specific upstream SPIFFE IDs via `subjectAltNames` (e.g. `spiffe://td/ns/foo/sa/bar`);<br>If `subjectAltNames` is omitted, any SVID chaining to the SPIFFE trust bundle is accepted|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth`|object|Authentication credentials sent to this backend.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.key`|object||
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.key.file`|string|Path to a file on disk to load the value from.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.passthrough`|object|Forward the validated incoming JWT to the backend.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location`|object|Where to place the forwarded credential in the backend request.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.header`|object|Read the credential from an HTTP header.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.header.name`|string|Header name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.cookie`|object|Read the credential from a request cookie.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.cookie.name`|string|Cookie name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.passthrough.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.key`|object|Send a configured secret value to the backend.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.key.value`|object|Secret value to send to the backend. File references are watched, so<br>rotating the file reloads it without a restart.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.key.value.file`|string|Path to a file on disk to load the value from.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.key.location`|object|Where to place the secret in the backend request.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.key.location.header`|object|Read the credential from an HTTP header.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.key.location.header.name`|string|Header name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.key.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.key.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.key.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.key.location.cookie`|object|Read the credential from a request cookie.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.key.location.cookie.name`|string|Cookie name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.key.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.gcp`|object|Authenticate to Google Cloud services.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.gcp.type`|enum|Possible values: `idToken`.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.gcp.audience`|string|Audience for the token. If not set, the destination host will be used.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.gcp.credential`|object|ADC-compatible Google credential JSON. If not set, ambient credentials are used.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.gcp.credential.file`|string|Path to a file on disk to load the value from.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.gcp.type`|enum|Possible values: `accessToken`, `null`.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.aws`|object|Sign backend requests with AWS credentials.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.aws.accessKeyId`|string||
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.aws.secretAccessKey`|string||
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.aws.region`|string||
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.aws.sessionToken`|string||
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.aws.serviceName`|string|AWS SigV4 signing service name (for example, "bedrock", "bedrock-agentcore", or "execute-api").|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.aws.region`|string|AWS SigV4 signing region (for example, "us-east-1"). If unset, typed AWS<br>backends may provide this automatically; otherwise the ambient AWS region<br>is used.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole`|object|Optional AWS STS role to assume before signing requests.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.roleArn`|string|AWS IAM role ARN to assume.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.sessionName`|string|Custom session name (RoleSessionName) for CloudTrail and Cost & Usage Report<br>attribution. Either a static string or `{expression: ...}` with a CEL<br>expression evaluated against each request. Max 64 chars, matching<br>`[\w+=,.@-]`. If unset, the AWS SDK generates a random session name.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.sessionName.expression`|string|CEL expression evaluated against each request to produce the session<br>name, for example `jwt.sub` or `request.headers["x-team"]`. If the<br>expression does not produce a valid session name at request time, the<br>request is rejected.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.tags`|[]object|Session tags passed to STS AssumeRole for cost attribution. Once activated as<br>cost allocation tags, each tag surfaces in the AWS Cost & Usage Report under<br>`resourceTags/user:TagKey`. A tag value is either static (`value`) or a CEL<br>expression evaluated against each request (`expression`).|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.tags[].key`|string|Tag key.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.tags[].value`|string|Static tag value.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.tags[].expression`|string|CEL expression evaluated against each request to produce the tag value, for<br>example `jwt.sub` or `request.headers["x-app"]`. If the expression does not<br>produce a valid tag value at request time, the request is rejected.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.azure`|object|Authenticate to Azure services.<br>Exactly one of explicitConfig, developerImplicit, or implicit may be set.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig`|object|Use explicit Azure credentials<br>Exactly one of clientSecret, managedIdentity, or workloadIdentity may be set.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.clientSecret`|object||
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.clientSecret.tenant_id`|string||
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.clientSecret.client_id`|string||
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.clientSecret.client_secret`|string||
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.managedIdentity`|object||
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity`|object||
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.clientId`|string||
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.objectId`|string||
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.resourceId`|string||
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.workloadIdentity`|object||
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.azure.developerImplicit`|object|Use implicit Azure auth. Note that this is for developer use-cases only!|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.azure.implicit`|object|Automatically detect authentication method based on environment.<br>Uses Workload Identity on K8s, Managed Identity on Azure VMs, or Developer Tools locally.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.azure.scopes`|[]string|Scopes requested for the Azure access token. When unset, the scope is<br>inferred from the backend hostname.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign`|object|Sign a short-lived JWT with a private key on each request.<br>Signs a short-lived JWT with a private key on each request and sends it to<br>the backend. For upstreams that require per-request keypair JWTs (e.g. the<br>Snowflake SQL API) rather than a static credential.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.alg`|enum|JWS signing algorithm. Defaults to RS256.<br>Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.kid`|string|Optional JWS key ID header.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.claims`|object|Static claims added to every token (e.g. iss, sub, aud). Values may be<br>any JSON value (e.g. a string, number, bool, or array). `iat`, `exp`,<br>and `nbf` are reserved for the signer and cannot be configured here.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.claims.*`|any||
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.ttl`|string|Token lifetime used for `exp`. Defaults to 300s.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location`|object|Where the signed token is written. Defaults to the Authorization<br>header with a `Bearer ` prefix.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.header`|object|Read the credential from an HTTP header.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.header.name`|string|Header name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.cookie`|object|Read the credential from a request cookie.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.cookie.name`|string|Cookie name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange`|object|Use OAuth token exchange flows to obtain a backend access token.<br>Exactly one of service, host, or backend may be set.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.service`|object|Service reference. Service must be defined in the top level services list.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.service.port`|integer|Port on the target Service to route to.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.host`|string|Hostname or IP address|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.policies`|any|Backend policies used when connecting to the service.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.grantType`|enum|Selects which RFC the request follows; defaults to token exchange (RFC 8693).<br>Possible values: `tokenExchange`, `jwtBearer`.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken`|object|Where the subject token is read from, and its token type. Defaults to the<br>Authorization Bearer header with token type access_token.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source`|object|Where the token is read from in the incoming request. The CEL `expression`<br>source is permitted (extraction only).<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.tokenType`|string|RFC 8693 token type URN; when omitted defaults to access_token|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken`|object|RFC 8693 delegation actor token. Token-exchange grant only.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source`|object|Where the actor token is read from in the incoming request. The CEL<br>`expression` source is permitted (extraction only). Unlike subject tokens,<br>actor tokens have no default source.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.header`|object|Read the credential from an HTTP header.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.header.name`|string|Header name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.cookie`|object|Read the credential from a request cookie.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.tokenType`|string|RFC 8693 actor token type URN; when omitted defaults to access_token and is still sent|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.enforceMayAct`|boolean|Enforce that the subject's `may_act` claim authorizes the actor before exchanging.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.audiences`|[]string|`audience` parameters naming the target services at the authorization server.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.scopes`|[]string|`scope` values for the requested token, sent space-delimited.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.resources`|[]string|`resource` parameters with the target service URIs.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.requestedTokenType`|string|`requested_token_type` parameter. When unset it is omitted from the request<br>(RFC 8693 makes it optional). Some providers (e.g. Auth0 custom token exchange)<br>reject an explicit access_token value paired with a custom `subject_token_type`.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth`|object|Client authentication used when calling the token endpoint.<br>When unset, no client authentication fields are sent.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object||
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.kid`|string||
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.assertionAudience`|string||
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.additionalParams`|object|Extra form parameters appended to the token request.<br>Values are CEL expressions evaluated against the incoming request.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation`|object|Where to place the exchanged token in the backend request. Defaults to the<br>Authorization header with a "Bearer " prefix. The CEL `expression` source is<br>not valid here (it cannot insert).<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header`|object|Read the credential from an HTTP header.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header.name`|string|Header name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.queryParameter`|object|Read the credential from a URL query parameter.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.queryParameter.name`|string|Query parameter name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.cookie`|object|Read the credential from a request cookie.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.cookie.name`|string|Cookie name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess`|object|Use Cross App Access (Identity Assertion / ID-JAG) to obtain a backend access token.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider`|object|The user's IdP authorization server, used for the RFC 8693 token exchange.<br>Exactly one of service, host, or backend may be set.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.service`|object|Service reference. Service must be defined in the top level services list.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.service.port`|integer|Port on the target Service to route to.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.host`|string|Hostname or IP address|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.policies`|any|Backend policies used when connecting to the service.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth`|object|Client authentication used when calling the token endpoint.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret`|object||
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.kid`|string||
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.assertionAudience`|string||
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer`|object|The resource authorization server, which exchanges the ID-JAG for an access token.<br>Exactly one of service, host, or backend may be set.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service`|object|Service reference. Service must be defined in the top level services list.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service.port`|integer|Port on the target Service to route to.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.host`|string|Hostname or IP address|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.policies`|any|Backend policies used when connecting to the service.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth`|object|Client authentication used when calling the token endpoint.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object||
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.kid`|string||
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.assertionAudience`|string||
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.audience`|string|Identifier of the resource authorization server. The issued ID-JAG is bound to this audience.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resources`|[]string|`resource` parameters naming the protected resource APIs.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.scopes`|[]string|`scope` values requested when obtaining the ID-JAG from the identity provider, sent<br>space-delimited.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.accessTokenScopes`|[]string|`scope` values requested when exchanging the ID-JAG for an access token. When unset,<br>inherits `scopes`. When empty, omits `scope`.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken`|object|Subject token sent to the identity provider. Defaults to an OpenID Connect ID token read<br>from the Authorization Bearer header.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source`|object|Where to read the subject token. Defaults to the Authorization Bearer header.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.tokenType`|string|RFC 8693 subject token type URI. Defaults to an OpenID Connect ID token.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.credentials`|[]object||
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location`|object|Where the credential is inserted on the backend request.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.header`|object|Read the credential from an HTTP header.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.header.name`|string|Header name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.cookie`|object|Read the credential from a request cookie.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.cookie.name`|string|Cookie name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].key`|object|Credential value.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendAuth.credentials[].key.file`|string|Path to a file on disk to load the value from.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.http`|object|HTTP protocol settings for this backend.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.http.version`|string|HTTP version to use when connecting to the backend.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.http.requestTimeout`|string|Maximum time allowed for a backend HTTP request.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.http.maxConnectionDuration`|string|Maximum time a connection to the backend may stay open. A connection past this duration is<br>not reused for new requests; a fresh connection is established instead, while in-flight<br>requests are not interrupted.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.tcp`|object|TCP protocol settings for this backend.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.tcp.keepalives`|object|TCP keepalive settings for backend connections.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.tcp.keepalives.enabled`|boolean|Enable TCP keepalive probes on backend connections. Defaults to true.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.tcp.keepalives.time`|string|Idle time before the first keepalive probe is sent.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.tcp.keepalives.interval`|string|Time between successive keepalive probes.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.tcp.keepalives.retries`|integer|Number of unacknowledged probes before the connection is considered dead.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.tcp.connectTimeout`|string|Maximum time allowed to establish a backend TCP connection.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendTunnel`|object|Tunnel settings used when connecting to this backend.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendTunnel.proxy`|object|Proxy backend used to tunnel the connection.<br>Exactly one of service, host, or backend may be set.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendTunnel.proxy.service`|object|Service reference. Service must be defined in the top level services list.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendTunnel.proxy.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendTunnel.proxy.service.port`|integer|Port on the target Service to route to.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendTunnel.proxy.host`|string|Hostname or IP address|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendTunnel.mode`|enum|How requests are sent through the proxy.<br>Possible values: `auto`, `connect`.|
+|`tcpRoutes[].policies.substrateTcpIngress.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
+|`tcpRoutes[].policies.substrateTcpIngress.connectTargetPort`|integer|Port on the resumed worker pod's atunnel CONNECT listener. Defaults to 8443.|
+|`tcpRoutes[].policies.substrateTcpIngress.cacheTtl`|string|How long successful actor assignments are reused. Defaults to 5s; 0s disables reuse.|
+|`tcpRoutes[].policies.substrateTcpIngress.requestParking`|object|Bounded request parking while a suspended actor is waiting for worker capacity.|
+|`tcpRoutes[].policies.substrateTcpIngress.requestParking.budget`|string|Maximum time to wait for the actor to become routable.|
+|`tcpRoutes[].policies.substrateTcpIngress.requestParking.max`|integer|Maximum concurrent requests that may wait for actor resumption. Set to 0 to disable parking.|
+|`tcpRoutes[].policies.substrateTcpIngress.requestParking.retryInterval`|string|Initial delay between ResumeActor retries while parked.|
+|`tcpRoutes[].policies.substrateTcpIngress.requestParking.retryFactor`|number|Multiplier applied to the delay after each parked retry.|
+|`tcpRoutes[].policies.substrateTcpEgress`|object|Enforce actor egress policy before forwarding a TCP connection.|
+|`tcpRoutes[].policies.substrateTcpEgress.service`|object|Service reference. Service must be defined in the top level services list.|
+|`tcpRoutes[].policies.substrateTcpEgress.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`tcpRoutes[].policies.substrateTcpEgress.service.port`|integer|Port on the target Service to route to.|
+|`tcpRoutes[].policies.substrateTcpEgress.host`|string|Hostname or IP address|
+|`tcpRoutes[].policies.substrateTcpEgress.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`tcpRoutes[].policies.substrateTcpEgress.policies`|object|Enforces the actor's egress policy once before forwarding a TCP connection.<br>Backend policies used when connecting to the service.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.requestHeaderModifier`|object|Modify request headers before forwarding to this backend.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.requestHeaderModifier.add`|object|Headers to append without replacing existing values.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.requestHeaderModifier.set`|object|Headers to set, replacing any existing values.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.requestHeaderModifier.remove`|[]string|Header names to remove.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.transformations`|object|Modify request and response data for this backend.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.transformations.request`|object|Transform the request before it is forwarded.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.transformations.request.add`|object|Headers to append using CEL expressions for values.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.transformations.request.set`|object|Headers to set using CEL expressions for values.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.transformations.request.remove`|[]string|Header names to remove.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.transformations.request.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.transformations.request.body`|string|CEL expression that computes a replacement body.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.transformations.request.metadata`|object|Metadata values to add using CEL expressions.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.transformations.response`|object|Transform the response before it is returned.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.transformations.response.add`|object|Headers to append using CEL expressions for values.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.transformations.response.set`|object|Headers to set using CEL expressions for values.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.transformations.response.remove`|[]string|Header names to remove.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.transformations.response.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.transformations.response.body`|string|CEL expression that computes a replacement body.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.transformations.response.metadata`|object|Metadata values to add using CEL expressions.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendTLS`|object|TLS settings used when connecting to this backend.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendTLS.cert`|string|Client certificate file to present to the backend.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendTLS.key`|string|Private key file for the client certificate.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendTLS.root`|string|Root certificate bundle used to verify the backend certificate.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendTLS.hostname`|string|Server name to use for TLS verification and SNI.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendTLS.insecure`|boolean|Skip certificate trust verification for the backend connection.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendTLS.insecureHost`|boolean|Skip hostname verification for the backend certificate.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendTLS.alpn`|[]string|ALPN protocols to offer to the backend.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendTLS.subjectAltNames`|[]string|Additional subject alternative names accepted for the backend certificate.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendTLS.keyExchangeGroups`|[]enum|Key exchange groups allowed for negotiating TLS.<br>Possible values: `X25519`, `P-256`, `P-384`, `X25519_MLKEM768`.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendTLS.spiffe`|object|Get the gateway's client identity and trust roots from the SPIFFE Workload API.<br>Mutually exclusive with `cert`/`key`/`root`/`insecure`/`insecureHost`.<br>Pin specific upstream SPIFFE IDs via `subjectAltNames` (e.g. `spiffe://td/ns/foo/sa/bar`);<br>If `subjectAltNames` is omitted, any SVID chaining to the SPIFFE trust bundle is accepted|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth`|object|Authentication credentials sent to this backend.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.key`|object||
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.key.file`|string|Path to a file on disk to load the value from.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.passthrough`|object|Forward the validated incoming JWT to the backend.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location`|object|Where to place the forwarded credential in the backend request.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.header`|object|Read the credential from an HTTP header.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.header.name`|string|Header name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.cookie`|object|Read the credential from a request cookie.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.cookie.name`|string|Cookie name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.passthrough.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.key`|object|Send a configured secret value to the backend.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.key.value`|object|Secret value to send to the backend. File references are watched, so<br>rotating the file reloads it without a restart.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.key.value.file`|string|Path to a file on disk to load the value from.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.key.location`|object|Where to place the secret in the backend request.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.key.location.header`|object|Read the credential from an HTTP header.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.key.location.header.name`|string|Header name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.key.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.key.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.key.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.key.location.cookie`|object|Read the credential from a request cookie.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.key.location.cookie.name`|string|Cookie name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.key.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.gcp`|object|Authenticate to Google Cloud services.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.gcp.type`|enum|Possible values: `idToken`.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.gcp.audience`|string|Audience for the token. If not set, the destination host will be used.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.gcp.credential`|object|ADC-compatible Google credential JSON. If not set, ambient credentials are used.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.gcp.credential.file`|string|Path to a file on disk to load the value from.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.gcp.type`|enum|Possible values: `accessToken`, `null`.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.aws`|object|Sign backend requests with AWS credentials.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.aws.accessKeyId`|string||
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.aws.secretAccessKey`|string||
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.aws.region`|string||
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.aws.sessionToken`|string||
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.aws.serviceName`|string|AWS SigV4 signing service name (for example, "bedrock", "bedrock-agentcore", or "execute-api").|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.aws.region`|string|AWS SigV4 signing region (for example, "us-east-1"). If unset, typed AWS<br>backends may provide this automatically; otherwise the ambient AWS region<br>is used.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole`|object|Optional AWS STS role to assume before signing requests.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.roleArn`|string|AWS IAM role ARN to assume.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.sessionName`|string|Custom session name (RoleSessionName) for CloudTrail and Cost & Usage Report<br>attribution. Either a static string or `{expression: ...}` with a CEL<br>expression evaluated against each request. Max 64 chars, matching<br>`[\w+=,.@-]`. If unset, the AWS SDK generates a random session name.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.sessionName.expression`|string|CEL expression evaluated against each request to produce the session<br>name, for example `jwt.sub` or `request.headers["x-team"]`. If the<br>expression does not produce a valid session name at request time, the<br>request is rejected.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.tags`|[]object|Session tags passed to STS AssumeRole for cost attribution. Once activated as<br>cost allocation tags, each tag surfaces in the AWS Cost & Usage Report under<br>`resourceTags/user:TagKey`. A tag value is either static (`value`) or a CEL<br>expression evaluated against each request (`expression`).|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.tags[].key`|string|Tag key.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.tags[].value`|string|Static tag value.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.tags[].expression`|string|CEL expression evaluated against each request to produce the tag value, for<br>example `jwt.sub` or `request.headers["x-app"]`. If the expression does not<br>produce a valid tag value at request time, the request is rejected.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.azure`|object|Authenticate to Azure services.<br>Exactly one of explicitConfig, developerImplicit, or implicit may be set.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig`|object|Use explicit Azure credentials<br>Exactly one of clientSecret, managedIdentity, or workloadIdentity may be set.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.clientSecret`|object||
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.clientSecret.tenant_id`|string||
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.clientSecret.client_id`|string||
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.clientSecret.client_secret`|string||
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.managedIdentity`|object||
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity`|object||
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.clientId`|string||
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.objectId`|string||
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.resourceId`|string||
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.workloadIdentity`|object||
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.azure.developerImplicit`|object|Use implicit Azure auth. Note that this is for developer use-cases only!|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.azure.implicit`|object|Automatically detect authentication method based on environment.<br>Uses Workload Identity on K8s, Managed Identity on Azure VMs, or Developer Tools locally.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.azure.scopes`|[]string|Scopes requested for the Azure access token. When unset, the scope is<br>inferred from the backend hostname.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign`|object|Sign a short-lived JWT with a private key on each request.<br>Signs a short-lived JWT with a private key on each request and sends it to<br>the backend. For upstreams that require per-request keypair JWTs (e.g. the<br>Snowflake SQL API) rather than a static credential.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.alg`|enum|JWS signing algorithm. Defaults to RS256.<br>Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.kid`|string|Optional JWS key ID header.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.claims`|object|Static claims added to every token (e.g. iss, sub, aud). Values may be<br>any JSON value (e.g. a string, number, bool, or array). `iat`, `exp`,<br>and `nbf` are reserved for the signer and cannot be configured here.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.claims.*`|any||
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.ttl`|string|Token lifetime used for `exp`. Defaults to 300s.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location`|object|Where the signed token is written. Defaults to the Authorization<br>header with a `Bearer ` prefix.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.header`|object|Read the credential from an HTTP header.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.header.name`|string|Header name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.cookie`|object|Read the credential from a request cookie.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.cookie.name`|string|Cookie name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange`|object|Use OAuth token exchange flows to obtain a backend access token.<br>Exactly one of service, host, or backend may be set.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.service`|object|Service reference. Service must be defined in the top level services list.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.service.port`|integer|Port on the target Service to route to.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.host`|string|Hostname or IP address|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.policies`|any|Backend policies used when connecting to the service.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.grantType`|enum|Selects which RFC the request follows; defaults to token exchange (RFC 8693).<br>Possible values: `tokenExchange`, `jwtBearer`.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken`|object|Where the subject token is read from, and its token type. Defaults to the<br>Authorization Bearer header with token type access_token.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source`|object|Where the token is read from in the incoming request. The CEL `expression`<br>source is permitted (extraction only).<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.tokenType`|string|RFC 8693 token type URN; when omitted defaults to access_token|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken`|object|RFC 8693 delegation actor token. Token-exchange grant only.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source`|object|Where the actor token is read from in the incoming request. The CEL<br>`expression` source is permitted (extraction only). Unlike subject tokens,<br>actor tokens have no default source.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.header`|object|Read the credential from an HTTP header.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.header.name`|string|Header name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.cookie`|object|Read the credential from a request cookie.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.tokenType`|string|RFC 8693 actor token type URN; when omitted defaults to access_token and is still sent|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.enforceMayAct`|boolean|Enforce that the subject's `may_act` claim authorizes the actor before exchanging.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.audiences`|[]string|`audience` parameters naming the target services at the authorization server.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.scopes`|[]string|`scope` values for the requested token, sent space-delimited.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.resources`|[]string|`resource` parameters with the target service URIs.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.requestedTokenType`|string|`requested_token_type` parameter. When unset it is omitted from the request<br>(RFC 8693 makes it optional). Some providers (e.g. Auth0 custom token exchange)<br>reject an explicit access_token value paired with a custom `subject_token_type`.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth`|object|Client authentication used when calling the token endpoint.<br>When unset, no client authentication fields are sent.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object||
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.kid`|string||
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.assertionAudience`|string||
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.additionalParams`|object|Extra form parameters appended to the token request.<br>Values are CEL expressions evaluated against the incoming request.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation`|object|Where to place the exchanged token in the backend request. Defaults to the<br>Authorization header with a "Bearer " prefix. The CEL `expression` source is<br>not valid here (it cannot insert).<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header`|object|Read the credential from an HTTP header.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header.name`|string|Header name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.queryParameter`|object|Read the credential from a URL query parameter.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.queryParameter.name`|string|Query parameter name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.cookie`|object|Read the credential from a request cookie.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.cookie.name`|string|Cookie name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess`|object|Use Cross App Access (Identity Assertion / ID-JAG) to obtain a backend access token.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider`|object|The user's IdP authorization server, used for the RFC 8693 token exchange.<br>Exactly one of service, host, or backend may be set.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.service`|object|Service reference. Service must be defined in the top level services list.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.service.port`|integer|Port on the target Service to route to.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.host`|string|Hostname or IP address|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.policies`|any|Backend policies used when connecting to the service.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth`|object|Client authentication used when calling the token endpoint.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret`|object||
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.kid`|string||
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.assertionAudience`|string||
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer`|object|The resource authorization server, which exchanges the ID-JAG for an access token.<br>Exactly one of service, host, or backend may be set.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service`|object|Service reference. Service must be defined in the top level services list.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service.port`|integer|Port on the target Service to route to.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.host`|string|Hostname or IP address|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.policies`|any|Backend policies used when connecting to the service.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth`|object|Client authentication used when calling the token endpoint.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object||
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.kid`|string||
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.assertionAudience`|string||
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.audience`|string|Identifier of the resource authorization server. The issued ID-JAG is bound to this audience.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resources`|[]string|`resource` parameters naming the protected resource APIs.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.scopes`|[]string|`scope` values requested when obtaining the ID-JAG from the identity provider, sent<br>space-delimited.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.accessTokenScopes`|[]string|`scope` values requested when exchanging the ID-JAG for an access token. When unset,<br>inherits `scopes`. When empty, omits `scope`.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken`|object|Subject token sent to the identity provider. Defaults to an OpenID Connect ID token read<br>from the Authorization Bearer header.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source`|object|Where to read the subject token. Defaults to the Authorization Bearer header.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.tokenType`|string|RFC 8693 subject token type URI. Defaults to an OpenID Connect ID token.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.credentials`|[]object||
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location`|object|Where the credential is inserted on the backend request.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.header`|object|Read the credential from an HTTP header.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.header.name`|string|Header name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.cookie`|object|Read the credential from a request cookie.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.cookie.name`|string|Cookie name containing the credential.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].key`|object|Credential value.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendAuth.credentials[].key.file`|string|Path to a file on disk to load the value from.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.http`|object|HTTP protocol settings for this backend.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.http.version`|string|HTTP version to use when connecting to the backend.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.http.requestTimeout`|string|Maximum time allowed for a backend HTTP request.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.http.maxConnectionDuration`|string|Maximum time a connection to the backend may stay open. A connection past this duration is<br>not reused for new requests; a fresh connection is established instead, while in-flight<br>requests are not interrupted.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.tcp`|object|TCP protocol settings for this backend.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.tcp.keepalives`|object|TCP keepalive settings for backend connections.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.tcp.keepalives.enabled`|boolean|Enable TCP keepalive probes on backend connections. Defaults to true.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.tcp.keepalives.time`|string|Idle time before the first keepalive probe is sent.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.tcp.keepalives.interval`|string|Time between successive keepalive probes.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.tcp.keepalives.retries`|integer|Number of unacknowledged probes before the connection is considered dead.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.tcp.connectTimeout`|string|Maximum time allowed to establish a backend TCP connection.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendTunnel`|object|Tunnel settings used when connecting to this backend.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendTunnel.proxy`|object|Proxy backend used to tunnel the connection.<br>Exactly one of service, host, or backend may be set.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendTunnel.proxy.service`|object|Service reference. Service must be defined in the top level services list.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendTunnel.proxy.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendTunnel.proxy.service.port`|integer|Port on the target Service to route to.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendTunnel.proxy.host`|string|Hostname or IP address|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendTunnel.mode`|enum|How requests are sent through the proxy.<br>Possible values: `auto`, `connect`.|
+|`tcpRoutes[].policies.substrateTcpEgress.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
 |`tcpRoutes[].policies.backendTLS`|object|TLS configuration for connections to the TCP route's backend.|
 |`tcpRoutes[].policies.backendTLS.cert`|string|Client certificate file to present to the backend.|
 |`tcpRoutes[].policies.backendTLS.key`|string|Private key file for the client certificate.|
@@ -84741,6 +88131,571 @@
 |`mcp.policies.substrateEgress.credentialProviders[].target.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
 |`mcp.policies.substrateEgress.credentialProviders[].target.policies.backendTunnel.mode`|enum|How requests are sent through the proxy.<br>Possible values: `auto`, `connect`.|
 |`mcp.policies.substrateEgress.credentialProviders[].target.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
+|`mcp.policies.substrateTcpIngress`|object|Resolve an actor selected by CONNECT metadata for a TCP connection.|
+|`mcp.policies.substrateTcpIngress.service`|object|Service reference. Service must be defined in the top level services list.|
+|`mcp.policies.substrateTcpIngress.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`mcp.policies.substrateTcpIngress.service.port`|integer|Port on the target Service to route to.|
+|`mcp.policies.substrateTcpIngress.host`|string|Hostname or IP address|
+|`mcp.policies.substrateTcpIngress.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`mcp.policies.substrateTcpIngress.policies`|object|Backend policies used when connecting to the service.|
+|`mcp.policies.substrateTcpIngress.policies.requestHeaderModifier`|object|Modify request headers before forwarding to this backend.|
+|`mcp.policies.substrateTcpIngress.policies.requestHeaderModifier.add`|object|Headers to append without replacing existing values.|
+|`mcp.policies.substrateTcpIngress.policies.requestHeaderModifier.set`|object|Headers to set, replacing any existing values.|
+|`mcp.policies.substrateTcpIngress.policies.requestHeaderModifier.remove`|[]string|Header names to remove.|
+|`mcp.policies.substrateTcpIngress.policies.transformations`|object|Modify request and response data for this backend.|
+|`mcp.policies.substrateTcpIngress.policies.transformations.request`|object|Transform the request before it is forwarded.|
+|`mcp.policies.substrateTcpIngress.policies.transformations.request.add`|object|Headers to append using CEL expressions for values.|
+|`mcp.policies.substrateTcpIngress.policies.transformations.request.set`|object|Headers to set using CEL expressions for values.|
+|`mcp.policies.substrateTcpIngress.policies.transformations.request.remove`|[]string|Header names to remove.|
+|`mcp.policies.substrateTcpIngress.policies.transformations.request.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
+|`mcp.policies.substrateTcpIngress.policies.transformations.request.body`|string|CEL expression that computes a replacement body.|
+|`mcp.policies.substrateTcpIngress.policies.transformations.request.metadata`|object|Metadata values to add using CEL expressions.|
+|`mcp.policies.substrateTcpIngress.policies.transformations.response`|object|Transform the response before it is returned.|
+|`mcp.policies.substrateTcpIngress.policies.transformations.response.add`|object|Headers to append using CEL expressions for values.|
+|`mcp.policies.substrateTcpIngress.policies.transformations.response.set`|object|Headers to set using CEL expressions for values.|
+|`mcp.policies.substrateTcpIngress.policies.transformations.response.remove`|[]string|Header names to remove.|
+|`mcp.policies.substrateTcpIngress.policies.transformations.response.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
+|`mcp.policies.substrateTcpIngress.policies.transformations.response.body`|string|CEL expression that computes a replacement body.|
+|`mcp.policies.substrateTcpIngress.policies.transformations.response.metadata`|object|Metadata values to add using CEL expressions.|
+|`mcp.policies.substrateTcpIngress.policies.backendTLS`|object|TLS settings used when connecting to this backend.|
+|`mcp.policies.substrateTcpIngress.policies.backendTLS.cert`|string|Client certificate file to present to the backend.|
+|`mcp.policies.substrateTcpIngress.policies.backendTLS.key`|string|Private key file for the client certificate.|
+|`mcp.policies.substrateTcpIngress.policies.backendTLS.root`|string|Root certificate bundle used to verify the backend certificate.|
+|`mcp.policies.substrateTcpIngress.policies.backendTLS.hostname`|string|Server name to use for TLS verification and SNI.|
+|`mcp.policies.substrateTcpIngress.policies.backendTLS.insecure`|boolean|Skip certificate trust verification for the backend connection.|
+|`mcp.policies.substrateTcpIngress.policies.backendTLS.insecureHost`|boolean|Skip hostname verification for the backend certificate.|
+|`mcp.policies.substrateTcpIngress.policies.backendTLS.alpn`|[]string|ALPN protocols to offer to the backend.|
+|`mcp.policies.substrateTcpIngress.policies.backendTLS.subjectAltNames`|[]string|Additional subject alternative names accepted for the backend certificate.|
+|`mcp.policies.substrateTcpIngress.policies.backendTLS.keyExchangeGroups`|[]enum|Key exchange groups allowed for negotiating TLS.<br>Possible values: `X25519`, `P-256`, `P-384`, `X25519_MLKEM768`.|
+|`mcp.policies.substrateTcpIngress.policies.backendTLS.spiffe`|object|Get the gateway's client identity and trust roots from the SPIFFE Workload API.<br>Mutually exclusive with `cert`/`key`/`root`/`insecure`/`insecureHost`.<br>Pin specific upstream SPIFFE IDs via `subjectAltNames` (e.g. `spiffe://td/ns/foo/sa/bar`);<br>If `subjectAltNames` is omitted, any SVID chaining to the SPIFFE trust bundle is accepted|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth`|object|Authentication credentials sent to this backend.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.key`|object||
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.key.file`|string|Path to a file on disk to load the value from.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.passthrough`|object|Forward the validated incoming JWT to the backend.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.passthrough.location`|object|Where to place the forwarded credential in the backend request.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.passthrough.location.header`|object|Read the credential from an HTTP header.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.passthrough.location.header.name`|string|Header name containing the credential.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.passthrough.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.passthrough.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.passthrough.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.passthrough.location.cookie`|object|Read the credential from a request cookie.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.passthrough.location.cookie.name`|string|Cookie name containing the credential.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.passthrough.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.key`|object|Send a configured secret value to the backend.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.key.value`|object|Secret value to send to the backend. File references are watched, so<br>rotating the file reloads it without a restart.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.key.value.file`|string|Path to a file on disk to load the value from.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.key.location`|object|Where to place the secret in the backend request.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.key.location.header`|object|Read the credential from an HTTP header.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.key.location.header.name`|string|Header name containing the credential.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.key.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.key.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.key.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.key.location.cookie`|object|Read the credential from a request cookie.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.key.location.cookie.name`|string|Cookie name containing the credential.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.key.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.gcp`|object|Authenticate to Google Cloud services.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.gcp.type`|enum|Possible values: `idToken`.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.gcp.audience`|string|Audience for the token. If not set, the destination host will be used.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.gcp.credential`|object|ADC-compatible Google credential JSON. If not set, ambient credentials are used.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.gcp.credential.file`|string|Path to a file on disk to load the value from.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.gcp.type`|enum|Possible values: `accessToken`, `null`.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.aws`|object|Sign backend requests with AWS credentials.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.aws.accessKeyId`|string||
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.aws.secretAccessKey`|string||
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.aws.region`|string||
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.aws.sessionToken`|string||
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.aws.serviceName`|string|AWS SigV4 signing service name (for example, "bedrock", "bedrock-agentcore", or "execute-api").|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.aws.region`|string|AWS SigV4 signing region (for example, "us-east-1"). If unset, typed AWS<br>backends may provide this automatically; otherwise the ambient AWS region<br>is used.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole`|object|Optional AWS STS role to assume before signing requests.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.roleArn`|string|AWS IAM role ARN to assume.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.sessionName`|string|Custom session name (RoleSessionName) for CloudTrail and Cost & Usage Report<br>attribution. Either a static string or `{expression: ...}` with a CEL<br>expression evaluated against each request. Max 64 chars, matching<br>`[\w+=,.@-]`. If unset, the AWS SDK generates a random session name.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.sessionName.expression`|string|CEL expression evaluated against each request to produce the session<br>name, for example `jwt.sub` or `request.headers["x-team"]`. If the<br>expression does not produce a valid session name at request time, the<br>request is rejected.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.tags`|[]object|Session tags passed to STS AssumeRole for cost attribution. Once activated as<br>cost allocation tags, each tag surfaces in the AWS Cost & Usage Report under<br>`resourceTags/user:TagKey`. A tag value is either static (`value`) or a CEL<br>expression evaluated against each request (`expression`).|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.tags[].key`|string|Tag key.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.tags[].value`|string|Static tag value.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.aws.assumeRole.tags[].expression`|string|CEL expression evaluated against each request to produce the tag value, for<br>example `jwt.sub` or `request.headers["x-app"]`. If the expression does not<br>produce a valid tag value at request time, the request is rejected.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.azure`|object|Authenticate to Azure services.<br>Exactly one of explicitConfig, developerImplicit, or implicit may be set.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig`|object|Use explicit Azure credentials<br>Exactly one of clientSecret, managedIdentity, or workloadIdentity may be set.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.clientSecret`|object||
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.clientSecret.tenant_id`|string||
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.clientSecret.client_id`|string||
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.clientSecret.client_secret`|string||
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.managedIdentity`|object||
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity`|object||
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.clientId`|string||
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.objectId`|string||
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.resourceId`|string||
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.azure.explicitConfig.workloadIdentity`|object||
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.azure.developerImplicit`|object|Use implicit Azure auth. Note that this is for developer use-cases only!|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.azure.implicit`|object|Automatically detect authentication method based on environment.<br>Uses Workload Identity on K8s, Managed Identity on Azure VMs, or Developer Tools locally.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.azure.scopes`|[]string|Scopes requested for the Azure access token. When unset, the scope is<br>inferred from the backend hostname.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.jwtSign`|object|Sign a short-lived JWT with a private key on each request.<br>Signs a short-lived JWT with a private key on each request and sends it to<br>the backend. For upstreams that require per-request keypair JWTs (e.g. the<br>Snowflake SQL API) rather than a static credential.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.jwtSign.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.jwtSign.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.jwtSign.alg`|enum|JWS signing algorithm. Defaults to RS256.<br>Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.jwtSign.kid`|string|Optional JWS key ID header.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.jwtSign.claims`|object|Static claims added to every token (e.g. iss, sub, aud). Values may be<br>any JSON value (e.g. a string, number, bool, or array). `iat`, `exp`,<br>and `nbf` are reserved for the signer and cannot be configured here.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.jwtSign.claims.*`|any||
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.jwtSign.ttl`|string|Token lifetime used for `exp`. Defaults to 300s.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.jwtSign.location`|object|Where the signed token is written. Defaults to the Authorization<br>header with a `Bearer ` prefix.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.header`|object|Read the credential from an HTTP header.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.header.name`|string|Header name containing the credential.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.cookie`|object|Read the credential from a request cookie.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.cookie.name`|string|Cookie name containing the credential.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.jwtSign.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange`|object|Use OAuth token exchange flows to obtain a backend access token.<br>Exactly one of service, host, or backend may be set.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.service`|object|Service reference. Service must be defined in the top level services list.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.service.port`|integer|Port on the target Service to route to.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.host`|string|Hostname or IP address|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.policies`|any|Backend policies used when connecting to the service.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.grantType`|enum|Selects which RFC the request follows; defaults to token exchange (RFC 8693).<br>Possible values: `tokenExchange`, `jwtBearer`.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken`|object|Where the subject token is read from, and its token type. Defaults to the<br>Authorization Bearer header with token type access_token.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source`|object|Where the token is read from in the incoming request. The CEL `expression`<br>source is permitted (extraction only).<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.subjectToken.tokenType`|string|RFC 8693 token type URN; when omitted defaults to access_token|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken`|object|RFC 8693 delegation actor token. Token-exchange grant only.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source`|object|Where the actor token is read from in the incoming request. The CEL<br>`expression` source is permitted (extraction only). Unlike subject tokens,<br>actor tokens have no default source.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.header`|object|Read the credential from an HTTP header.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.header.name`|string|Header name containing the credential.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.cookie`|object|Read the credential from a request cookie.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.tokenType`|string|RFC 8693 actor token type URN; when omitted defaults to access_token and is still sent|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.actorToken.enforceMayAct`|boolean|Enforce that the subject's `may_act` claim authorizes the actor before exchanging.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.audiences`|[]string|`audience` parameters naming the target services at the authorization server.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.scopes`|[]string|`scope` values for the requested token, sent space-delimited.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.resources`|[]string|`resource` parameters with the target service URIs.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.requestedTokenType`|string|`requested_token_type` parameter. When unset it is omitted from the request<br>(RFC 8693 makes it optional). Some providers (e.g. Auth0 custom token exchange)<br>reject an explicit access_token value paired with a custom `subject_token_type`.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth`|object|Client authentication used when calling the token endpoint.<br>When unset, no client authentication fields are sent.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object||
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.kid`|string||
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.assertionAudience`|string||
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.additionalParams`|object|Extra form parameters appended to the token request.<br>Values are CEL expressions evaluated against the incoming request.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation`|object|Where to place the exchanged token in the backend request. Defaults to the<br>Authorization header with a "Bearer " prefix. The CEL `expression` source is<br>not valid here (it cannot insert).<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header`|object|Read the credential from an HTTP header.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header.name`|string|Header name containing the credential.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.queryParameter`|object|Read the credential from a URL query parameter.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.queryParameter.name`|string|Query parameter name containing the credential.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.cookie`|object|Read the credential from a request cookie.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.cookie.name`|string|Cookie name containing the credential.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.authorizationLocation.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.oauthTokenExchange.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess`|object|Use Cross App Access (Identity Assertion / ID-JAG) to obtain a backend access token.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider`|object|The user's IdP authorization server, used for the RFC 8693 token exchange.<br>Exactly one of service, host, or backend may be set.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.service`|object|Service reference. Service must be defined in the top level services list.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.service.port`|integer|Port on the target Service to route to.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.host`|string|Hostname or IP address|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.policies`|any|Backend policies used when connecting to the service.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth`|object|Client authentication used when calling the token endpoint.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret`|object||
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.kid`|string||
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.assertionAudience`|string||
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer`|object|The resource authorization server, which exchanges the ID-JAG for an access token.<br>Exactly one of service, host, or backend may be set.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service`|object|Service reference. Service must be defined in the top level services list.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service.port`|integer|Port on the target Service to route to.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.host`|string|Hostname or IP address|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.policies`|any|Backend policies used when connecting to the service.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth`|object|Client authentication used when calling the token endpoint.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object||
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.kid`|string||
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.assertionAudience`|string||
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.audience`|string|Identifier of the resource authorization server. The issued ID-JAG is bound to this audience.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.resources`|[]string|`resource` parameters naming the protected resource APIs.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.scopes`|[]string|`scope` values requested when obtaining the ID-JAG from the identity provider, sent<br>space-delimited.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.accessTokenScopes`|[]string|`scope` values requested when exchanging the ID-JAG for an access token. When unset,<br>inherits `scopes`. When empty, omits `scope`.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken`|object|Subject token sent to the identity provider. Defaults to an OpenID Connect ID token read<br>from the Authorization Bearer header.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source`|object|Where to read the subject token. Defaults to the Authorization Bearer header.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.subjectToken.tokenType`|string|RFC 8693 subject token type URI. Defaults to an OpenID Connect ID token.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.crossAppAccess.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.credentials`|[]object||
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.credentials[].location`|object|Where the credential is inserted on the backend request.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.credentials[].location.header`|object|Read the credential from an HTTP header.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.credentials[].location.header.name`|string|Header name containing the credential.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.credentials[].location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.credentials[].location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.credentials[].location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.credentials[].location.cookie`|object|Read the credential from a request cookie.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.credentials[].location.cookie.name`|string|Cookie name containing the credential.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.credentials[].location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.credentials[].key`|object|Credential value.|
+|`mcp.policies.substrateTcpIngress.policies.backendAuth.credentials[].key.file`|string|Path to a file on disk to load the value from.|
+|`mcp.policies.substrateTcpIngress.policies.http`|object|HTTP protocol settings for this backend.|
+|`mcp.policies.substrateTcpIngress.policies.http.version`|string|HTTP version to use when connecting to the backend.|
+|`mcp.policies.substrateTcpIngress.policies.http.requestTimeout`|string|Maximum time allowed for a backend HTTP request.|
+|`mcp.policies.substrateTcpIngress.policies.http.maxConnectionDuration`|string|Maximum time a connection to the backend may stay open. A connection past this duration is<br>not reused for new requests; a fresh connection is established instead, while in-flight<br>requests are not interrupted.|
+|`mcp.policies.substrateTcpIngress.policies.tcp`|object|TCP protocol settings for this backend.|
+|`mcp.policies.substrateTcpIngress.policies.tcp.keepalives`|object|TCP keepalive settings for backend connections.|
+|`mcp.policies.substrateTcpIngress.policies.tcp.keepalives.enabled`|boolean|Enable TCP keepalive probes on backend connections. Defaults to true.|
+|`mcp.policies.substrateTcpIngress.policies.tcp.keepalives.time`|string|Idle time before the first keepalive probe is sent.|
+|`mcp.policies.substrateTcpIngress.policies.tcp.keepalives.interval`|string|Time between successive keepalive probes.|
+|`mcp.policies.substrateTcpIngress.policies.tcp.keepalives.retries`|integer|Number of unacknowledged probes before the connection is considered dead.|
+|`mcp.policies.substrateTcpIngress.policies.tcp.connectTimeout`|string|Maximum time allowed to establish a backend TCP connection.|
+|`mcp.policies.substrateTcpIngress.policies.backendTunnel`|object|Tunnel settings used when connecting to this backend.|
+|`mcp.policies.substrateTcpIngress.policies.backendTunnel.proxy`|object|Proxy backend used to tunnel the connection.<br>Exactly one of service, host, or backend may be set.|
+|`mcp.policies.substrateTcpIngress.policies.backendTunnel.proxy.service`|object|Service reference. Service must be defined in the top level services list.|
+|`mcp.policies.substrateTcpIngress.policies.backendTunnel.proxy.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`mcp.policies.substrateTcpIngress.policies.backendTunnel.proxy.service.port`|integer|Port on the target Service to route to.|
+|`mcp.policies.substrateTcpIngress.policies.backendTunnel.proxy.host`|string|Hostname or IP address|
+|`mcp.policies.substrateTcpIngress.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`mcp.policies.substrateTcpIngress.policies.backendTunnel.mode`|enum|How requests are sent through the proxy.<br>Possible values: `auto`, `connect`.|
+|`mcp.policies.substrateTcpIngress.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
+|`mcp.policies.substrateTcpIngress.connectTargetPort`|integer|Port on the resumed worker pod's atunnel CONNECT listener. Defaults to 8443.|
+|`mcp.policies.substrateTcpIngress.cacheTtl`|string|How long successful actor assignments are reused. Defaults to 5s; 0s disables reuse.|
+|`mcp.policies.substrateTcpIngress.requestParking`|object|Bounded request parking while a suspended actor is waiting for worker capacity.|
+|`mcp.policies.substrateTcpIngress.requestParking.budget`|string|Maximum time to wait for the actor to become routable.|
+|`mcp.policies.substrateTcpIngress.requestParking.max`|integer|Maximum concurrent requests that may wait for actor resumption. Set to 0 to disable parking.|
+|`mcp.policies.substrateTcpIngress.requestParking.retryInterval`|string|Initial delay between ResumeActor retries while parked.|
+|`mcp.policies.substrateTcpIngress.requestParking.retryFactor`|number|Multiplier applied to the delay after each parked retry.|
+|`mcp.policies.substrateTcpEgress`|object|Enforce actor egress policy before forwarding a TCP connection.|
+|`mcp.policies.substrateTcpEgress.service`|object|Service reference. Service must be defined in the top level services list.|
+|`mcp.policies.substrateTcpEgress.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`mcp.policies.substrateTcpEgress.service.port`|integer|Port on the target Service to route to.|
+|`mcp.policies.substrateTcpEgress.host`|string|Hostname or IP address|
+|`mcp.policies.substrateTcpEgress.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`mcp.policies.substrateTcpEgress.policies`|object|Enforces the actor's egress policy once before forwarding a TCP connection.<br>Backend policies used when connecting to the service.|
+|`mcp.policies.substrateTcpEgress.policies.requestHeaderModifier`|object|Modify request headers before forwarding to this backend.|
+|`mcp.policies.substrateTcpEgress.policies.requestHeaderModifier.add`|object|Headers to append without replacing existing values.|
+|`mcp.policies.substrateTcpEgress.policies.requestHeaderModifier.set`|object|Headers to set, replacing any existing values.|
+|`mcp.policies.substrateTcpEgress.policies.requestHeaderModifier.remove`|[]string|Header names to remove.|
+|`mcp.policies.substrateTcpEgress.policies.transformations`|object|Modify request and response data for this backend.|
+|`mcp.policies.substrateTcpEgress.policies.transformations.request`|object|Transform the request before it is forwarded.|
+|`mcp.policies.substrateTcpEgress.policies.transformations.request.add`|object|Headers to append using CEL expressions for values.|
+|`mcp.policies.substrateTcpEgress.policies.transformations.request.set`|object|Headers to set using CEL expressions for values.|
+|`mcp.policies.substrateTcpEgress.policies.transformations.request.remove`|[]string|Header names to remove.|
+|`mcp.policies.substrateTcpEgress.policies.transformations.request.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
+|`mcp.policies.substrateTcpEgress.policies.transformations.request.body`|string|CEL expression that computes a replacement body.|
+|`mcp.policies.substrateTcpEgress.policies.transformations.request.metadata`|object|Metadata values to add using CEL expressions.|
+|`mcp.policies.substrateTcpEgress.policies.transformations.response`|object|Transform the response before it is returned.|
+|`mcp.policies.substrateTcpEgress.policies.transformations.response.add`|object|Headers to append using CEL expressions for values.|
+|`mcp.policies.substrateTcpEgress.policies.transformations.response.set`|object|Headers to set using CEL expressions for values.|
+|`mcp.policies.substrateTcpEgress.policies.transformations.response.remove`|[]string|Header names to remove.|
+|`mcp.policies.substrateTcpEgress.policies.transformations.response.replace`|string|CEL expression that computes the full set of headers, replacing all existing headers.<br>The expression must evaluate to a map of header name to value (a string, or a list of<br>strings for a repeated header). Pseudo-headers (`:method`, `:path`, etc.) are ignored;<br>set those explicitly with `set`/`add`. `replace` is applied before `add`/`set`/`remove`,<br>so those still operate on top of the replaced headers.|
+|`mcp.policies.substrateTcpEgress.policies.transformations.response.body`|string|CEL expression that computes a replacement body.|
+|`mcp.policies.substrateTcpEgress.policies.transformations.response.metadata`|object|Metadata values to add using CEL expressions.|
+|`mcp.policies.substrateTcpEgress.policies.backendTLS`|object|TLS settings used when connecting to this backend.|
+|`mcp.policies.substrateTcpEgress.policies.backendTLS.cert`|string|Client certificate file to present to the backend.|
+|`mcp.policies.substrateTcpEgress.policies.backendTLS.key`|string|Private key file for the client certificate.|
+|`mcp.policies.substrateTcpEgress.policies.backendTLS.root`|string|Root certificate bundle used to verify the backend certificate.|
+|`mcp.policies.substrateTcpEgress.policies.backendTLS.hostname`|string|Server name to use for TLS verification and SNI.|
+|`mcp.policies.substrateTcpEgress.policies.backendTLS.insecure`|boolean|Skip certificate trust verification for the backend connection.|
+|`mcp.policies.substrateTcpEgress.policies.backendTLS.insecureHost`|boolean|Skip hostname verification for the backend certificate.|
+|`mcp.policies.substrateTcpEgress.policies.backendTLS.alpn`|[]string|ALPN protocols to offer to the backend.|
+|`mcp.policies.substrateTcpEgress.policies.backendTLS.subjectAltNames`|[]string|Additional subject alternative names accepted for the backend certificate.|
+|`mcp.policies.substrateTcpEgress.policies.backendTLS.keyExchangeGroups`|[]enum|Key exchange groups allowed for negotiating TLS.<br>Possible values: `X25519`, `P-256`, `P-384`, `X25519_MLKEM768`.|
+|`mcp.policies.substrateTcpEgress.policies.backendTLS.spiffe`|object|Get the gateway's client identity and trust roots from the SPIFFE Workload API.<br>Mutually exclusive with `cert`/`key`/`root`/`insecure`/`insecureHost`.<br>Pin specific upstream SPIFFE IDs via `subjectAltNames` (e.g. `spiffe://td/ns/foo/sa/bar`);<br>If `subjectAltNames` is omitted, any SVID chaining to the SPIFFE trust bundle is accepted|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth`|object|Authentication credentials sent to this backend.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.key`|object||
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.key.file`|string|Path to a file on disk to load the value from.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.passthrough`|object|Forward the validated incoming JWT to the backend.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.passthrough.location`|object|Where to place the forwarded credential in the backend request.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.passthrough.location.header`|object|Read the credential from an HTTP header.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.passthrough.location.header.name`|string|Header name containing the credential.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.passthrough.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.passthrough.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.passthrough.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.passthrough.location.cookie`|object|Read the credential from a request cookie.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.passthrough.location.cookie.name`|string|Cookie name containing the credential.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.passthrough.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.key`|object|Send a configured secret value to the backend.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.key.value`|object|Secret value to send to the backend. File references are watched, so<br>rotating the file reloads it without a restart.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.key.value.file`|string|Path to a file on disk to load the value from.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.key.location`|object|Where to place the secret in the backend request.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.key.location.header`|object|Read the credential from an HTTP header.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.key.location.header.name`|string|Header name containing the credential.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.key.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.key.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.key.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.key.location.cookie`|object|Read the credential from a request cookie.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.key.location.cookie.name`|string|Cookie name containing the credential.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.key.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.gcp`|object|Authenticate to Google Cloud services.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.gcp.type`|enum|Possible values: `idToken`.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.gcp.audience`|string|Audience for the token. If not set, the destination host will be used.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.gcp.credential`|object|ADC-compatible Google credential JSON. If not set, ambient credentials are used.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.gcp.credential.file`|string|Path to a file on disk to load the value from.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.gcp.type`|enum|Possible values: `accessToken`, `null`.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.aws`|object|Sign backend requests with AWS credentials.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.aws.accessKeyId`|string||
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.aws.secretAccessKey`|string||
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.aws.region`|string||
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.aws.sessionToken`|string||
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.aws.serviceName`|string|AWS SigV4 signing service name (for example, "bedrock", "bedrock-agentcore", or "execute-api").|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.aws.region`|string|AWS SigV4 signing region (for example, "us-east-1"). If unset, typed AWS<br>backends may provide this automatically; otherwise the ambient AWS region<br>is used.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole`|object|Optional AWS STS role to assume before signing requests.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.roleArn`|string|AWS IAM role ARN to assume.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.sessionName`|string|Custom session name (RoleSessionName) for CloudTrail and Cost & Usage Report<br>attribution. Either a static string or `{expression: ...}` with a CEL<br>expression evaluated against each request. Max 64 chars, matching<br>`[\w+=,.@-]`. If unset, the AWS SDK generates a random session name.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.sessionName.expression`|string|CEL expression evaluated against each request to produce the session<br>name, for example `jwt.sub` or `request.headers["x-team"]`. If the<br>expression does not produce a valid session name at request time, the<br>request is rejected.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.tags`|[]object|Session tags passed to STS AssumeRole for cost attribution. Once activated as<br>cost allocation tags, each tag surfaces in the AWS Cost & Usage Report under<br>`resourceTags/user:TagKey`. A tag value is either static (`value`) or a CEL<br>expression evaluated against each request (`expression`).|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.tags[].key`|string|Tag key.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.tags[].value`|string|Static tag value.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.aws.assumeRole.tags[].expression`|string|CEL expression evaluated against each request to produce the tag value, for<br>example `jwt.sub` or `request.headers["x-app"]`. If the expression does not<br>produce a valid tag value at request time, the request is rejected.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.azure`|object|Authenticate to Azure services.<br>Exactly one of explicitConfig, developerImplicit, or implicit may be set.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig`|object|Use explicit Azure credentials<br>Exactly one of clientSecret, managedIdentity, or workloadIdentity may be set.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.clientSecret`|object||
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.clientSecret.tenant_id`|string||
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.clientSecret.client_id`|string||
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.clientSecret.client_secret`|string||
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.managedIdentity`|object||
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity`|object||
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.clientId`|string||
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.objectId`|string||
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.managedIdentity.userAssignedIdentity.resourceId`|string||
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.azure.explicitConfig.workloadIdentity`|object||
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.azure.developerImplicit`|object|Use implicit Azure auth. Note that this is for developer use-cases only!|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.azure.implicit`|object|Automatically detect authentication method based on environment.<br>Uses Workload Identity on K8s, Managed Identity on Azure VMs, or Developer Tools locally.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.azure.scopes`|[]string|Scopes requested for the Azure access token. When unset, the scope is<br>inferred from the backend hostname.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.jwtSign`|object|Sign a short-lived JWT with a private key on each request.<br>Signs a short-lived JWT with a private key on each request and sends it to<br>the backend. For upstreams that require per-request keypair JWTs (e.g. the<br>Snowflake SQL API) rather than a static credential.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.jwtSign.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.jwtSign.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.jwtSign.alg`|enum|JWS signing algorithm. Defaults to RS256.<br>Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.jwtSign.kid`|string|Optional JWS key ID header.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.jwtSign.claims`|object|Static claims added to every token (e.g. iss, sub, aud). Values may be<br>any JSON value (e.g. a string, number, bool, or array). `iat`, `exp`,<br>and `nbf` are reserved for the signer and cannot be configured here.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.jwtSign.claims.*`|any||
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.jwtSign.ttl`|string|Token lifetime used for `exp`. Defaults to 300s.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.jwtSign.location`|object|Where the signed token is written. Defaults to the Authorization<br>header with a `Bearer ` prefix.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.header`|object|Read the credential from an HTTP header.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.header.name`|string|Header name containing the credential.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.cookie`|object|Read the credential from a request cookie.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.cookie.name`|string|Cookie name containing the credential.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.jwtSign.location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange`|object|Use OAuth token exchange flows to obtain a backend access token.<br>Exactly one of service, host, or backend may be set.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.service`|object|Service reference. Service must be defined in the top level services list.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.service.port`|integer|Port on the target Service to route to.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.host`|string|Hostname or IP address|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.policies`|any|Backend policies used when connecting to the service.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.grantType`|enum|Selects which RFC the request follows; defaults to token exchange (RFC 8693).<br>Possible values: `tokenExchange`, `jwtBearer`.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken`|object|Where the subject token is read from, and its token type. Defaults to the<br>Authorization Bearer header with token type access_token.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source`|object|Where the token is read from in the incoming request. The CEL `expression`<br>source is permitted (extraction only).<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.subjectToken.tokenType`|string|RFC 8693 token type URN; when omitted defaults to access_token|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken`|object|RFC 8693 delegation actor token. Token-exchange grant only.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source`|object|Where the actor token is read from in the incoming request. The CEL<br>`expression` source is permitted (extraction only). Unlike subject tokens,<br>actor tokens have no default source.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.header`|object|Read the credential from an HTTP header.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.header.name`|string|Header name containing the credential.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.cookie`|object|Read the credential from a request cookie.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.tokenType`|string|RFC 8693 actor token type URN; when omitted defaults to access_token and is still sent|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.actorToken.enforceMayAct`|boolean|Enforce that the subject's `may_act` claim authorizes the actor before exchanging.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.audiences`|[]string|`audience` parameters naming the target services at the authorization server.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.scopes`|[]string|`scope` values for the requested token, sent space-delimited.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.resources`|[]string|`resource` parameters with the target service URIs.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.requestedTokenType`|string|`requested_token_type` parameter. When unset it is omitted from the request<br>(RFC 8693 makes it optional). Some providers (e.g. Auth0 custom token exchange)<br>reject an explicit access_token value paired with a custom `subject_token_type`.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth`|object|Client authentication used when calling the token endpoint.<br>When unset, no client authentication fields are sent.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object||
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.kid`|string||
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.assertionAudience`|string||
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.additionalParams`|object|Extra form parameters appended to the token request.<br>Values are CEL expressions evaluated against the incoming request.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation`|object|Where to place the exchanged token in the backend request. Defaults to the<br>Authorization header with a "Bearer " prefix. The CEL `expression` source is<br>not valid here (it cannot insert).<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header`|object|Read the credential from an HTTP header.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header.name`|string|Header name containing the credential.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.queryParameter`|object|Read the credential from a URL query parameter.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.queryParameter.name`|string|Query parameter name containing the credential.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.cookie`|object|Read the credential from a request cookie.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.cookie.name`|string|Cookie name containing the credential.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.authorizationLocation.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.oauthTokenExchange.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess`|object|Use Cross App Access (Identity Assertion / ID-JAG) to obtain a backend access token.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider`|object|The user's IdP authorization server, used for the RFC 8693 token exchange.<br>Exactly one of service, host, or backend may be set.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.service`|object|Service reference. Service must be defined in the top level services list.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.service.port`|integer|Port on the target Service to route to.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.host`|string|Hostname or IP address|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.policies`|any|Backend policies used when connecting to the service.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth`|object|Client authentication used when calling the token endpoint.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret`|object||
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.kid`|string||
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.assertionAudience`|string||
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.identityProvider.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer`|object|The resource authorization server, which exchanges the ID-JAG for an access token.<br>Exactly one of service, host, or backend may be set.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service`|object|Service reference. Service must be defined in the top level services list.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.service.port`|integer|Port on the target Service to route to.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.host`|string|Hostname or IP address|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.policies`|any|Backend policies used when connecting to the service.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.path`|string|Token endpoint path on the backend; defaults to "/".|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth`|object|Client authentication used when calling the token endpoint.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientId`|string|`client_id` parameter identifying the gateway at the authorization server.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object||
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret.file`|string|Path to a file on disk to load the value from.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretBasic`.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `clientSecretPost`.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey`|object|PEM-encoded private signing key (RSA or EC, matching `alg`).|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.signingKey.file`|string|Path to a file on disk to load the value from.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate`|object|PEM-encoded X.509 certificate chain, leaf first. The leaf public key must<br>correspond to `signing_key` for token endpoints to validate assertions.<br>A mismatch or comparison failure is logged and does not prevent loading.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificate.file`|string|Path to a file on disk to load the value from.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.certificateHeader`|enum|JWS certificate header emitted from `certificate`. Required when `certificate` is set.<br>Possible values: `x5c`, `x5t#S256`.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.alg`|enum|Possible values: `RS256`, `RS384`, `RS512`, `PS256`, `ES256`, `ES384`.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.kid`|string||
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.assertionAudience`|string||
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.method`|enum|Possible values: `privateKeyJwt`.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resourceAuthorizationServer.clientAuth.clientSecret`|object|OAuth 2.0 client secret sent via HTTP Basic auth to the authorization server.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.audience`|string|Identifier of the resource authorization server. The issued ID-JAG is bound to this audience.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.resources`|[]string|`resource` parameters naming the protected resource APIs.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.scopes`|[]string|`scope` values requested when obtaining the ID-JAG from the identity provider, sent<br>space-delimited.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.accessTokenScopes`|[]string|`scope` values requested when exchanging the ID-JAG for an access token. When unset,<br>inherits `scopes`. When empty, omits `scope`.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken`|object|Subject token sent to the identity provider. Defaults to an OpenID Connect ID token read<br>from the Authorization Bearer header.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source`|object|Where to read the subject token. Defaults to the Authorization Bearer header.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header`|object|Read the credential from an HTTP header.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header.name`|string|Header name containing the credential.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter`|object|Read the credential from a URL query parameter.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.queryParameter.name`|string|Query parameter name containing the credential.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie`|object|Read the credential from a request cookie.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.cookie.name`|string|Cookie name containing the credential.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.source.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.subjectToken.tokenType`|string|RFC 8693 subject token type URI. Defaults to an OpenID Connect ID token.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.cache`|object|Response cache configuration. Defaults to an in-memory cache with 8192 entries and a 300s<br>TTL when the token endpoint omits `expires_in`. Set `maxEntries` to 0 to disable.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.cache.maxEntries`|integer|Maximum number of token exchange responses to keep in the cache. Set to 0 to disable.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.crossAppAccess.cache.defaultTtl`|string|TTL used when the token endpoint omits `expires_in`. Defaults to 300s.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.credentials`|[]object||
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.credentials[].location`|object|Where the credential is inserted on the backend request.<br>Exactly one of header, queryParameter, cookie, or expression may be set.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.credentials[].location.header`|object|Read the credential from an HTTP header.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.credentials[].location.header.name`|string|Header name containing the credential.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.credentials[].location.header.prefix`|string|Prefix to remove from the header value before validation, such as `Bearer ` or `Basic `.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.credentials[].location.queryParameter`|object|Read the credential from a URL query parameter.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.credentials[].location.queryParameter.name`|string|Query parameter name containing the credential.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.credentials[].location.cookie`|object|Read the credential from a request cookie.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.credentials[].location.cookie.name`|string|Cookie name containing the credential.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.credentials[].location.expression`|string|Read the credential from a CEL expression evaluated against the incoming request.<br>CEL expression that returns the credential string. This location can extract credentials but cannot insert them.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.credentials[].key`|object|Credential value.|
+|`mcp.policies.substrateTcpEgress.policies.backendAuth.credentials[].key.file`|string|Path to a file on disk to load the value from.|
+|`mcp.policies.substrateTcpEgress.policies.http`|object|HTTP protocol settings for this backend.|
+|`mcp.policies.substrateTcpEgress.policies.http.version`|string|HTTP version to use when connecting to the backend.|
+|`mcp.policies.substrateTcpEgress.policies.http.requestTimeout`|string|Maximum time allowed for a backend HTTP request.|
+|`mcp.policies.substrateTcpEgress.policies.http.maxConnectionDuration`|string|Maximum time a connection to the backend may stay open. A connection past this duration is<br>not reused for new requests; a fresh connection is established instead, while in-flight<br>requests are not interrupted.|
+|`mcp.policies.substrateTcpEgress.policies.tcp`|object|TCP protocol settings for this backend.|
+|`mcp.policies.substrateTcpEgress.policies.tcp.keepalives`|object|TCP keepalive settings for backend connections.|
+|`mcp.policies.substrateTcpEgress.policies.tcp.keepalives.enabled`|boolean|Enable TCP keepalive probes on backend connections. Defaults to true.|
+|`mcp.policies.substrateTcpEgress.policies.tcp.keepalives.time`|string|Idle time before the first keepalive probe is sent.|
+|`mcp.policies.substrateTcpEgress.policies.tcp.keepalives.interval`|string|Time between successive keepalive probes.|
+|`mcp.policies.substrateTcpEgress.policies.tcp.keepalives.retries`|integer|Number of unacknowledged probes before the connection is considered dead.|
+|`mcp.policies.substrateTcpEgress.policies.tcp.connectTimeout`|string|Maximum time allowed to establish a backend TCP connection.|
+|`mcp.policies.substrateTcpEgress.policies.backendTunnel`|object|Tunnel settings used when connecting to this backend.|
+|`mcp.policies.substrateTcpEgress.policies.backendTunnel.proxy`|object|Proxy backend used to tunnel the connection.<br>Exactly one of service, host, or backend may be set.|
+|`mcp.policies.substrateTcpEgress.policies.backendTunnel.proxy.service`|object|Service reference. Service must be defined in the top level services list.|
+|`mcp.policies.substrateTcpEgress.policies.backendTunnel.proxy.service.name`|string|Name of the target Service, as defined in the top-level `services` list.|
+|`mcp.policies.substrateTcpEgress.policies.backendTunnel.proxy.service.port`|integer|Port on the target Service to route to.|
+|`mcp.policies.substrateTcpEgress.policies.backendTunnel.proxy.host`|string|Hostname or IP address|
+|`mcp.policies.substrateTcpEgress.policies.backendTunnel.proxy.backend`|string|Explicit backend reference. Backend must be defined in the top level backends list|
+|`mcp.policies.substrateTcpEgress.policies.backendTunnel.mode`|enum|How requests are sent through the proxy.<br>Possible values: `auto`, `connect`.|
+|`mcp.policies.substrateTcpEgress.policies.backendTunnel.policies`|any|Policies to connect to the proxy backend|
 |`mcp.policies.transformations`|object|Modify request and response headers, bodies, or metadata.|
 |`mcp.policies.transformations.conditional`|[]object|conditional policy entries. An entry without a condition must be the final fallback.|
 |`mcp.policies.transformations.conditional[].condition`|string|condition must evaluate to true for this policy to execute. If unset, the policy is the fallback.|

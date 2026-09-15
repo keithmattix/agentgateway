@@ -280,6 +280,7 @@ pub fn basic_named_route(target: Strng) -> Route {
 
 pub fn basic_named_tcp_route(target: Strng) -> TCPRoute {
 	TCPRoute {
+		inline_policies: Vec::new(),
 		key: "route".into(),
 		service_key: None,
 		service_port: 0,

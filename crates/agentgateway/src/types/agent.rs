@@ -1126,6 +1126,9 @@ pub struct TCPRoute {
 	pub hostnames: Vec<Strng>,
 	#[serde(default, skip_serializing_if = "Vec::is_empty")]
 	pub backends: Vec<TCPRouteBackendReference>,
+	#[serde(default, skip_serializing_if = "Vec::is_empty")]
+	#[cfg_attr(feature = "schema", schemars(with = "Vec<serde_json::Value>"))]
+	pub inline_policies: Vec<TrafficPolicy>,
 }
 
 #[apply(schema_ser_schema!)]
@@ -2807,6 +2810,8 @@ pub enum TrafficPolicy {
 	ExtAuthz(RequestPolicy<ext_authz::ExtAuthz>),
 	SubstrateEgress(RequestPolicy<crate::http::substrate::SubstrateEgress>),
 	SubstrateIngress(RequestPolicy<crate::http::substrate::SubstrateIngress>),
+	SubstrateTcpIngress(Arc<crate::http::substrate::SubstrateTcpIngress>),
+	SubstrateTcpEgress(Arc<crate::http::substrate::SubstrateTcpEgress>),
 	ExtProc(RequestPolicy<ext_proc::ExtProc>),
 	JwtAuth(RequestPolicy<JwtAuthentication>),
 	Oidc(RequestPolicy<crate::http::oidc::OidcPolicy>),
@@ -3310,6 +3315,7 @@ mod tests {
 
 	fn tcp_route(key: &'static str, hostnames: Vec<&'static str>) -> TCPRoute {
 		TCPRoute {
+			inline_policies: Vec::new(),
 			key: strng::new(key),
 			service_key: None,
 			service_port: 0,

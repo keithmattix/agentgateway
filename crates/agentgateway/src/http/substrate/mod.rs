@@ -2,6 +2,8 @@ pub(crate) mod ateattr;
 mod egress;
 mod egress_actor_resolution;
 mod ingress;
+mod tcp;
+pub use tcp::{SubstrateTcpEgress, SubstrateTcpIngress};
 
 pub use egress::SubstrateEgress;
 pub(crate) use egress_actor_resolution::ActorIdentity;

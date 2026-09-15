@@ -388,6 +388,8 @@ pub struct RoutePolicies {
 	pub ext_authz: RequestPolicy<ext_authz::ExtAuthz>,
 	pub substrate_egress: RequestPolicy<substrate::SubstrateEgress>,
 	pub substrate_ingress: RequestPolicy<substrate::SubstrateIngress>,
+	pub substrate_tcp_ingress: Option<Arc<substrate::SubstrateTcpIngress>>,
+	pub substrate_tcp_egress: Option<Arc<substrate::SubstrateTcpEgress>>,
 	pub ext_proc: RequestPolicy<ext_proc::ExtProc>,
 	pub transformation: RequestPolicy<http::transformation_cel::Transformation>,
 	pub csrf: RequestPolicy<http::csrf::Csrf>,
@@ -1080,6 +1082,8 @@ impl Store {
 
 		let mut authz = Vec::new();
 		let mut authz_locked = false;
+		let mut tcp_ingress_locked = false;
+		let mut tcp_egress_locked = false;
 		let mut pol = RoutePolicies::default();
 		for (inheritance, rule) in rules {
 			let lock_inheritance = inheritance == PolicyInheritance::Override;
@@ -1188,6 +1192,18 @@ impl Store {
 				},
 				TrafficPolicy::Buffer(p) => {
 					pol.buffer.set_if_unset(p);
+				},
+				TrafficPolicy::SubstrateTcpIngress(p) => {
+					if !tcp_ingress_locked {
+						pol.substrate_tcp_ingress = Some(p.clone());
+						tcp_ingress_locked = lock_inheritance;
+					}
+				},
+				TrafficPolicy::SubstrateTcpEgress(p) => {
+					if !tcp_egress_locked {
+						pol.substrate_tcp_egress = Some(p.clone());
+						tcp_egress_locked = lock_inheritance;
+					}
 				},
 				TrafficPolicy::SubstrateIngress(p) => {
 					pol

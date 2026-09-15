@@ -4595,7 +4595,7 @@ pub struct BackendCall {
 	pub http_version_override: Option<::http::Version>,
 	pub transport_override: Option<(InboundProtocol, Vec<Identity>)>,
 	pub hbone_port: u16,
-	connect_headers: Vec<(HeaderName, HeaderValue)>,
+	pub(super) connect_headers: Vec<(HeaderName, HeaderValue)>,
 	advanced_routing: Option<Box<BackendCallAdvancedRouting>>,
 	pub backend_policies: Arc<BackendPolicies>,
 	tunnel_proxy: Option<Box<BackendCall>>,

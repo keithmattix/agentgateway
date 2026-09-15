@@ -2625,3 +2625,73 @@ binds:
 		.expect("a change to the key file should notify the resource manager")
 		.expect("resource change channel should stay open");
 }
+
+#[tokio::test]
+async fn substrate_tcp_policies_stay_on_their_routes() {
+	let normalized = normalize_test_yaml(
+		r#"
+binds:
+- port: 1080
+  listeners:
+  - protocol: TLS
+    hostname: "*"
+    tcpRoutes:
+    - name: actor
+      policies:
+        substrateTcpEgress:
+          host: "127.0.0.1:9000"
+        substrateTcpIngress:
+          host: "127.0.0.1:9000"
+      backends:
+      - dynamic: {}
+        policies:
+          backendTunnel:
+            mode: connect
+            proxy:
+              backend: worker
+- port: 1081
+  listeners:
+  - protocol: TCP
+    tcpRoutes:
+    - name: actor
+      backends:
+      - host: "127.0.0.1:1234"
+backends:
+- name: worker
+  dynamic: {}
+"#,
+	)
+	.await
+	.expect("TCP Substrate policies should normalize");
+	assert!(
+		normalized.listener_tcp_routes[0].1[0]
+			.inline_policies
+			.iter()
+			.any(|policy| matches!(policy, TrafficPolicy::SubstrateTcpIngress(_)))
+	);
+	let mut store = crate::store::BindStore::default();
+	for policy in normalized.policies {
+		store.insert_policy(policy);
+	}
+	for (idx, (key, routes)) in normalized.listener_tcp_routes.iter().enumerate() {
+		let listener = normalized
+			.binds
+			.iter()
+			.flat_map(|bind| bind.listeners.iter())
+			.find(|listener| &listener.key == key)
+			.unwrap();
+		let route = &routes[0];
+		let policies = store.route_policies(&crate::store::RoutePath {
+			routes: vec![&route.name],
+			service: None,
+			listener: &listener.name,
+			route_inlines: vec![&route.inline_policies],
+		});
+		assert_eq!(
+			policies.substrate_tcp_ingress.is_some(),
+			idx == 0,
+			"an inline TCP policy must stay on its own listener's route"
+		);
+		assert_eq!(policies.substrate_tcp_egress.is_some(), idx == 0);
+	}
+}

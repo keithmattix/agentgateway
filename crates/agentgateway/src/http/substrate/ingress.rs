@@ -517,7 +517,7 @@ impl SubstrateRequestState {
 			.and_then(|current| current.uid.clone())
 	}
 
-	pub(crate) async fn resolve_target(&mut self) -> Result<Target, crate::proxy::ProxyResponse> {
+	pub(crate) async fn resolve_target(&mut self) -> Result<Target, ProxyError> {
 		if let Some(current) = self.current.as_ref() {
 			self.route_outcome = Some(RouteOutcome::Ok);
 			pol_event!(
@@ -603,7 +603,7 @@ impl SubstrateRequestState {
 						"substrate request parking capacity exhausted"
 					),
 				}
-				Err(error.into_proxy_error(&self.actor).into())
+				Err(error.into_proxy_error(&self.actor))
 			},
 		}
 	}
@@ -631,6 +631,83 @@ pub(crate) fn stale_assignment_unavailable() -> Response {
 		.status(StatusCode::SERVICE_UNAVAILABLE)
 		.body(crate::http::Body::empty())
 		.expect("a static status-only response is valid")
+}
+
+impl SubstrateIngress {
+	pub(super) async fn resolve_tcp(
+		&self,
+		client: &PolicyClient,
+		log: &mut RequestLog,
+		source: &crate::cel::SourceContext,
+		destination: &crate::cel::DestinationContext,
+	) -> Result<super::tcp::TcpIngressTarget, ProxyError> {
+		let mut targets = source.connect_headers.get_all(TARGET_ACTOR_HEADER).iter();
+		let target = targets.next().and_then(|value| value.to_str().ok());
+		let actor = parse_target_actor(target)?;
+		if targets.next().is_some() {
+			return Err(ProxyError::ProcessingString(
+				"multiple ate-target-actor headers".to_owned(),
+			));
+		}
+		let mut authorities = source.connect_headers.get_all(::http::header::HOST).iter();
+		let authority = if let Some(value) = authorities.next() {
+			let authority = value
+				.to_str()
+				.ok()
+				.and_then(|value| value.parse::<::http::uri::Authority>().ok())
+				.filter(|authority| authority.port_u16().is_some());
+			if authorities.next().is_some() || authority.is_none() {
+				return Err(ProxyError::ProcessingString(
+					"invalid Substrate CONNECT authority".to_owned(),
+				));
+			}
+			authority.unwrap().to_string()
+		} else {
+			std::net::SocketAddr::new(destination.address, destination.port).to_string()
+		};
+		log.ate_actor_name = Some(actor.name.clone());
+		log.ate_atespace = Some(actor.atespace.clone());
+		let mut state = SubstrateRequestState {
+			actor,
+			connect_authority: authority,
+			ingress: self.clone(),
+			client: client.clone(),
+			current: None,
+			resume: ResumeDisposition::None,
+			route_duration: Duration::ZERO,
+			route_outcome: None,
+		};
+		let result = state.resolve_target().await;
+		log.ate_router_resume = Some(state.resume());
+		log.ate_actor_uid = state.actor_uid();
+		log.ate_router_route_duration = Some(state.route_duration());
+		log.ate_router_outcome = state.route_outcome();
+		let worker = result?;
+		Ok(super::tcp::TcpIngressTarget {
+			worker,
+			authority: Target::try_from(state.connect_authority().as_str()).map_err(|error| {
+				ProxyError::ProcessingString(format!("invalid Substrate CONNECT authority: {error}"))
+			})?,
+			actor_header: state.target_actor_header(),
+		})
+	}
+}
+
+fn parse_target_actor(target: Option<&str>) -> Result<ActorRef, ProxyError> {
+	let Some((atespace, name)) = target
+		.and_then(|target| target.split_once('/'))
+		.filter(|(_, name)| !name.contains('/'))
+		.filter(|(atespace, name)| valid_resource_name(atespace) && valid_resource_name(name))
+	else {
+		return Err(ProxyError::SubstrateIngressFailed(
+			StatusCode::NOT_FOUND,
+			format!("invalid {TARGET_ACTOR_HEADER:?}: expected <atespace>/<actor>"),
+		));
+	};
+	Ok(ActorRef {
+		atespace: atespace.to_owned(),
+		name: name.to_owned(),
+	})
 }
 
 impl RequestPolicyTrait for SubstrateIngress {
@@ -682,24 +759,7 @@ impl RequestPolicyTrait for SubstrateIngress {
 			req.headers().get(TARGET_ACTOR_HEADER)
 		}
 		.and_then(|value| value.to_str().ok());
-		let Some((atespace, name)) = target_actor
-			.and_then(|target| target.split_once('/'))
-			.filter(|(_, name)| !name.contains('/'))
-			.filter(|(atespace, name)| valid_resource_name(atespace) && valid_resource_name(name))
-		else {
-			return Err(
-				ProxyError::SubstrateIngressFailed(
-					StatusCode::NOT_FOUND,
-					format!("invalid {TARGET_ACTOR_HEADER:?}: expected <atespace>/<actor>"),
-				)
-				.into(),
-			);
-		};
-
-		let actor = ActorRef {
-			atespace: atespace.to_owned(),
-			name: name.to_owned(),
-		};
+		let actor = parse_target_actor(target_actor)?;
 		log.ate_actor_name = Some(actor.name.clone());
 		log.ate_atespace = Some(actor.atespace.clone());
 		// Ordinary atunnel ingress uses this header to select the actor port and
