@@ -1,3 +1,5 @@
+# A model-serving HTTPRoute attached to two listeners must produce a distinct
+# model route for each listener, without resource-key collisions.
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
@@ -6,6 +8,13 @@ metadata:
 spec:
   gatewayClassName: agentgateway
   listeners:
+  - name: alternate
+    port: 8080
+    protocol: HTTP
+    allowedRoutes:
+      kinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
   - name: http
     port: 80
     protocol: HTTP
@@ -22,7 +31,6 @@ metadata:
 spec:
   parentRefs:
   - name: model-gateway
-    sectionName: http
   rules:
   - name: models
     matches:
@@ -45,30 +53,6 @@ spec:
     kind: HTTPRoute
     name: tenant1
   provider: OpenAI
----
-apiVersion: agentgateway.dev/v1alpha1
-kind: AgentgatewayPolicy
-metadata:
-  name: tenant1-auth
-  namespace: default
-spec:
-  targetRefs:
-  - group: gateway.networking.k8s.io
-    kind: HTTPRoute
-    name: tenant1
-    sectionName: models
-  traffic:
-    basicAuthentication:
-      secretRef:
-        name: tenant1-users
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: tenant1-users
-  namespace: default
-stringData:
-  .htpasswd: alice:hash
 
 ---
 # Output
@@ -92,6 +76,17 @@ output:
     Namespace: default
   resource:
     backend:
+      key: default/tenant1.00.alternate
+      modelRouter:
+        routerKey: /llm:router:httproute:default:tenant1:models
+      name:
+        name: tenant1
+        namespace: default
+- gateway:
+    Name: model-gateway
+    Namespace: default
+  resource:
+    backend:
       key: default/tenant1.00.http
       modelRouter:
         routerKey: /llm:router:httproute:default:tenant1:models
@@ -105,6 +100,25 @@ output:
     bind:
       key: 80/default/model-gateway
       port: 80
+- gateway:
+    Name: model-gateway
+    Namespace: default
+  resource:
+    bind:
+      key: 8080/default/model-gateway
+      port: 8080
+- gateway:
+    Name: model-gateway
+    Namespace: default
+  resource:
+    listener:
+      bindKey: 8080/default/model-gateway
+      key: default/model-gateway.alternate
+      name:
+        gatewayName: model-gateway
+        gatewayNamespace: default
+        listenerName: alternate
+      protocol: HTTP
 - gateway:
     Name: model-gateway
     Namespace: default
@@ -125,6 +139,19 @@ output:
       concreteModel:
         backend:
           backend: default/gpt-5-mini/backend.default.tenant1
+      key: default/gpt-5-mini.default.tenant1.alternate
+      listenerKey: default/model-gateway.alternate
+      match:
+        model: gpt-5-mini
+      routerKey: /llm:router:httproute:default:tenant1:models
+- gateway:
+    Name: model-gateway
+    Namespace: default
+  resource:
+    modelRoute:
+      concreteModel:
+        backend:
+          backend: default/gpt-5-mini/backend.default.tenant1
       key: default/gpt-5-mini.default.tenant1.http
       listenerKey: default/model-gateway.http
       match:
@@ -134,20 +161,24 @@ output:
     Name: model-gateway
     Namespace: default
   resource:
-    policy:
-      key: traffic/default/tenant1-auth:basicauth:default/tenant1/models
+    route:
+      backends:
+      - backend:
+          backend: /llm:router:httproute:default:tenant1:models
+        weight: 1
+      key: default/tenant1.00.alternate
+      listenerKey: default/model-gateway.alternate
+      matches:
+      - path:
+          pathPrefix: /tenant1
       name:
-        kind: AgentgatewayPolicy
-        name: tenant1-auth
+        kind: HTTPRoute
+        name: tenant1
         namespace: default
-      target:
-        route:
-          kind: HTTPRoute
-          name: tenant1
-          namespace: default
-          routeRule: models
-      traffic:
-        basicAuth: {}
+        ruleName: models
+      trafficPolicies:
+      - urlRewrite:
+          prefix: ""
 - gateway:
     Name: model-gateway
     Namespace: default
@@ -238,6 +269,32 @@ status:
         reason: ResolvedRefs
         status: "True"
         type: ResolvedRefs
+      name: alternate
+      supportedKinds:
+      - group: gateway.networking.k8s.io
+        kind: HTTPRoute
+    - attachedRoutes: 1
+      conditions:
+      - lastTransitionTime: fake
+        message: No errors found
+        reason: Accepted
+        status: "True"
+        type: Accepted
+      - lastTransitionTime: fake
+        message: No errors found
+        reason: NoConflicts
+        status: "False"
+        type: Conflicted
+      - lastTransitionTime: fake
+        message: No errors found
+        reason: Programmed
+        status: "True"
+        type: Programmed
+      - lastTransitionTime: fake
+        message: No errors found
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
       name: http
       supportedKinds:
       - group: gateway.networking.k8s.io
@@ -267,4 +324,3 @@ status:
         kind: Gateway
         name: model-gateway
         namespace: default
-        sectionName: http

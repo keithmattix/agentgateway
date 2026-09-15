@@ -1,3 +1,5 @@
+# Parent references to different HTTPRoute rules must have independent status:
+# the existing rule is accepted, and the missing rule is rejected.
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
@@ -44,31 +46,12 @@ spec:
   - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: tenant1
-  provider: OpenAI
----
-apiVersion: agentgateway.dev/v1alpha1
-kind: AgentgatewayPolicy
-metadata:
-  name: tenant1-auth
-  namespace: default
-spec:
-  targetRefs:
+    sectionName: models
   - group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: tenant1
-    sectionName: models
-  traffic:
-    basicAuthentication:
-      secretRef:
-        name: tenant1-users
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: tenant1-users
-  namespace: default
-stringData:
-  .htpasswd: alice:hash
+    sectionName: missing
+  provider: OpenAI
 
 ---
 # Output
@@ -83,7 +66,7 @@ output:
         - providers:
           - name: backend
             openai: {}
-      key: default/gpt-5-mini/backend.default.tenant1
+      key: default/gpt-5-mini/backend.default.tenant1.models
       name:
         name: gpt-5-mini
         namespace: default
@@ -124,30 +107,12 @@ output:
     modelRoute:
       concreteModel:
         backend:
-          backend: default/gpt-5-mini/backend.default.tenant1
-      key: default/gpt-5-mini.default.tenant1.http
+          backend: default/gpt-5-mini/backend.default.tenant1.models
+      key: default/gpt-5-mini.default.tenant1.models.http
       listenerKey: default/model-gateway.http
       match:
         model: gpt-5-mini
       routerKey: /llm:router:httproute:default:tenant1:models
-- gateway:
-    Name: model-gateway
-    Namespace: default
-  resource:
-    policy:
-      key: traffic/default/tenant1-auth:basicauth:default/tenant1/models
-      name:
-        kind: AgentgatewayPolicy
-        name: tenant1-auth
-        namespace: default
-      target:
-        route:
-          kind: HTTPRoute
-          name: tenant1
-          namespace: default
-          routeRule: models
-      traffic:
-        basicAuth: {}
 - gateway:
     Name: model-gateway
     Namespace: default
@@ -181,6 +146,24 @@ status:
     parents:
     - conditions:
       - lastTransitionTime: fake
+        message: HTTPRoute rule "missing" not found
+        reason: NoMatchingParent
+        status: "False"
+        type: Accepted
+      - lastTransitionTime: fake
+        message: ""
+        reason: ResolvedRefs
+        status: "True"
+        type: ResolvedRefs
+      controllerName: agentgateway.dev/agentgateway
+      parentRef:
+        group: gateway.networking.k8s.io
+        kind: HTTPRoute
+        name: tenant1
+        namespace: default
+        sectionName: missing
+    - conditions:
+      - lastTransitionTime: fake
         message: Successfully accepted AgentgatewayModel
         reason: Accepted
         status: "True"
@@ -196,6 +179,7 @@ status:
         kind: HTTPRoute
         name: tenant1
         namespace: default
+        sectionName: models
 - apiVersion: gateway.networking.k8s.io/v1
   kind: Gateway
   metadata:
