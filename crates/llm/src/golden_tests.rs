@@ -981,6 +981,7 @@ mod responses {
 			region: strng::new("us-west-2"),
 			guardrail_identifier: None,
 			guardrail_version: None,
+			endpoint_preference: Default::default(),
 		};
 		let bedrock =
 			conversion::bedrock::from_responses::translate(&request, &provider, None, None, None)
