@@ -25,5 +25,48 @@ info:
       reasoning_tokens: 3
 ---
 {
-  "error": "unsupported conversion: responses function call arguments are not valid JSON"
+  "response": {
+    "id": "[id]",
+    "type": "message",
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "call_empty",
+        "name": "ping",
+        "input": {}
+      }
+    ],
+    "model": "gpt-5.6-luna",
+    "stop_reason": "tool_use",
+    "stop_sequence": null,
+    "usage": {
+      "input_tokens": 50,
+      "output_tokens": 5,
+      "cache_creation_input_tokens": 30,
+      "cache_read_input_tokens": 20
+    }
+  },
+  "parsed": {
+    "input_tokens": 50,
+    "output_tokens": 5,
+    "total_tokens": 55,
+    "cache_creation_input_tokens": 30,
+    "cached_input_tokens": 20,
+    "provider_model": "gpt-5.6-luna",
+    "output_messages": [
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_call",
+            "id": "call_empty",
+            "name": "ping",
+            "arguments": {}
+          }
+        ],
+        "finish_reason": "tool_use"
+      }
+    ]
+  }
 }

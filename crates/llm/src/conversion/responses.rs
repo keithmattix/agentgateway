@@ -782,7 +782,7 @@ pub mod from_messages {
 							"in-progress responses function call cannot be represented by messages",
 						);
 					}
-					let input = parse_tool_arguments(&call.arguments)?;
+					let input = crate::conversion::tool_arguments_to_input(&call.arguments);
 					saw_tool_call = true;
 					content.push(messages::ContentBlock::ToolUse {
 						id: call.call_id,
@@ -1620,14 +1620,6 @@ pub mod from_messages {
 				"responses incomplete reason {reason:?} cannot be represented by messages"
 			)))
 		}
-	}
-
-	fn parse_tool_arguments(arguments: &str) -> Result<Value, AIError> {
-		serde_json::from_str(arguments).map_err(|_| {
-			AIError::UnsupportedConversion(strng::literal!(
-				"responses function call arguments are not valid JSON"
-			))
-		})
 	}
 
 	fn validate_raw_request(req: &types::messages::Request) -> Result<(), AIError> {

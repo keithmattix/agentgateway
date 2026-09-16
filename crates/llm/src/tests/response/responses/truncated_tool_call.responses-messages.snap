@@ -18,5 +18,44 @@ info:
     reason: max_output_tokens
 ---
 {
-  "error": "unsupported conversion: responses function call arguments are not valid JSON"
+  "response": {
+    "id": "[id]",
+    "type": "message",
+    "role": "assistant",
+    "content": [
+      {
+        "type": "tool_use",
+        "id": "call_1",
+        "name": "get_weather",
+        "input": "{\"location\": \"Par"
+      }
+    ],
+    "model": "gpt-x",
+    "stop_reason": "max_tokens",
+    "stop_sequence": null,
+    "usage": {
+      "input_tokens": 0,
+      "output_tokens": 0
+    }
+  },
+  "parsed": {
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "total_tokens": 0,
+    "provider_model": "gpt-x",
+    "output_messages": [
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_call",
+            "id": "call_1",
+            "name": "get_weather",
+            "arguments": "{\"location\": \"Par"
+          }
+        ],
+        "finish_reason": "max_tokens"
+      }
+    ]
+  }
 }
