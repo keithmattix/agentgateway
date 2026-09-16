@@ -744,19 +744,27 @@ pub mod from_messages {
 					for part in message.content {
 						match part {
 							responses::OutputMessageContent::OutputText(text) => {
-								if !text.annotations.is_empty()
-									|| text
-										.logprobs
-										.as_ref()
-										.is_some_and(|logprobs| !logprobs.is_empty())
-								{
-									return unsupported(
-										"responses text annotations/logprobs cannot be represented by messages",
-									);
-								}
+								let citations: Vec<_> = text
+									.annotations
+									.into_iter()
+									.filter_map(|annotation| {
+										let responses::Annotation::UrlCitation(citation) = annotation else {
+											return None;
+										};
+										// Responses provides a source link, not the source excerpt or
+										// Anthropic's opaque replay index. Do not fabricate either.
+										Some(json!({
+											"type": "web_search_result_location",
+											"url": citation.url,
+											"title": citation.title,
+											"cited_text": "",
+											"encrypted_index": "",
+										}))
+									})
+									.collect();
 								content.push(messages::ContentBlock::Text(messages::ContentTextBlock {
 									text: text.text,
-									citations: None,
+									citations: (!citations.is_empty()).then_some(Value::Array(citations)),
 									cache_control: None,
 								}));
 							},
