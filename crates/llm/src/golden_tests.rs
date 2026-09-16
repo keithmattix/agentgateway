@@ -1736,6 +1736,41 @@ data: {"type":"message_stop"}
 		assert!(!llm_response.inter_chunk_latencies.is_empty());
 		assert!(llm_response.first_token.is_some());
 	}
+
+	#[tokio::test]
+	async fn responses_translation_records_inter_chunk_latencies() {
+		let input_bytes = fs::read(fixture_path("response/responses/stream.json"))
+			.expect("failed to read streaming input file");
+		let info = Arc::new(Mutex::new(LLMInfo::new(
+			LLMRequest {
+				input_tokens: None,
+				input_format: InputFormat::Detect,
+				cache_convention: CacheTokenConvention::pending(),
+				request_model: strng::literal!("input-model"),
+				provider: Default::default(),
+				streaming: true,
+				params: Default::default(),
+				prompt: None,
+				provider_state: None,
+			},
+			LLMResponse::default(),
+		)));
+		let reporter = TestStreamingReporter { info: info.clone() };
+		let response = crate::conversion::responses::from_messages::translate_stream(
+			agent_http::Body::from(input_bytes),
+			1024 * 1024,
+			StreamingUsageGuard::new(Box::new(reporter)),
+			crate::LogContentFields::default(),
+		);
+		// Drain the body so the translation closures actually run.
+		let _ = response.collect().await.unwrap().to_bytes();
+
+		let llm_response = info.lock().unwrap().response.clone();
+		// The fixture has many content-bearing chunks; every one after the first
+		// token should record a gap.
+		assert!(!llm_response.inter_chunk_latencies.is_empty());
+		assert!(llm_response.first_token.is_some());
+	}
 }
 
 #[test]

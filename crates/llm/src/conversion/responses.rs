@@ -862,7 +862,7 @@ pub mod from_messages {
 		struct StreamState {
 			sent_message_start: bool,
 			sent_message_stop: bool,
-			sent_first_token: bool,
+			last_token_at: Option<Instant>,
 			next_block_index: usize,
 			response_id: Option<String>,
 			model: Option<String>,
@@ -927,14 +927,17 @@ pub mod from_messages {
 			}
 		}
 
-		fn maybe_set_first_token(state: &mut StreamState, log: &StreamingUsageGuard) {
-			if state.sent_first_token {
-				return;
+		fn record_token(state: &mut StreamState, log: &StreamingUsageGuard) {
+			let now = Instant::now();
+			if let Some(prev) = state.last_token_at.replace(now) {
+				log.update(|r| {
+					r.response
+						.inter_chunk_latencies
+						.record(now.duration_since(prev))
+				});
+			} else {
+				log.update(|r| r.response.first_token = Some(now));
 			}
-			state.sent_first_token = true;
-			log.update(|r| {
-				r.response.first_token = Some(Instant::now());
-			});
 		}
 
 		fn close_text_block(
@@ -966,7 +969,7 @@ pub mod from_messages {
 			if !text.is_empty() && state.emitted_refusals.insert(key) {
 				ensure_message_start(state, events, log);
 				let index = open_text_block(state, events, key);
-				maybe_set_first_token(state, log);
+				record_token(state, log);
 				if let Some(c) = completion.as_mut() {
 					c.push_str(&text);
 				}
@@ -1266,7 +1269,7 @@ pub mod from_messages {
 								Some(call.call_id),
 								Some(call.name),
 							);
-							maybe_set_first_token(&mut state, &log);
+							record_token(&mut state, &log);
 						}
 					},
 					responses::ResponseStreamEvent::ResponseContentPartAdded(added) => {
@@ -1301,7 +1304,7 @@ pub mod from_messages {
 							&mut events,
 							(delta.output_index, delta.content_index),
 						);
-						maybe_set_first_token(&mut state, &log);
+						record_token(&mut state, &log);
 						if let Some(c) = completion.as_mut() {
 							c.push_str(&delta.delta);
 						}
@@ -1325,7 +1328,7 @@ pub mod from_messages {
 						let block = state.tool_blocks.entry(delta.output_index).or_default();
 						block.arguments.push_str(&delta.delta);
 						block.emitted_arguments = true;
-						maybe_set_first_token(&mut state, &log);
+						record_token(&mut state, &log);
 						push_event(
 							&mut events,
 							messages::MessagesStreamEvent::ContentBlockDelta {
@@ -1351,7 +1354,7 @@ pub mod from_messages {
 						}
 						if !block.emitted_arguments && !done.arguments.is_empty() {
 							block.emitted_arguments = true;
-							maybe_set_first_token(&mut state, &log);
+							record_token(&mut state, &log);
 							push_event(
 								&mut events,
 								messages::MessagesStreamEvent::ContentBlockDelta {
@@ -1370,7 +1373,7 @@ pub mod from_messages {
 						let index = open_text_block(&mut state, &mut events, key);
 						if !delta.delta.is_empty() {
 							state.emitted_refusals.insert(key);
-							maybe_set_first_token(&mut state, &log);
+							record_token(&mut state, &log);
 							if let Some(c) = completion.as_mut() {
 								c.push_str(&delta.delta);
 							}
