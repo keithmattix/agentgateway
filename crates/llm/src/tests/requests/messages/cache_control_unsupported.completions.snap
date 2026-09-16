@@ -1,8 +1,8 @@
 ---
 source: crates/llm/src/golden_tests.rs
-description: src/tests/requests/messages/cache_control_responses.json
+description: src/tests/requests/messages/cache_control_unsupported.json
 info:
-  model: gpt-5.6-terra
+  model: gpt-5.5
   max_tokens: 1024
   system:
     - type: text
@@ -21,47 +21,39 @@ info:
 ---
 {
   "request": {
-    "input": [
+    "messages": [
       {
-        "type": "message",
         "role": "system",
         "content": [
           {
-            "type": "input_text",
+            "type": "text",
             "text": "Stable instructions"
           },
           {
-            "type": "input_text",
-            "text": "Cached instructions",
-            "prompt_cache_breakpoint": {
-              "mode": "explicit"
-            }
+            "type": "text",
+            "text": "Cached instructions"
           }
         ]
       },
       {
-        "type": "message",
         "role": "user",
         "content": [
           {
-            "type": "input_text",
-            "text": "Return CACHE_CONTROL_OK",
-            "prompt_cache_breakpoint": {
-              "mode": "explicit"
-            }
+            "type": "text",
+            "text": "Return CACHE_CONTROL_OK"
           }
         ]
       }
     ],
-    "model": "gpt-5.6-terra",
-    "max_output_tokens": 1024,
+    "model": "gpt-5.5",
+    "max_completion_tokens": 1024,
     "stream": false
   },
   "parsed": {
     "input_format": "Messages",
     "cache_convention": "InputIncludesCache",
-    "request_model": "gpt-5.6-terra",
-    "provider": "responses",
+    "request_model": "gpt-5.5",
+    "provider": "openai",
     "streaming": false,
     "params": {
       "max_tokens": 1024

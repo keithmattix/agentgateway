@@ -807,12 +807,8 @@ pub mod from_messages {
 		} = req;
 
 		// Explicit prompt-cache breakpoints are accepted only by GPT 5.6 and newer models.
-		let supports_prompt_cache_breakpoint = model
-			.strip_prefix("gpt-")
-			.and_then(|model| model.split('-').next())
-			.and_then(|version| version.split_once('.'))
-			.and_then(|(major, minor)| Some((major.parse::<u32>().ok()?, minor.parse::<u32>().ok()?)))
-			.is_some_and(|version| version >= (5, 6));
+		let supports_prompt_cache_breakpoint =
+			crate::conversion::supports_prompt_cache_breakpoint(&model);
 		let cache_breakpoint = |cache_control: Option<messages::CacheControlEphemeral>| {
 			cache_control
 				.filter(|_| supports_prompt_cache_breakpoint)

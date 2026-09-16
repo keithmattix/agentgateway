@@ -191,7 +191,8 @@ pub mod from_messages {
 		// accepted and dropped rather than failing the conversion (see #2662).
 		let _ = (stop_sequences, top_k);
 
-		let (instructions, mut input) = translate_system_prompt(system)?;
+		let supports_cache = crate::conversion::supports_prompt_cache_breakpoint(&model);
+		let (instructions, mut input) = translate_system_prompt(system, supports_cache)?;
 		let mut rest = Map::new();
 		if let Some(instructions) = instructions.filter(|s| !s.is_empty()) {
 			rest.insert("instructions".to_string(), Value::String(instructions));
@@ -231,7 +232,7 @@ pub mod from_messages {
 		}
 
 		for msg in messages {
-			translate_message(msg, &mut input)?;
+			translate_message(msg, &mut input, supports_cache)?;
 		}
 
 		let max_output_tokens = u32::try_from(max_tokens).map_err(|_| {
@@ -256,6 +257,7 @@ pub mod from_messages {
 
 	fn translate_system_prompt(
 		system: Option<messages::SystemPrompt>,
+		supports_cache: bool,
 	) -> Result<(Option<String>, Vec<types::responses::RawInputItem>), AIError> {
 		let Some(system) = system else {
 			return Ok((None, Vec::new()));
@@ -266,7 +268,7 @@ pub mod from_messages {
 				let has_cache_control = blocks.iter().any(|block| match block {
 					messages::SystemContentBlock::Text { cache_control, .. } => cache_control.is_some(),
 				});
-				if has_cache_control {
+				if supports_cache && has_cache_control {
 					let mut parts = Vec::new();
 					for block in blocks {
 						match block {
@@ -278,7 +280,7 @@ pub mod from_messages {
 									"type": "input_text",
 									"text": text,
 								});
-								add_prompt_cache_breakpoint(&mut part, cache_control);
+								add_prompt_cache_breakpoint(&mut part, cache_control, supports_cache);
 								parts.push(part);
 							},
 						}
@@ -302,8 +304,10 @@ pub mod from_messages {
 	fn add_prompt_cache_breakpoint(
 		value: &mut Value,
 		cache_control: Option<messages::CacheControlEphemeral>,
+		supports_cache: bool,
 	) {
-		if cache_control.is_some()
+		if supports_cache
+			&& cache_control.is_some()
 			&& let Some(object) = value.as_object_mut()
 		{
 			object
@@ -423,17 +427,19 @@ pub mod from_messages {
 	fn translate_message(
 		msg: messages::Message,
 		out: &mut Vec<types::responses::RawInputItem>,
+		supports_cache: bool,
 	) -> Result<(), AIError> {
 		match msg.role {
-			messages::Role::User => translate_user_message(msg.content, out),
-			messages::Role::Assistant => translate_assistant_message(msg.content, out),
-			messages::Role::System => translate_system_message(msg.content, out),
+			messages::Role::User => translate_user_message(msg.content, out, supports_cache),
+			messages::Role::Assistant => translate_assistant_message(msg.content, out, supports_cache),
+			messages::Role::System => translate_system_message(msg.content, out, supports_cache),
 		}
 	}
 
 	fn translate_user_message(
 		content: Vec<messages::ContentBlock>,
 		out: &mut Vec<types::responses::RawInputItem>,
+		supports_cache: bool,
 	) -> Result<(), AIError> {
 		let mut parts = Vec::new();
 		for block in content {
@@ -443,12 +449,12 @@ pub mod from_messages {
 						"type": "input_text",
 						"text": text.text,
 					});
-					add_prompt_cache_breakpoint(&mut part, text.cache_control);
+					add_prompt_cache_breakpoint(&mut part, text.cache_control, supports_cache);
 					parts.push(part);
 				},
 				messages::ContentBlock::Image(image) => {
 					let mut part = translate_image_source(&image.source)?;
-					add_prompt_cache_breakpoint(&mut part, image.cache_control);
+					add_prompt_cache_breakpoint(&mut part, image.cache_control, supports_cache);
 					parts.push(part);
 				},
 				messages::ContentBlock::ToolResult {
@@ -463,7 +469,7 @@ pub mod from_messages {
 					} else {
 						"completed"
 					};
-					let output = translate_tool_result_content(content, cache_control)?;
+					let output = translate_tool_result_content(content, cache_control, supports_cache)?;
 					out.push(types::responses::RawInputItem::from_value(json!({
 						"type": "function_call_output",
 						"call_id": tool_use_id,
@@ -488,16 +494,19 @@ pub mod from_messages {
 	fn translate_assistant_message(
 		content: Vec<messages::ContentBlock>,
 		out: &mut Vec<types::responses::RawInputItem>,
+		supports_cache: bool,
 	) -> Result<(), AIError> {
 		let mut text_parts = Vec::new();
 		for block in content {
 			match block {
 				messages::ContentBlock::Text(text) => {
-					text_parts.push(json!({
+					let mut part = json!({
 						"type": "output_text",
 						"text": text.text,
 						"annotations": [],
-					}));
+					});
+					add_prompt_cache_breakpoint(&mut part, text.cache_control, supports_cache);
+					text_parts.push(part);
 				},
 				messages::ContentBlock::ToolUse {
 					id,
@@ -529,6 +538,7 @@ pub mod from_messages {
 	fn translate_system_message(
 		content: Vec<messages::ContentBlock>,
 		out: &mut Vec<types::responses::RawInputItem>,
+		supports_cache: bool,
 	) -> Result<(), AIError> {
 		let mut parts = Vec::new();
 		for block in content {
@@ -537,7 +547,7 @@ pub mod from_messages {
 					"type": "input_text",
 					"text": text.text,
 				});
-				add_prompt_cache_breakpoint(&mut part, text.cache_control);
+				add_prompt_cache_breakpoint(&mut part, text.cache_control, supports_cache);
 				parts.push(part);
 			}
 		}
@@ -630,7 +640,9 @@ pub mod from_messages {
 	fn translate_tool_result_content(
 		content: messages::ToolResultContent,
 		cache_control: Option<messages::CacheControlEphemeral>,
+		supports_cache: bool,
 	) -> Result<Value, AIError> {
+		let cache_control = cache_control.filter(|_| supports_cache);
 		match content {
 			messages::ToolResultContent::Text(text) => {
 				if cache_control.is_some() {
@@ -638,7 +650,7 @@ pub mod from_messages {
 						"type": "input_text",
 						"text": text,
 					});
-					add_prompt_cache_breakpoint(&mut part, cache_control);
+					add_prompt_cache_breakpoint(&mut part, cache_control, supports_cache);
 					Ok(json!([part]))
 				} else {
 					Ok(Value::String(text))
@@ -664,7 +676,7 @@ pub mod from_messages {
 							cache_control,
 						} => {
 							let mut value = translate_image_source(&source)?;
-							add_prompt_cache_breakpoint(&mut value, cache_control);
+							add_prompt_cache_breakpoint(&mut value, cache_control, supports_cache);
 							text_values.push(value);
 							requires_array = true;
 							continue;
@@ -677,13 +689,13 @@ pub mod from_messages {
 						"type": "input_text",
 						"text": &text,
 					});
-					add_prompt_cache_breakpoint(&mut value, cache_control);
+					add_prompt_cache_breakpoint(&mut value, cache_control, supports_cache);
 					text_parts.push(text);
 					text_values.push(value);
 				}
 				if let Some(cache_control) = cache_control {
 					if let Some(last) = text_values.last_mut() {
-						add_prompt_cache_breakpoint(last, Some(cache_control));
+						add_prompt_cache_breakpoint(last, Some(cache_control), supports_cache);
 					} else {
 						text_values.push(json!({
 							"type": "input_text",

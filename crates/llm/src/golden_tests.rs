@@ -190,8 +190,12 @@ mod requests {
 			"structured-output",
 			&[ANTHROPIC, COMPLETIONS, BEDROCK, VERTEX, RESPONSES],
 		),
-		("cache_control", &[ANTHROPIC, COMPLETIONS, BEDROCK]),
+		(
+			"cache_control",
+			&[ANTHROPIC, COMPLETIONS, BEDROCK, RESPONSES],
+		),
 		("cache_control_responses", &[RESPONSES]),
+		("cache_control_unsupported", &[COMPLETIONS, RESPONSES]),
 		("gpt_adaptive_thinking_with_tools", &[COMPLETIONS]),
 		("reasoning_replay", &[BEDROCK, COMPLETIONS, RESPONSES]),
 		(
@@ -1790,7 +1794,7 @@ fn messages_to_responses_rejects_malformed_image_source() {
 #[test]
 fn messages_to_responses_maps_anthropic_runtime_features() {
 	let input: types::messages::Request = serde_json::from_value(json!({
-		"model": "claude-sonnet-4-20250514",
+		"model": "gpt-5.6-terra",
 		"max_tokens": 1024,
 		"context_management": {
 			"edits": [{"type": "clear_thinking_20251015", "keep": "all"}]
