@@ -21,5 +21,27 @@ info:
     reason: content_filter
 ---
 {
-  "error": "unsupported conversion: responses incomplete reason \"content_filter\" cannot be represented by messages"
+  "response": {
+    "id": "[id]",
+    "type": "message",
+    "role": "assistant",
+    "content": [],
+    "model": "gpt-5.6-luna",
+    "stop_reason": "refusal",
+    "stop_sequence": null,
+    "usage": {
+      "input_tokens": 50,
+      "output_tokens": 5,
+      "cache_creation_input_tokens": 30,
+      "cache_read_input_tokens": 20
+    }
+  },
+  "parsed": {
+    "input_tokens": 50,
+    "output_tokens": 5,
+    "total_tokens": 55,
+    "cache_creation_input_tokens": 30,
+    "cached_input_tokens": 20,
+    "provider_model": "gpt-5.6-luna"
+  }
 }

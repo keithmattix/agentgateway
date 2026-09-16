@@ -894,6 +894,7 @@ mod responses {
 		COMPLETIONS_TO_DETECT,
 	];
 	const COMPLETIONS_RESPONSES: &[(&str, &[&str])] = &[
+		("content_filter", &[COMPLETIONS_TO_MESSAGES]),
 		("basic", ALL_COMPLETIONS),
 		("stop_sequence", &[COMPLETIONS_TO_MESSAGES]),
 		("audio", ALL_COMPLETIONS),
@@ -995,6 +996,7 @@ mod responses {
 		),
 	];
 	const COMPLETIONS_STREAM_RESPONSES: &[(&str, &[&str])] = &[
+		("stream-content_filter", &[COMPLETIONS_TO_MESSAGES]),
 		("stream", ALL_COMPLETIONS),
 		(
 			"stream_tool_empty_content",

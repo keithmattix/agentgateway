@@ -1611,7 +1611,9 @@ pub mod from_messages {
 
 	fn incomplete_reason_to_stop_reason(reason: &str) -> Result<messages::StopReason, AIError> {
 		let reason = reason.to_ascii_lowercase();
-		if reason.contains("max") || reason.contains("token") {
+		if reason == "content_filter" {
+			Ok(messages::StopReason::Refusal)
+		} else if reason.contains("max") || reason.contains("token") {
 			Ok(messages::StopReason::MaxTokens)
 		} else if reason.contains("context") {
 			Ok(messages::StopReason::ModelContextWindowExceeded)

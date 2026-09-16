@@ -138,7 +138,7 @@ mod stop_sequence_reporting {
 			"message":{"role":"assistant","content":"..."}}],
 			"usage":{"prompt_tokens":1,"completion_tokens":1,"total_tokens":2}}"#;
 		let out = translate(body);
-		assert_eq!(out.stop_reason, Some(messages::StopReason::EndTurn));
+		assert_eq!(out.stop_reason, Some(messages::StopReason::Refusal));
 		assert_eq!(out.stop_sequence, None);
 	}
 }

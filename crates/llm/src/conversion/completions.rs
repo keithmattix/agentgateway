@@ -192,7 +192,7 @@ pub mod from_messages {
 			Some(completions::FinishReason::Stop) => (messages::StopReason::EndTurn, true),
 			Some(completions::FinishReason::Length) => (messages::StopReason::MaxTokens, false),
 			Some(completions::FinishReason::ToolCalls) => (messages::StopReason::ToolUse, false),
-			Some(completions::FinishReason::ContentFilter) => (messages::StopReason::EndTurn, false),
+			Some(completions::FinishReason::ContentFilter) => (messages::StopReason::Refusal, false),
 			Some(completions::FinishReason::FunctionCall) => (messages::StopReason::ToolUse, false),
 			None => (messages::StopReason::EndTurn, false),
 		};
