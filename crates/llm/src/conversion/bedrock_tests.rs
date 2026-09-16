@@ -384,6 +384,7 @@ fn test_adaptive_thinking_preserves_sampling_and_tool_choice() {
 		top_p: Some(0.8),
 		tools: Some(vec![messages::typed::Tool::Custom(
 			messages::typed::CustomTool {
+				strict: None,
 				name: "lookup".to_string(),
 				description: Some("Lookup tool".to_string()),
 				input_schema: json!({
@@ -461,6 +462,7 @@ fn test_enabled_thinking_applies_sampling_and_tool_choice_constraints() {
 		top_p: Some(0.8),
 		tools: Some(vec![messages::typed::Tool::Custom(
 			messages::typed::CustomTool {
+				strict: None,
 				name: "lookup".to_string(),
 				description: Some("Lookup tool".to_string()),
 				input_schema: json!({
@@ -1603,6 +1605,7 @@ fn test_messages_long_tool_names_fit_bedrock_tool_config() {
 			})],
 		}],
 		tools: Some(vec![messages::Tool::Custom(messages::CustomTool {
+			strict: None,
 			name: long_name.to_string(),
 			description: Some("test".to_string()),
 			input_schema: serde_json::json!({"type": "object"}),
@@ -1661,6 +1664,7 @@ fn test_messages_long_tool_name_round_trip_response() {
 			})],
 		}],
 		tools: Some(vec![messages::Tool::Custom(messages::CustomTool {
+			strict: None,
 			name: long_name.to_string(),
 			description: Some("test".to_string()),
 			input_schema: serde_json::json!({"type": "object"}),

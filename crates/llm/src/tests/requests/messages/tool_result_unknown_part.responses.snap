@@ -88,7 +88,8 @@ info:
           "required": [
             "query"
           ]
-        }
+        },
+        "strict": false
       },
       {
         "type": "function",
@@ -97,7 +98,8 @@ info:
         "parameters": {
           "type": "object",
           "properties": {}
-        }
+        },
+        "strict": false
       }
     ]
   },

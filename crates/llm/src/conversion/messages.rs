@@ -404,6 +404,7 @@ pub mod from_completions {
 					completions::Tool::Function(function_tool) => {
 						Some(messages::Tool::Custom(messages::CustomTool {
 							name: function_tool.function.name.clone(),
+							strict: None,
 							description: function_tool.function.description.clone(),
 							input_schema: function_tool
 								.function

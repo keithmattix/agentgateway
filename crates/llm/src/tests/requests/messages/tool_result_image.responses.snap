@@ -109,7 +109,8 @@ info:
           "required": [
             "location"
           ]
-        }
+        },
+        "strict": false
       }
     ]
   },

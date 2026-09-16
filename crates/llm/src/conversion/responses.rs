@@ -365,6 +365,11 @@ pub mod from_messages {
 						value.insert("description".to_string(), Value::String(description));
 					}
 					value.insert("parameters".to_string(), tool.input_schema);
+					// Responses defaults to strict schemas, making optional properties required.
+					value.insert(
+						"strict".to_string(),
+						Value::Bool(tool.strict.unwrap_or(false)),
+					);
 					out.push(Value::Object(value));
 				},
 				// OpenAI Responses has no equivalent of an Anthropic server-executed

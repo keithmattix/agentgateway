@@ -1122,7 +1122,7 @@ pub mod from_messages {
 							name: tool.name,
 							description: tool.description,
 							parameters: Some(tool.input_schema),
-							strict: None,
+							strict: tool.strict,
 						},
 					}))
 				},

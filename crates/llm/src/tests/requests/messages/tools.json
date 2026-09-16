@@ -21,6 +21,38 @@
           "location"
         ]
       }
+    },
+    {
+      "name": "get_time",
+      "strict": true,
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "location": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "location"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "get_forecast",
+      "strict": false,
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "location": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "location"
+        ],
+        "additionalProperties": false
+      }
     }
   ],
   "messages": [
