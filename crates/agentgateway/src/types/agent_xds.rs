@@ -27,7 +27,7 @@ use llm::{AIBackend, AIProvider, NamedAIProvider};
 use super::agent::*;
 use crate::http::auth::{AwsAuth, BackendAuth, BackendAuthKind, GcpAuth};
 use crate::http::buffer::BufferBody;
-use crate::http::transformation_cel::{LocalTransform, LocalTransformationConfig, Transformation};
+use crate::http::transformation_cel::{Transformation, TransformerConfig};
 use crate::http::{HeaderOrPseudo, Scheme, auth, authorization, health};
 use crate::mcp::{FailureMode, McpAuthorization};
 use crate::store::RequestPolicy;
@@ -2252,52 +2252,49 @@ fn transformation_from_proto(
 ) -> Result<Transformation, ProtoError> {
 	fn convert_transform(
 		t: &Option<proto::agent::traffic_policy_spec::transformation_policy::Transform>,
-	) -> LocalTransform {
-		let mut add = Vec::new();
-		let mut set = Vec::new();
-		let mut remove = Vec::new();
-		let mut body = None;
-		let mut metadata = Vec::new();
-
-		if let Some(t) = t {
-			for h in &t.add {
-				add.push((h.name.clone().into(), h.expression.clone().into()));
-			}
-			for h in &t.set {
-				set.push((h.name.clone().into(), h.expression.clone().into()));
-			}
-			for r in &t.remove {
-				remove.push(r.clone().into());
-			}
-			if let Some(b) = &t.body {
-				body = Some(b.expression.clone().into());
-			}
-			for (k, v) in &t.metadata {
-				metadata.push((k.clone().into(), v.clone().into()));
-			}
+		diagnostics: &mut Diagnostics,
+	) -> Result<Option<Arc<TransformerConfig>>, ProtoError> {
+		let Some(t) = t else {
+			return Ok(None);
+		};
+		let mut config = TransformerConfig::default();
+		for h in &t.set {
+			config.set.push((
+				crate::http::HeaderOrPseudo::try_from(h.name.as_str())
+					.map_err(|e| ProtoError::Generic(e.to_string()))?,
+				permissive_cel_expression(diagnostics, "transformation", &h.expression),
+			));
 		}
-
-		LocalTransform {
-			add,
-			set,
-			remove,
-			// `replace` is only available via local file config today; the XDS proto does not
-			// carry it yet, so dynamic configs leave it unset.
-			replace: None,
-			body,
-			metadata,
+		for h in &t.add {
+			config.add.push((
+				crate::http::HeaderOrPseudo::try_from(h.name.as_str())
+					.map_err(|e| ProtoError::Generic(e.to_string()))?,
+				permissive_cel_expression(diagnostics, "transformation", &h.expression),
+			));
 		}
+		for r in &t.remove {
+			config.remove.push(
+				::http::HeaderName::try_from(r.as_str()).map_err(|e| ProtoError::Generic(e.to_string()))?,
+			);
+		}
+		config.body = t
+			.body
+			.as_ref()
+			.map(|b| permissive_cel_expression(diagnostics, "transformation", &b.expression));
+		for (k, v) in &t.metadata {
+			config.metadata.push((
+				k.clone().into(),
+				permissive_cel_expression(diagnostics, "transformation", v),
+			));
+		}
+		// The xDS proto does not carry replace yet, so it remains unset.
+		Ok(Some(Arc::new(config)))
 	}
 
-	let request = Some(convert_transform(&spec.request));
-	let response = Some(convert_transform(&spec.response));
-	let config = LocalTransformationConfig { request, response };
-	Transformation::try_from_local_config_with_warnings(config, false, |expression, err| {
-		diagnostics.add_warning(format!(
-			"invalid CEL expression for transformation: {err}; replacing {expression:?} with an expression that always fails",
-		));
+	Ok(Transformation {
+		request: convert_transform(&spec.request, diagnostics)?,
+		response: convert_transform(&spec.response, diagnostics)?,
 	})
-	.map_err(|e| ProtoError::Generic(e.to_string()))
 }
 
 fn backend_policy_from_proto(

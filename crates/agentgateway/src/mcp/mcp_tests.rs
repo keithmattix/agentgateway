@@ -8114,9 +8114,7 @@ async fn mcp_guardrails_request_headers_visible_to_policy_server() {
 // mcpGuardrails processor metadata is readable as `guardrails.*` in an upstream-leg transformation.
 #[tokio::test]
 async fn mcp_guardrails_request_metadata_usable_in_backend_transformation() {
-	use crate::http::transformation_cel::{
-		LocalTransform, LocalTransformationConfig, Transformation,
-	};
+	use crate::http::transformation_cel::Transformation;
 	use crate::test_helpers::extmcpmock::{closure_mock, pass_request_with, pass_response};
 
 	let extmcp_mock = closure_mock(
@@ -8129,19 +8127,11 @@ async fn mcp_guardrails_request_metadata_usable_in_backend_transformation() {
 	.spawn()
 	.await;
 
-	let xfm = Transformation::try_from_local_config(
-		LocalTransformationConfig {
-			request: Some(LocalTransform {
-				set: vec![(
-					strng::new("x-from-guardrails"),
-					strng::new("mcpGuardrails.tenant"),
-				)],
-				..Default::default()
-			}),
-			response: None,
+	let xfm: Transformation = serde_json::from_value(serde_json::json!({
+		"request": {
+			"set": { "x-from-guardrails": "mcpGuardrails.tenant" },
 		},
-		true,
-	)
+	}))
 	.unwrap();
 	let target_policy = BackendTrafficPolicy::Transformation(Arc::new(xfm));
 
