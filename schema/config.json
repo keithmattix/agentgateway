@@ -700,6 +700,17 @@
               "type": "null"
             }
           ]
+        },
+        "perPage": {
+          "description": "Cost per page, for document/OCR models.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Money"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false
