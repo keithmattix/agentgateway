@@ -451,6 +451,7 @@ export function LogsPage() {
 									entry={entry}
 									detail={expandedId === entry.id ? (expanded ?? entry) : entry}
 									expanded={expandedId === entry.id}
+									promptLoggingEnabled={promptLoggingEnabled}
 									loading={expandedId === entry.id && expandedLoading}
 									onToggle={() => void expand(entry)}
 									onOpenSettings={() => setSettings('logs')}
@@ -1227,6 +1228,7 @@ function LogCallRow(props: {
 	entry: LogEntry;
 	detail: LogEntry;
 	expanded: boolean;
+	promptLoggingEnabled: boolean;
 	loading: boolean;
 	onToggle: () => void;
 	onOpenSettings?: () => void;
@@ -1316,7 +1318,11 @@ function LogCallRow(props: {
 					<td colSpan={11}>
 						<div className="expanded-log">
 							{props.loading ? <StatusBanner state="loading" title="Loading log payload" /> : null}
-							<LogDetailView entry={props.detail} onOpenSettings={props.onOpenSettings} />
+							<LogDetailView
+								entry={props.detail}
+								promptLoggingEnabled={props.promptLoggingEnabled}
+								onOpenSettings={props.onOpenSettings}
+							/>
 						</div>
 					</td>
 				</tr>
@@ -1393,7 +1399,11 @@ function logUsageDetail(entry: LogEntry): LogUsageDetail {
 	};
 }
 
-function LogDetailView(props: { entry: LogEntry; onOpenSettings?: () => void }) {
+function LogDetailView(props: {
+	entry: LogEntry;
+	promptLoggingEnabled: boolean;
+	onOpenSettings?: () => void;
+}) {
 	const messages = logConversation(props.entry);
 	const trajectory = trajectoryEvents(messages);
 	const conversationRef = useRef<HTMLDetailsElement>(null);
@@ -1544,6 +1554,11 @@ function LogDetailView(props: { entry: LogEntry; onOpenSettings?: () => void }) 
 						))}
 					</div>
 				</details>
+			) : props.promptLoggingEnabled ? (
+				<StatusBanner state="info" title="No prompt or completion content recorded">
+					Prompt logging is enabled, but no content was captured for this request. This can happen
+					in passthrough mode.
+				</StatusBanner>
 			) : (
 				<StatusBanner state="info" title="Prompt logging is off">
 					Enable "Include prompts and completions in logs" in{' '}
