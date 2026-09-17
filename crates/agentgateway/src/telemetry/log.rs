@@ -377,7 +377,7 @@ impl<T: Debug> Debug for AsyncLog<T> {
 	}
 }
 
-/// Per-request accumulator of prompt-guard guardrail interventions.
+/// Per-request accumulator of prompt-guard guardrail evaluations.
 pub type GuardrailLog = AsyncLog<Vec<cel::GuardrailInfo>>;
 
 #[derive(serde::Serialize, Debug, Default, Clone)]

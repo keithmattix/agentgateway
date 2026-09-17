@@ -12,6 +12,9 @@ import {
 	MessageSquare,
 	RefreshCw,
 	Settings,
+	Shield,
+	ShieldBan,
+	ShieldEllipsis,
 	User,
 	Wrench
 } from 'lucide-react';
@@ -1224,6 +1227,118 @@ function providerIconName(name: string | null | undefined) {
 	return match === 'xai' ? 'xAI' : match;
 }
 
+function logGuardrails(entry: LogEntry): Record<string, unknown>[] {
+	const value = parseMaybeJson(attributeValue(entry.attributes, 'agw.ai.guardrails'));
+	if (!Array.isArray(value)) return [];
+	return value.filter(
+		(item): item is Record<string, unknown> =>
+			item != null && typeof item === 'object' && !Array.isArray(item)
+	);
+}
+
+function LogGuardrailBadge(props: { entry: LogEntry }) {
+	const guards = logGuardrails(props.entry);
+	if (!guards.length) return null;
+	const rejected = guards.some(guard => guard.action === 'reject');
+	const masked = guards.some(guard => guard.action === 'mask');
+	const failedOpen = guards.some(guard => guard.action === 'failOpen');
+	const state = rejected ? 'rejected' : failedOpen ? 'failed-open' : masked ? 'masked' : 'inactive';
+	const label = rejected
+		? 'Guardrail rejected'
+		: failedOpen
+			? 'Guardrail failed open'
+			: masked
+				? 'Guardrail masked content'
+				: 'Guardrail present — no action taken';
+	const Icon = rejected ? ShieldBan : masked ? ShieldEllipsis : Shield;
+	return (
+		<Tooltip
+			content={
+				<>
+					<strong>{label}</strong>
+					{guards.map((guard, index) => (
+						// biome-ignore lint/suspicious/noArrayIndexKey: Log evaluations are immutable and may repeat the same guard.
+						<div key={index}>
+							{String(guard.phase ?? '')}: {String(guard.guard ?? 'guardrail')} (
+							{String(guard.action ?? 'unknown')})
+						</div>
+					))}
+				</>
+			}
+		>
+			<span className={`log-guardrail-badge ${state}`} role="img" aria-label={label}>
+				<Icon size={15} aria-hidden="true" />
+			</span>
+		</Tooltip>
+	);
+}
+
+function LogGuardrailDetails(props: { entry: LogEntry }) {
+	const guards = logGuardrails(props.entry);
+	if (!guards.length) return null;
+	const outcomes: Record<string, { label: string; description: string }> = {
+		allow: { label: 'Allowed', description: 'Content passed without modification.' },
+		reject: { label: 'Rejected', description: 'The guardrail blocked the call.' },
+		mask: { label: 'Masked', description: 'The guardrail modified content before continuing.' },
+		audit: {
+			label: 'Audit only',
+			description: 'The guardrail flagged content without blocking or masking it.'
+		},
+		failOpen: {
+			label: 'Failed open',
+			description: 'The guardrail could not complete its check; the call continued.'
+		}
+	};
+	return (
+		<section className="log-detail-section">
+			<h4>Guardrails</h4>
+			<div className="log-guardrail-list">
+				{guards.map((guard, index) => {
+					const action = String(guard.action ?? 'unknown');
+					const outcome = outcomes[action];
+					const state =
+						action === 'reject'
+							? 'rejected'
+							: action === 'failOpen'
+								? 'failed-open'
+								: action === 'mask'
+									? 'masked'
+									: 'inactive';
+					const Icon =
+						action === 'reject' ? ShieldBan : action === 'mask' ? ShieldEllipsis : Shield;
+					return (
+						// biome-ignore lint/suspicious/noArrayIndexKey: Log evaluations are immutable and may repeat the same guard.
+						<div className="log-guardrail-result" key={index}>
+							<span className={`log-guardrail-badge ${state}`}>
+								<Icon size={18} aria-hidden="true" />
+							</span>
+							<div className="log-guardrail-context">
+								<div className="log-guardrail-heading">
+									<strong>{String(guard.guard ?? 'Guardrail')}</strong>
+									<span className="log-op-chip">
+										{guard.phase === 'request'
+											? 'Request'
+											: guard.phase === 'response'
+												? 'Response'
+												: String(guard.phase ?? 'Unknown phase')}
+									</span>
+									<span className={`log-guardrail-badge ${state}`}>{outcome?.label ?? action}</span>
+								</div>
+								{outcome ? <p>{outcome.description}</p> : null}
+								{typeof guard.guardrailId === 'string' ? (
+									<p>
+										Guardrail ID: <code>{guard.guardrailId}</code>
+									</p>
+								) : null}
+							</div>
+						</div>
+					);
+				})}
+			</div>
+		</section>
+	);
+}
+
 function LogCallRow(props: {
 	entry: LogEntry;
 	detail: LogEntry;
@@ -1272,8 +1387,11 @@ function LogCallRow(props: {
 					</span>
 				</td>
 				<td className="log-td-status">
-					<span className={statusBad ? 'log-status-pill bad' : 'log-status-pill ok'}>
-						{props.entry.httpStatus ?? 'err'}
+					<span className="log-status-indicators">
+						<span className={statusBad ? 'log-status-pill bad' : 'log-status-pill ok'}>
+							{props.entry.httpStatus ?? 'err'}
+						</span>
+						<LogGuardrailBadge entry={props.entry} />
 					</span>
 				</td>
 				<td className="log-td-model">
@@ -1531,6 +1649,8 @@ function LogDetailView(props: {
 					<LogUsagePanel usage={usage} />
 				</section>
 			</div>
+
+			<LogGuardrailDetails entry={props.entry} />
 
 			{messages.length ? (
 				<details className="log-conversation" ref={conversationRef}>
