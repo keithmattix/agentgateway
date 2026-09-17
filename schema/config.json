@@ -8384,6 +8384,16 @@
           "description": "Name identifying this MCP target, used to prefix tool and resource names when multiplexing.",
           "type": "string"
         },
+        "condition": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Expression"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "policies": {
           "description": "Transport policies for connecting to this target's backend. Not supported\non stdio targets. MCP policies (mcpAuthorization, mcpGuardrails) apply to\nthe full target set and belong on the route or `mcp.policies`.",
           "anyOf": [

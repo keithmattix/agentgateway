@@ -312,8 +312,11 @@ pub struct RelayInputs {
 }
 
 impl RelayInputs {
-	pub fn build_new_connections(self) -> Result<Relay, mcp::Error> {
-		let r = Relay::new(self.backend, self.policies, self.client)?;
+	pub fn build_new_connections(
+		self,
+		ctx: &upstream::IncomingRequestContext,
+	) -> Result<Relay, mcp::Error> {
+		let r = Relay::new_for_request(self.backend, self.policies, self.client, ctx)?;
 		Ok(Relay {
 			mcp_guardrails: self.mcp_guardrails,
 			..r
@@ -322,14 +325,19 @@ impl RelayInputs {
 }
 
 impl Relay {
-	pub fn new(
+	pub fn new_for_request(
 		backend: McpBackendGroup,
 		policies: McpAuthorizationSet,
 		client: PolicyClient,
+		ctx: &upstream::IncomingRequestContext,
 	) -> Result<Self, mcp::Error> {
 		let client = PolicyClient::new(client.inputs.clone());
 		Ok(Self {
-			upstreams: Arc::new(upstream::UpstreamGroup::new(client.clone(), backend)?),
+			upstreams: Arc::new(upstream::UpstreamGroup::new_for_request(
+				client.clone(),
+				backend,
+				Some(ctx),
+			)?),
 			policies,
 			mcp_guardrails: None,
 			policy_client: client,

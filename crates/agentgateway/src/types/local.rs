@@ -1711,6 +1711,9 @@ impl LocalBackend {
 			LocalBackend::Internal(tgt) => vec![Backend::Internal(name, tgt.clone()).into()],
 			LocalBackend::Dynamic { target } => vec![Backend::Dynamic(name, target.clone()).into()],
 			LocalBackend::MCP(tgt) => {
+				if tgt.targets.len() <= 1 && tgt.targets.iter().any(|target| target.condition.is_some()) {
+					bail!("mcp target condition requires at least two configured targets");
+				}
 				let mut targets = vec![];
 				let mut backends = vec![];
 				for (idx, t) in tgt.targets.iter().enumerate() {
@@ -1789,6 +1792,7 @@ impl LocalBackend {
 					};
 					let t = McpTarget {
 						name: t.name.clone(),
+						condition: t.condition.clone(),
 						spec,
 					};
 					targets.push(Arc::new(t));
@@ -1901,6 +1905,8 @@ pub struct LocalMcpBackend {
 pub struct LocalMcpTarget {
 	/// Name identifying this MCP target, used to prefix tool and resource names when multiplexing.
 	pub name: McpTargetName,
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub condition: Option<Arc<cel::Expression>>,
 	#[serde(flatten)]
 	pub spec: LocalMcpTargetSpec,
 	/// Transport policies for connecting to this target's backend. Not supported

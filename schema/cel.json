@@ -968,6 +968,21 @@
             "null"
           ]
         },
+        "target": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "name"
+          ]
+        },
         "tool": {
           "type": [
             "object",

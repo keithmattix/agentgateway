@@ -136,6 +136,8 @@
 |`mcp`|object|`mcp` contains attributes about the MCP request.<br>Request-time CEL includes identity fields (`tool`, `prompt`, `resource`,<br>`task`) plus `methodName`. Post-request CEL may also include fields like<br>`sessionId` and tool payloads.|
 |`mcp.methodName`|string||
 |`mcp.sessionId`|string||
+|`mcp.target`|object||
+|`mcp.target.name`|string||
 |`mcp.tool`|object||
 |`mcp.tool.target`|string|The target handling the tool call after multiplexing resolution.|
 |`mcp.tool.name`|string|The resolved tool name sent to the upstream target.|

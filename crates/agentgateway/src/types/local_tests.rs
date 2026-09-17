@@ -1577,6 +1577,28 @@ mcp:
 }
 
 #[tokio::test]
+async fn test_local_mcp_target_condition_requires_multiplexing() {
+	let err = normalize_test_yaml(
+		r#"
+mcp:
+  targets:
+  - name: only
+    condition: 'true'
+    stdio:
+      cmd: echo
+"#,
+	)
+	.await
+	.expect_err("a condition on a single MCP target should be rejected");
+	assert!(
+		err
+			.to_string()
+			.contains("mcp target condition requires at least two configured targets"),
+		"{err:?}"
+	);
+}
+
+#[tokio::test]
 async fn test_local_mcp_stdio_target_rejects_policies() {
 	let yaml = r#"
 mcp:

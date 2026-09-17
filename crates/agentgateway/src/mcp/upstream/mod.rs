@@ -463,11 +463,33 @@ impl UpstreamGroup {
 		self.by_name.len()
 	}
 
-	pub(crate) fn new(client: PolicyClient, backend: McpBackendGroup) -> Result<Self, mcp::Error> {
+	pub(crate) fn new_for_request(
+		client: PolicyClient,
+		mut backend: McpBackendGroup,
+		ctx: Option<&IncomingRequestContext>,
+	) -> Result<Self, mcp::Error> {
 		let client = PolicyClient::new(client.inputs.clone());
 		let is_multiplexing = backend.targets.len() != 1;
 		let default_target_name = (!is_multiplexing && backend.prefix_mode != McpPrefixMode::Always)
 			.then(|| backend.targets[0].name.to_string());
+		let configured_targets = backend.targets.len();
+		let all_targets_conditioned_out = configured_targets > 0
+			&& ctx.is_some_and(|ctx| {
+				backend.targets.retain(|target| {
+					target.condition.as_ref().is_none_or(|condition| {
+						let mcp = crate::mcp::MCPInfo {
+							target: Some(crate::mcp::MCPTarget {
+								name: target.name.to_string(),
+							}),
+							..Default::default()
+						};
+						let mut exec = ctx.executor();
+						exec.mcp = Some(&mcp);
+						exec.eval_bool(condition)
+					})
+				});
+				backend.targets.is_empty()
+			});
 		let mut s = Self {
 			failure_mode: backend.failure_mode,
 			prefix_mode: backend.prefix_mode,
@@ -481,6 +503,9 @@ impl UpstreamGroup {
 		};
 		s.setup_connections()?;
 		if s.by_name.is_empty() {
+			if all_targets_conditioned_out {
+				return Err(mcp::Error::NoBackends);
+			}
 			if s.backend.targets.is_empty() && s.failure_mode == FailureMode::FailOpen {
 				warn!(
 					"MCP backend configured with zero targets and failure_mode=failOpen; allowing startup to avoid downstream retry loops"

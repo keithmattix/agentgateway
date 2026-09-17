@@ -1903,6 +1903,8 @@ impl McpServerOverrides {
 #[apply(schema_ser_schema!)]
 pub struct McpTarget {
 	pub name: McpTargetName,
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub condition: Option<Arc<crate::cel::Expression>>,
 	#[serde(flatten)]
 	pub spec: McpTargetSpec,
 }

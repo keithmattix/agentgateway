@@ -864,6 +864,7 @@ impl SessionManager {
 		&self,
 		id: &str,
 		builder: RelayInputs,
+		ctx: &IncomingRequestContext,
 	) -> Result<Option<Session>, mcp::Error> {
 		if let Some(s) = self.sessions.write().expect("poisoned").get_mut(id) {
 			if s.backend_id != builder.backend_id {
@@ -879,7 +880,7 @@ impl SessionManager {
 		let http::sessionpersistence::SessionState::MCP(state) = d else {
 			return Ok(None);
 		};
-		let relay = builder.build_new_connections()?;
+		let relay = builder.build_new_connections(ctx)?;
 		if let Err(err) = relay.set_sessions(state.sessions) {
 			warn!("failed to resume session: {err}");
 			return Ok(None);

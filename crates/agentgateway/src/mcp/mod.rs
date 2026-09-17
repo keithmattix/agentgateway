@@ -426,6 +426,13 @@ pub struct MCPTask {
 	pub name: String,
 }
 
+#[apply(schema!)]
+#[derive(Default, PartialEq, ::cel::DynamicType)]
+#[dynamic(rename_all = "camelCase")]
+pub struct MCPTarget {
+	pub name: String,
+}
+
 impl MCPTask {
 	pub fn new(target: String, name: String) -> Self {
 		Self { target, name }
@@ -448,6 +455,8 @@ pub struct MCPInfo {
 	pub method_name: Option<Strng>,
 	#[serde(default, skip_serializing_if = "Option::is_none")]
 	pub session_id: Option<String>,
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub target: Option<MCPTarget>,
 	#[serde(default, skip_serializing_if = "Option::is_none")]
 	pub tool: Option<MCPTool>,
 	#[serde(default, skip_serializing_if = "Option::is_none")]

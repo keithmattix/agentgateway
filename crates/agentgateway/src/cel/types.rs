@@ -2475,6 +2475,7 @@ pub fn full_example_executor() -> ExecutorSerde {
 		mcp: Some(MCPInfo {
 			method_name: Some("tools/call".into()),
 			session_id: Some("session-123".to_string()),
+			target: None,
 			tool: Some(MCPTool {
 				target: "my-mcp-server".to_string(),
 				name: "get_weather".to_string(),

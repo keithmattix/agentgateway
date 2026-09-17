@@ -6568,6 +6568,7 @@
 |`binds[].listeners[].routes[].backends[].mcp.targets[].openapi.schema.file`|string|Path to a file on disk to load the value from.|
 |`binds[].listeners[].routes[].backends[].mcp.targets[].openapi.schema.url`|string||
 |`binds[].listeners[].routes[].backends[].mcp.targets[].name`|string|Name identifying this MCP target, used to prefix tool and resource names when multiplexing.|
+|`binds[].listeners[].routes[].backends[].mcp.targets[].condition`|string||
 |`binds[].listeners[].routes[].backends[].mcp.targets[].policies`|object|Transport policies for connecting to this target's backend. Not supported<br>on stdio targets. MCP policies (mcpAuthorization, mcpGuardrails) apply to<br>the full target set and belong on the route or `mcp.policies`.|
 |`binds[].listeners[].routes[].backends[].mcp.targets[].policies.requestHeaderModifier`|object|Modify request headers before forwarding to this backend.|
 |`binds[].listeners[].routes[].backends[].mcp.targets[].policies.requestHeaderModifier.add`|object|Headers to append without replacing existing values.|
@@ -28212,6 +28213,7 @@
 |`backends[].mcp.targets[].openapi.schema.file`|string|Path to a file on disk to load the value from.|
 |`backends[].mcp.targets[].openapi.schema.url`|string||
 |`backends[].mcp.targets[].name`|string|Name identifying this MCP target, used to prefix tool and resource names when multiplexing.|
+|`backends[].mcp.targets[].condition`|string||
 |`backends[].mcp.targets[].policies`|object|Transport policies for connecting to this target's backend. Not supported<br>on stdio targets. MCP policies (mcpAuthorization, mcpGuardrails) apply to<br>the full target set and belong on the route or `mcp.policies`.|
 |`backends[].mcp.targets[].policies.requestHeaderModifier`|object|Modify request headers before forwarding to this backend.|
 |`backends[].mcp.targets[].policies.requestHeaderModifier.add`|object|Headers to append without replacing existing values.|
@@ -46730,6 +46732,7 @@
 |`routeGroups[].routes[].backends[].mcp.targets[].openapi.schema.file`|string|Path to a file on disk to load the value from.|
 |`routeGroups[].routes[].backends[].mcp.targets[].openapi.schema.url`|string||
 |`routeGroups[].routes[].backends[].mcp.targets[].name`|string|Name identifying this MCP target, used to prefix tool and resource names when multiplexing.|
+|`routeGroups[].routes[].backends[].mcp.targets[].condition`|string||
 |`routeGroups[].routes[].backends[].mcp.targets[].policies`|object|Transport policies for connecting to this target's backend. Not supported<br>on stdio targets. MCP policies (mcpAuthorization, mcpGuardrails) apply to<br>the full target set and belong on the route or `mcp.policies`.|
 |`routeGroups[].routes[].backends[].mcp.targets[].policies.requestHeaderModifier`|object|Modify request headers before forwarding to this backend.|
 |`routeGroups[].routes[].backends[].mcp.targets[].policies.requestHeaderModifier.add`|object|Headers to append without replacing existing values.|
@@ -67899,6 +67902,7 @@
 |`routes[].backends[].mcp.targets[].openapi.schema.file`|string|Path to a file on disk to load the value from.|
 |`routes[].backends[].mcp.targets[].openapi.schema.url`|string||
 |`routes[].backends[].mcp.targets[].name`|string|Name identifying this MCP target, used to prefix tool and resource names when multiplexing.|
+|`routes[].backends[].mcp.targets[].condition`|string||
 |`routes[].backends[].mcp.targets[].policies`|object|Transport policies for connecting to this target's backend. Not supported<br>on stdio targets. MCP policies (mcpAuthorization, mcpGuardrails) apply to<br>the full target set and belong on the route or `mcp.policies`.|
 |`routes[].backends[].mcp.targets[].policies.requestHeaderModifier`|object|Modify request headers before forwarding to this backend.|
 |`routes[].backends[].mcp.targets[].policies.requestHeaderModifier.add`|object|Headers to append without replacing existing values.|
@@ -88545,6 +88549,7 @@
 |`mcp.targets[].openapi.schema.file`|string|Path to a file on disk to load the value from.|
 |`mcp.targets[].openapi.schema.url`|string||
 |`mcp.targets[].name`|string|Name identifying this MCP target, used to prefix tool and resource names when multiplexing.|
+|`mcp.targets[].condition`|string||
 |`mcp.targets[].policies`|object|Transport policies for connecting to this target's backend. Not supported<br>on stdio targets. MCP policies (mcpAuthorization, mcpGuardrails) apply to<br>the full target set and belong on the route or `mcp.policies`.|
 |`mcp.targets[].policies.requestHeaderModifier`|object|Modify request headers before forwarding to this backend.|
 |`mcp.targets[].policies.requestHeaderModifier.add`|object|Headers to append without replacing existing values.|
