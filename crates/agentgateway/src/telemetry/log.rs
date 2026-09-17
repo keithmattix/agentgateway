@@ -1542,7 +1542,8 @@ impl Drop for DropOnLog {
 			let otlp_log_enabled = log.otel_logger.is_some();
 			// For now we only enable this log for LLM requests to keep cost/performance appropriate.
 			let log_store_enabled = log_store::enabled()
-				&& (llm_response.is_some()
+				&& (log.llm_request.is_some()
+					|| llm_response.is_some()
 					|| log
 						.listener_name
 						.as_ref()
