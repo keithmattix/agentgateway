@@ -2124,7 +2124,7 @@ async fn elicitation_roundtrip_completes_tool_call() {
 	// route back so the tool call completes instead of hanging.
 	use rmcp::ServiceExt;
 	use rmcp::model::{
-		ClientCapabilities, ClientInfo, ElicitRequestParams, ElicitResult, ElicitationAction,
+		ClientCapabilities, ClientConfig, ElicitRequestParams, ElicitResult, ElicitationAction,
 		Implementation, ProtocolVersion,
 	};
 	use rmcp::service::RequestContext;
@@ -2142,8 +2142,8 @@ async fn elicitation_roundtrip_completes_tool_call() {
 					.with_content(serde_json::json!({"confirm": "yes"})),
 			)
 		}
-		fn get_info(&self) -> ClientInfo {
-			let mut info = ClientInfo::new(
+		fn get_info(&self) -> ClientConfig {
+			let mut info = ClientConfig::new(
 				ClientCapabilities::default(),
 				Implementation::new("test client".to_string(), "0.0.1".to_string()),
 			);
@@ -3499,7 +3499,7 @@ async fn authorization_deny_with_request_header_filters_per_agent() {
 
 	use ::http::{HeaderName, HeaderValue};
 	use rmcp::ServiceExt;
-	use rmcp::model::{ClientCapabilities, ClientInfo, Implementation};
+	use rmcp::model::{ClientCapabilities, ClientConfig, Implementation};
 	use rmcp::transport::StreamableHttpClientTransport;
 	use rmcp::transport::streamable_http_client::StreamableHttpClientTransportConfig;
 
@@ -3535,7 +3535,7 @@ async fn authorization_deny_with_request_header_filters_per_agent() {
 		let config = StreamableHttpClientTransportConfig::with_uri(format!("http://{addr}/mcp"))
 			.custom_headers(headers);
 		let transport = StreamableHttpClientTransport::from_config(config);
-		let client_info = ClientInfo::new(
+		let client_info = ClientConfig::new(
 			ClientCapabilities::default(),
 			Implementation::new(format!("test-{agent_name}"), "0.0.1"),
 		);
@@ -4079,11 +4079,11 @@ pub async fn mcp_streamable_client(
 	s: SocketAddr,
 ) -> RunningService<RoleClient, InitializeRequestParams> {
 	use rmcp::ServiceExt;
-	use rmcp::model::{ClientCapabilities, ClientInfo, Implementation};
+	use rmcp::model::{ClientCapabilities, ClientConfig, Implementation};
 	use rmcp::transport::StreamableHttpClientTransport;
 	let transport =
 		StreamableHttpClientTransport::<reqwest::Client>::from_uri(format!("http://{s}/mcp"));
-	let client_info = ClientInfo::new(
+	let client_info = ClientConfig::new(
 		ClientCapabilities::default(),
 		Implementation::new("test client".to_string(), "0.0.1".to_string()),
 	);
@@ -4722,7 +4722,7 @@ pub async fn mcp_streamable_client_with_ui(
 	s: SocketAddr,
 ) -> RunningService<RoleClient, InitializeRequestParams> {
 	use rmcp::ServiceExt;
-	use rmcp::model::{ClientCapabilities, ClientInfo, ExtensionCapabilities, Implementation};
+	use rmcp::model::{ClientCapabilities, ClientConfig, ExtensionCapabilities, Implementation};
 	use rmcp::transport::StreamableHttpClientTransport;
 	let transport =
 		StreamableHttpClientTransport::<reqwest::Client>::from_uri(format!("http://{s}/mcp"));
@@ -4734,7 +4734,7 @@ pub async fn mcp_streamable_client_with_ui(
 			.cloned()
 			.unwrap(),
 	);
-	let client_info = ClientInfo::new(
+	let client_info = ClientConfig::new(
 		ClientCapabilities::builder()
 			.enable_extensions_with(extensions)
 			.build(),
@@ -4793,7 +4793,7 @@ mod appsmockserver {
 			Ok(self.get_info())
 		}
 
-		fn get_info(&self) -> ServerInfo {
+		fn get_info(&self) -> ServerConfig {
 			let mut extensions = ExtensionCapabilities::new();
 			extensions.insert(
 				"io.modelcontextprotocol/ui".to_string(),
@@ -4802,7 +4802,7 @@ mod appsmockserver {
 					.cloned()
 					.unwrap(),
 			);
-			ServerInfo::new(
+			ServerConfig::new(
 				ServerCapabilities::builder()
 					.enable_tools()
 					.enable_resources()
@@ -5121,8 +5121,8 @@ mod mockserver {
 	#[tool_handler]
 	#[prompt_handler]
 	impl ServerHandler for Counter {
-		fn get_info(&self) -> ServerInfo {
-			ServerInfo::new(
+		fn get_info(&self) -> ServerConfig {
+			ServerConfig::new(
 				ServerCapabilities::builder()
 					.enable_prompts()
 					.enable_resources()
@@ -5233,8 +5233,8 @@ mod mockserver {
 	pub struct PagingServer;
 
 	impl ServerHandler for PagingServer {
-		fn get_info(&self) -> ServerInfo {
-			ServerInfo::new(ServerCapabilities::builder().enable_tools().build())
+		fn get_info(&self) -> ServerConfig {
+			ServerConfig::new(ServerCapabilities::builder().enable_tools().build())
 		}
 
 		async fn list_tools(
@@ -6761,11 +6761,11 @@ async fn try_mcp_streamable_client(
 ) -> Result<RunningService<RoleClient, InitializeRequestParams>, rmcp::service::ClientInitializeError>
 {
 	use rmcp::ServiceExt;
-	use rmcp::model::{ClientCapabilities, ClientInfo, Implementation};
+	use rmcp::model::{ClientCapabilities, ClientConfig, Implementation};
 	use rmcp::transport::StreamableHttpClientTransport;
 	let transport =
 		StreamableHttpClientTransport::<reqwest::Client>::from_uri(format!("http://{s}/mcp"));
-	let client_info = ClientInfo::new(
+	let client_info = ClientConfig::new(
 		ClientCapabilities::default(),
 		Implementation::new("test client".to_string(), "0.0.1".to_string()),
 	);

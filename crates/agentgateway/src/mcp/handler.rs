@@ -15,7 +15,7 @@ use rmcp::model::{
 	ConstString, DiscoverResult, ExtensionCapabilities, Extensions, Implementation,
 	JsonRpcNotification, JsonRpcRequest, ListPromptsResult, ListResourceTemplatesResult,
 	ListResourcesResult, ListToolsResult, PaginatedRequestParams, ProtocolVersion, RequestId,
-	RequestMetaObject, ResultType, ServerCapabilities, ServerInfo, ServerJsonRpcMessage,
+	RequestMetaObject, ResultType, ServerCapabilities, ServerConfig, ServerJsonRpcMessage,
 	ServerNotification, ServerRequest, ServerResult, SubscriptionFilter,
 };
 use tracing::{debug, info, warn};
@@ -1586,7 +1586,7 @@ impl Relay {
 		upstream_instructions: Vec<(String, String)>,
 		extensions: Option<ExtensionCapabilities>,
 		server_overrides: Option<McpServerOverrides>,
-	) -> ServerInfo {
+	) -> ServerConfig {
 		let capabilities = {
 			// Prompts are supported with multiplexing using proxy-prefixed names.
 			// Resources are supported with multiplexing using service+<uri> prefixing.
@@ -1632,7 +1632,7 @@ impl Relay {
 		if let Some(title) = server_overrides.as_ref().and_then(|o| o.title.clone()) {
 			server_info = server_info.with_title(title.to_string());
 		}
-		ServerInfo::new(capabilities)
+		ServerConfig::new(capabilities)
 			.with_protocol_version(pv)
 			.with_server_info(server_info)
 			.with_instructions(instructions.unwrap_or_default())

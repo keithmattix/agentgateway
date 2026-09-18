@@ -15,7 +15,7 @@ use futures_util::StreamExt;
 use headers::HeaderMapExt;
 use http_body_util::BodyExt as _;
 use rmcp::model::{
-	ClientInfo, ClientJsonRpcMessage, ClientNotification, ClientRequest, ConstString, GetMeta,
+	ClientConfig, ClientJsonRpcMessage, ClientNotification, ClientRequest, ConstString, GetMeta,
 	Implementation, InitializeRequest, JsonRpcRequest, ProtocolVersion, Reference, RequestId,
 	RequestMetaObject, ServerJsonRpcMessage,
 };
@@ -1114,8 +1114,8 @@ impl sse_stream::Timer for TokioSseTimer {
 	}
 }
 
-fn get_client_info() -> ClientInfo {
-	let mut client_info = ClientInfo::default();
+fn get_client_info() -> ClientConfig {
+	let mut client_info = ClientConfig::default();
 	client_info.protocol_version = ProtocolVersion::V_2025_11_25;
 	client_info.capabilities = rmcp::model::ClientCapabilities::default();
 	client_info.client_info =
