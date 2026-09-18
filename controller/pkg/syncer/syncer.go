@@ -676,8 +676,9 @@ func (s *Syncer) buildAgwResources(
 				From:    lsKey,
 				To:      lsKey,
 				Gateway: ls.GatewayParent,
-				// ListenerName omitted: this index only needs ListenerSet→Gateway;
-				// omitting it lets krt deduplicate the N per-listener entries to one.
+				// Each input listener must own a distinct attachment so removing one
+				// preserves the remaining listeners' ListenerSet-to-Gateway mapping.
+				ListenerName: string(ls.ParentInfo.SectionName),
 			}}
 		}, krtopts.ToOptions("translator/ListenerSetGatewayAttachments")...)
 	listenerSetAttachmentsIdx := krt.NewIndex(listenerSetAttachments, "ls-to-gateway",
