@@ -373,6 +373,7 @@ dependencies = [
  "which 8.0.6",
  "wiremock",
  "x509-parser",
+ "zstd",
 ]
 
 [[package]]
