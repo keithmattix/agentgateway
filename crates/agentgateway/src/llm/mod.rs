@@ -2450,19 +2450,20 @@ impl AIProvider {
 				response_prompt_guard_headers(&parts.headers, rate_limit.request_traceparent.as_ref());
 
 			// Apply response prompt guard
-			if let Some(dr) = Policy::apply_response_prompt_guard(
-				&client,
-				resp.as_mut(),
-				&prompt_guard_headers,
-				&rate_limit.prompt_guard,
-				req_snapshot.as_deref(),
-				Some(&guardrail_log),
-			)
-			.await
-			.map_err(|e| {
-				warn!("failed to apply response prompt guard: {e}");
-				AIError::PromptWebhookError
-			})? {
+			if req.input_format.supports_prompt_guard()
+				&& let Some(dr) = Policy::apply_response_prompt_guard(
+					&client,
+					resp.as_mut(),
+					&prompt_guard_headers,
+					&rate_limit.prompt_guard,
+					req_snapshot.as_deref(),
+					Some(&guardrail_log),
+				)
+				.await
+				.map_err(|e| {
+					warn!("failed to apply response prompt guard: {e}");
+					AIError::PromptWebhookError
+				})? {
 				return Ok(dr.map(|replacement| {
 					managed_body.replace_content(replacement.into_boxed().into());
 					managed_body
