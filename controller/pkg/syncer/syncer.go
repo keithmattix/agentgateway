@@ -861,8 +861,14 @@ func defaultBuildAddressCollections(cols *plugins.AgwCollections, krtopts krtuti
 		nodeLocality,
 		meshConfig,
 		// Authz/Authn are not use for agentgateway, ignore
-		krt.NewStaticCollection[model.WorkloadAuthorization](nil, nil, krtopts.ToOptions("addresses/DisabledWorkloadAuthorization")...),
-		krt.NewStaticCollection[*securityclient.PeerAuthentication](nil, nil, krtopts.ToOptions("addresses/DisabledPeerAuthentication")...),
+		krt.NewIndex(
+			krt.NewStaticCollection[model.WorkloadAuthorization](nil, nil, krtopts.ToOptions("addresses/DisabledWorkloadAuthorization")...),
+			"byNS",
+			func(model.WorkloadAuthorization) []string { return nil },
+		),
+		krt.NewNamespaceIndex(
+			krt.NewStaticCollection[*securityclient.PeerAuthentication](nil, nil, krtopts.ToOptions("addresses/DisabledPeerAuthentication")...),
+		),
 		waypoints,
 		services,
 		cols.WorkloadEntries,
