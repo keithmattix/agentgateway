@@ -975,6 +975,7 @@
           ],
           "properties": {
             "name": {
+              "description": "The MCP target for the current target-scoped operation.",
               "type": "string"
             }
           },

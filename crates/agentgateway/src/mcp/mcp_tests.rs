@@ -241,6 +241,7 @@ async fn multiplex_target_condition_skips_denied_upstream() {
 				("unfiltered", unfiltered.addr, false),
 			],
 			true,
+			FailureMode::FailClosed,
 			vec![Some(condition.clone()), Some(condition), None],
 		)
 		.with_bind(simple_bind())
@@ -267,6 +268,33 @@ async fn multiplex_target_condition_skips_denied_upstream() {
 		0,
 		"a conditionally disabled target must not be initialized"
 	);
+}
+
+#[tokio::test]
+async fn multiplex_target_conditions_can_select_no_targets() {
+	let denied_a = mock_streamable_http_server(true).await;
+	let denied_b = mock_streamable_http_server(true).await;
+	let condition = Arc::new(cel::Expression::new_strict("false").unwrap());
+	let t = setup_proxy_test("{}")
+		.unwrap()
+		.with_multiplex_mcp_backend_target_conditions(
+			"mcp",
+			vec![
+				("denied-a", denied_a.addr, false),
+				("denied-b", denied_b.addr, false),
+			],
+			true,
+			FailureMode::FailOpen,
+			vec![Some(condition.clone()), Some(condition)],
+		)
+		.with_bind(simple_bind())
+		.with_route(basic_named_route(strng::new("/mcp")));
+	let io = t.serve_real_listener(strng::new("bind")).await;
+	let client = mcp_streamable_client(io).await;
+
+	assert!(client.list_tools(None).await.unwrap().tools.is_empty());
+	assert_eq!(denied_a.init_count().await, 0);
+	assert_eq!(denied_b.init_count().await, 0);
 }
 
 #[tokio::test]
@@ -5577,7 +5605,7 @@ async fn test_zero_targets_fail_closed() {
 	let client = PolicyClient::new(setup_proxy_test("{}").unwrap().pi);
 	let ctx = crate::mcp::upstream::IncomingRequestContext::empty();
 	let err =
-		crate::mcp::upstream::UpstreamGroup::new_for_request(client, backend, Some(&ctx)).unwrap_err();
+		crate::mcp::upstream::UpstreamGroup::new_for_request(client, backend, &ctx).unwrap_err();
 	assert!(matches!(err, crate::mcp::Error::NoBackends));
 }
 
@@ -5590,7 +5618,7 @@ async fn test_zero_targets_fail_open() {
 	};
 	let client = PolicyClient::new(setup_proxy_test("{}").unwrap().pi);
 	let ctx = crate::mcp::upstream::IncomingRequestContext::empty();
-	crate::mcp::upstream::UpstreamGroup::new_for_request(client, backend, Some(&ctx)).unwrap();
+	crate::mcp::upstream::UpstreamGroup::new_for_request(client, backend, &ctx).unwrap();
 }
 
 #[tokio::test]
@@ -5629,8 +5657,7 @@ async fn test_setup_partial_success_fail_open() {
 	};
 	let client = PolicyClient::new(setup_proxy_test("{}").unwrap().pi);
 	let ctx = crate::mcp::upstream::IncomingRequestContext::empty();
-	let group =
-		crate::mcp::upstream::UpstreamGroup::new_for_request(client, backend, Some(&ctx)).unwrap();
+	let group = crate::mcp::upstream::UpstreamGroup::new_for_request(client, backend, &ctx).unwrap();
 	assert_eq!(group.size(), 1);
 }
 
@@ -5670,7 +5697,7 @@ async fn test_all_targets_fail_open_still_errors() {
 	let client = PolicyClient::new(setup_proxy_test("{}").unwrap().pi);
 	let ctx = crate::mcp::upstream::IncomingRequestContext::empty();
 	let err =
-		crate::mcp::upstream::UpstreamGroup::new_for_request(client, backend, Some(&ctx)).unwrap_err();
+		crate::mcp::upstream::UpstreamGroup::new_for_request(client, backend, &ctx).unwrap_err();
 	assert!(matches!(err, crate::mcp::Error::NoBackends));
 }
 

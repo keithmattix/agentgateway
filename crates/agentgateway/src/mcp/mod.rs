@@ -430,6 +430,7 @@ pub struct MCPTask {
 #[derive(Default, PartialEq, ::cel::DynamicType)]
 #[dynamic(rename_all = "camelCase")]
 pub struct MCPTarget {
+	/// The MCP target for the current target-scoped operation.
 	pub name: String,
 }
 

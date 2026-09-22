@@ -137,7 +137,7 @@
 |`mcp.methodName`|string||
 |`mcp.sessionId`|string||
 |`mcp.target`|object||
-|`mcp.target.name`|string||
+|`mcp.target.name`|string|The MCP target for the current target-scoped operation.|
 |`mcp.tool`|object||
 |`mcp.tool.target`|string|The target handling the tool call after multiplexing resolution.|
 |`mcp.tool.name`|string|The resolved tool name sent to the upstream target.|

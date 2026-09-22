@@ -336,7 +336,7 @@ impl Relay {
 			upstreams: Arc::new(upstream::UpstreamGroup::new_for_request(
 				client.clone(),
 				backend,
-				Some(ctx),
+				ctx,
 			)?),
 			policies,
 			mcp_guardrails: None,
@@ -1067,7 +1067,7 @@ impl Relay {
 					.is_none_or(|targets| targets.iter().any(|target| target == name.as_str()))
 			})
 			.collect::<Vec<_>>();
-		if selected_upstreams.is_empty() {
+		if selected_upstreams.is_empty() && !self.upstreams.all_targets_conditioned_out() {
 			return Err(UpstreamError::Unavailable(
 				"no upstreams available".to_string(),
 			));
@@ -1154,7 +1154,7 @@ impl Relay {
 				},
 			}
 		}
-		if streams.is_empty() {
+		if streams.is_empty() && !self.upstreams.all_targets_conditioned_out() {
 			// Request fanout has no transport fallback or generic synthetic success.
 			return Err(
 				last_error
@@ -1448,6 +1448,17 @@ impl Relay {
 			.await?;
 
 		let cel = CelExecWrapper::from(ctx.clone());
+		if streams.is_empty() {
+			let result = merge(Vec::new(), &cel)?;
+			return respond_with_guardrails(
+				id,
+				Messages::from_result(r.id.clone(), result),
+				service_names.and_then(|sn| self.build_guardrails_ctx(&r, &ctx, sn)),
+				ctx.extensions().get::<AsyncLog<MCPInfo>>().cloned(),
+				&ctx,
+				self.upstreams.sse_keep_alive,
+			);
+		}
 		let streams = streams
 			.into_iter()
 			.map(|(name, s)| {
