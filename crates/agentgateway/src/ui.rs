@@ -7,7 +7,7 @@ use axum::http::{StatusCode, Uri};
 use axum::response::sse::Event;
 use axum::response::{IntoResponse, Redirect, Response, Sse};
 use axum::routing::{get, post, put};
-use axum::{Json, Router};
+use axum::{Extension, Json, Router};
 use chrono::Utc;
 use include_dir::Dir;
 use serde::{Serialize, Serializer};
@@ -80,6 +80,12 @@ pub fn router(
 	resource_manager: crate::resource_manager::ResourceManager,
 	assets_dir: &'static Dir<'static>,
 ) -> Router {
+	let app = App {
+		state: cfg.clone(),
+		config_resource_store,
+		resource_manager,
+		model_catalog,
+	};
 	let ui_service = tower::service_fn(move |req| serve_ui_asset(req, assets_dir));
 	Router::new()
 		// OIDC intercepts this path to start login; without OIDC, return to the UI.
@@ -108,12 +114,74 @@ pub fn router(
 		.route("/api/budgets/status", get(budget_status))
 		.nest_service("/ui", ui_service)
 		.route("/", get(|| async { Redirect::permanent("/ui") }))
-		.with_state(App {
-			state: cfg.clone(),
-			config_resource_store,
-			resource_manager,
-			model_catalog,
-		})
+		.layer(axum::middleware::from_fn_with_state(
+			app.clone(),
+			authorize_route,
+		))
+		.with_state(app)
+}
+
+#[derive(Clone, Default)]
+struct AuthorizationContext {
+	user: Option<String>,
+}
+
+impl AuthorizationContext {
+	/// Prepares ownership metadata before a management resource write is persisted.
+	fn authorize_write(
+		&self,
+		prepared: &mut PreparedResource,
+		_old_id: &str,
+		old: Option<&Value>,
+	) -> Result<(), ErrorResponse> {
+		if prepared.kind == ConfigResourceKind::LlmApiKey {
+			let owner = match old {
+				Some(old) => old
+					.pointer("/metadata/agentgateway.dev~1owner")
+					.and_then(Value::as_str)
+					.filter(|owner| !owner.is_empty()),
+				None => self.user.as_deref(),
+			};
+			if let Some(owner) = owner {
+				if !prepared.value["metadata"].is_object() {
+					prepared.value["metadata"] = serde_json::json!({});
+				}
+				prepared.value["metadata"]["agentgateway.dev/owner"] = owner.into();
+			}
+		}
+		Ok(())
+	}
+}
+
+/// Attaches the management caller context using the live `standardAttributes.user`
+/// CEL mapping and the request's authentication context.
+async fn authorize_route(
+	State(app): State<App>,
+	request: axum::extract::Request,
+	next: axum::middleware::Next,
+) -> Result<Response, ErrorResponse> {
+	let request = request.map(crate::http::Body::new);
+	let attributes = app.state.logging.database_fields.load();
+	let executor = cel::Executor::new_request(&request);
+	let user = attributes
+		.add
+		.iter()
+		.find(|(name, _)| name.as_ref() == "agentgateway.user")
+		.and_then(|(_, expression)| executor.eval(expression).ok())
+		.and_then(|value| match value {
+			cel::Value::String(value) if !value.is_empty() => Some(value.to_string()),
+			_ => None,
+		});
+	let (mut parts, body) = request.into_parts();
+	parts.extensions.insert(AuthorizationContext { user });
+	Ok(
+		next
+			.run(axum::extract::Request::from_parts(
+				parts,
+				axum::body::Body::new(body),
+			))
+			.await,
+	)
 }
 
 #[derive(Serialize)]
@@ -445,6 +513,7 @@ async fn read_file_config(app: &App) -> Result<Value, ErrorResponse> {
 
 async fn upsert_config_resources_by_kind(
 	State(app): State<App>,
+	Extension(auth): Extension<AuthorizationContext>,
 	Path(kind): Path<String>,
 	Json(request): Json<ConfigResourceUpsertRequest>,
 ) -> Result<Json<UiConfigResourcesResponse>, ErrorResponse> {
@@ -452,11 +521,14 @@ async fn upsert_config_resources_by_kind(
 	let kind = kind
 		.parse::<ConfigResourceKind>()
 		.map_err(resource_api_error)?;
-	upsert_config_resources(&app, kind, request).await.map(Json)
+	upsert_config_resources(&app, &auth, kind, request)
+		.await
+		.map(Json)
 }
 
 async fn upsert_config_resources(
 	app: &App,
+	auth: &AuthorizationContext,
 	kind: ConfigResourceKind,
 	mut request: ConfigResourceUpsertRequest,
 ) -> Result<UiConfigResourcesResponse, ErrorResponse> {
@@ -466,11 +538,14 @@ async fn upsert_config_resources(
 			remove_file_owned_settings(kind, &file_config, &mut resource.value)?;
 		}
 	}
-	let prepared =
+	let mut prepared =
 		crate::config_store::prepare_resources(kind, request).map_err(resource_api_error)?;
 	if app.state.storage.mode == ConfigStoreMode::File {
 		let mut config = read_file_config(app).await?;
-		for resource in &prepared {
+		for resource in &mut prepared {
+			let old = crate::config_store::file_config_resource(&config, kind, &resource.id);
+			let id = resource.id.clone();
+			auth.authorize_write(resource, &id, old)?;
 			crate::config_store::upsert_file_config_resource(&mut config, resource, None)
 				.map_err(resource_api_error)?;
 		}
@@ -482,6 +557,14 @@ async fn upsert_config_resources(
 
 	let store = app.config_resource_store()?;
 	let resources = store.list(None).await.map_err(resource_api_error)?;
+	for resource in &mut prepared {
+		let old = resources
+			.iter()
+			.find(|old| old.kind == kind && old.id == resource.id);
+		let id = resource.id.clone();
+		auth.authorize_write(resource, &id, old.map(|old| &old.value))?;
+	}
+
 	let candidate =
 		crate::config_store::apply_prepared_upsert(resources, &prepared).map_err(resource_api_error)?;
 	validate_materialized_config(app, &candidate).await?;
@@ -494,6 +577,7 @@ async fn upsert_config_resources(
 
 async fn update_config_resource(
 	State(app): State<App>,
+	Extension(auth): Extension<AuthorizationContext>,
 	Path((kind, id)): Path<(String, String)>,
 	Json(mut resource): Json<crate::config_store::ConfigResourceUpsert>,
 ) -> Result<Json<UiConfigResourcesResponse>, ErrorResponse> {
@@ -520,7 +604,7 @@ async fn update_config_resource(
 	} else {
 		None
 	};
-	let prepared = match kind {
+	let mut prepared = match kind {
 		ConfigResourceKind::LlmApiKey => {
 			if app.state.storage.mode == ConfigStoreMode::Hybrid
 				&& !stored_resources.as_ref().is_some_and(|resources| {
@@ -567,7 +651,12 @@ async fn update_config_resource(
 	};
 	if app.state.storage.mode == ConfigStoreMode::File {
 		let mut config = file_config.expect("file mode loads the file config");
-		for resource in &prepared {
+		for resource in &mut prepared {
+			auth.authorize_write(
+				resource,
+				&id,
+				crate::config_store::file_config_resource(&config, kind, &id),
+			)?;
 			crate::config_store::upsert_file_config_resource(&mut config, resource, Some(id.as_str()))
 				.map_err(resource_api_error)?;
 		}
@@ -579,6 +668,13 @@ async fn update_config_resource(
 
 	let store = app.config_resource_store()?;
 	let resources = stored_resources.expect("hybrid mode loads stored resources");
+	for resource in &mut prepared {
+		let old = resources
+			.iter()
+			.find(|old| old.kind == kind && old.id == id);
+		auth.authorize_write(resource, &id, old.map(|old| &old.value))?;
+	}
+
 	let exists = resources
 		.iter()
 		.any(|resource| resource.kind == kind && resource.id == id);
@@ -732,7 +828,10 @@ fn resource_api_error(err: impl Into<anyhow::Error>) -> ErrorResponse {
 	ErrorResponse::Status(status, message)
 }
 
-async fn refresh_base_costs(State(app): State<App>) -> Result<Json<Value>, ErrorResponse> {
+async fn refresh_base_costs(
+	State(app): State<App>,
+	Extension(auth): Extension<AuthorizationContext>,
+) -> Result<Json<Value>, ErrorResponse> {
 	app.ensure_writable()?;
 	let configured_file = app.state.model_catalog.sources.iter().find_map(|source| {
 		if let crate::ModelCatalogSource::File { file } = source {
@@ -762,6 +861,7 @@ async fn refresh_base_costs(State(app): State<App>) -> Result<Json<Value>, Error
 		);
 		upsert_config_resources(
 			&app,
+			&auth,
 			ConfigResourceKind::ModelCatalog,
 			ConfigResourceUpsertRequest {
 				resources: vec![crate::config_store::ConfigResourceUpsert { value }],

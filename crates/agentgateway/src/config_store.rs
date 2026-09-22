@@ -397,6 +397,29 @@ fn file_resource_collection(kind: ConfigResourceKind) -> Option<FileResourceColl
 	}
 }
 
+pub(crate) fn file_config_resource<'a>(
+	config: &'a Value,
+	kind: ConfigResourceKind,
+	id: &str,
+) -> Option<&'a Value> {
+	if kind == ConfigResourceKind::LlmApiKey {
+		return config
+			.pointer("/llm/policies/apiKey/keys")?
+			.as_array()?
+			.iter()
+			.enumerate()
+			.find(|(index, value)| file_api_key_id(value, *index) == id)
+			.map(|(_, value)| value);
+	}
+	match file_resource_collection(kind)? {
+		FileResourceCollection::Map(path) => crate::json::traverse(config, path)?.get(id),
+		FileResourceCollection::List(path) => crate::json::traverse(config, path)?
+			.as_array()?
+			.iter()
+			.find(|value| resource_id(kind, value).is_ok_and(|current| current == id)),
+	}
+}
+
 pub(crate) fn upsert_file_config_resource(
 	config: &mut Value,
 	prepared: &PreparedResource,
