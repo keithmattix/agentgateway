@@ -5430,15 +5430,15 @@
       ]
     },
     "WebhookFailureMode": {
-      "description": "Defines how the proxy behaves when a webhook guardrail is unreachable or\nreturns an error.\n\nDefaults to `failClosed`. When failing closed, the error is propagated and\nthe LLM request is rejected. When failing open, the request is allowed\nthrough despite the webhook failure.",
+      "description": "Defines how the proxy behaves when a guardrail provider is unreachable or\nreturns an error.\n\nDefaults to `failClosed`. When failing closed, the error is propagated and\nthe LLM request is rejected. When failing open, the request is allowed\nthrough despite the provider failure.",
       "oneOf": [
         {
-          "description": "Reject the request when the webhook guardrail is unavailable (default).",
+          "description": "Reject the request when the guardrail provider is unavailable (default).",
           "type": "string",
           "const": "failClosed"
         },
         {
-          "description": "Allow the request through when the webhook guardrail is unavailable.",
+          "description": "Allow the request through when the guardrail provider is unavailable.",
           "type": "string",
           "const": "failOpen"
         }
@@ -5462,6 +5462,10 @@
     "Moderation": {
       "type": "object",
       "properties": {
+        "failureMode": {
+          "description": "Behavior when the provider is unreachable or returns an error.\nDefaults to `failClosed`.",
+          "$ref": "#/$defs/WebhookFailureMode"
+        },
         "model": {
           "description": "Moderation model to use. Defaults to `omni-moderation-latest`.",
           "type": [
@@ -5491,6 +5495,10 @@
       "description": "Configuration for AWS Bedrock Guardrails integration.",
       "type": "object",
       "properties": {
+        "failureMode": {
+          "description": "Behavior when the provider is unreachable or returns an error.\nDefaults to `failClosed`.",
+          "$ref": "#/$defs/WebhookFailureMode"
+        },
         "guardrailIdentifier": {
           "description": "The unique identifier of the guardrail",
           "type": "string"
@@ -5530,6 +5538,10 @@
       "description": "Configuration for Google Cloud Model Armor integration.",
       "type": "object",
       "properties": {
+        "failureMode": {
+          "description": "Behavior when the provider is unreachable or returns an error.\nDefaults to `failClosed`.",
+          "$ref": "#/$defs/WebhookFailureMode"
+        },
         "templateId": {
           "description": "The template ID for the Model Armor configuration",
           "type": "string"
@@ -5571,6 +5583,10 @@
       "description": "Configuration for Azure Content Safety integration.\n\nUses the Azure AI Content Safety APIs to detect harmful content\nand jailbreak attempts. The endpoint and authentication are shared\nacross all enabled features.",
       "type": "object",
       "properties": {
+        "failureMode": {
+          "description": "Behavior when the provider is unreachable or returns an error.\nDefaults to `failClosed`.",
+          "$ref": "#/$defs/WebhookFailureMode"
+        },
         "endpoint": {
           "description": "The Azure Content Safety endpoint hostname (e.g., \"<resource-name>.cognitiveservices.azure.com\")",
           "type": "string"

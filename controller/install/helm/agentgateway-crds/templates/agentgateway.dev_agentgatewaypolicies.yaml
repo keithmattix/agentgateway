@@ -318,6 +318,14 @@ spec:
                                       - Audit
                                       - Reject
                                       type: string
+                                    failureMode:
+                                      description: |-
+                                        Behavior when the provider is unavailable or returns an error.
+                                        `FailOpen` allows the request to continue; `FailClosed` (default) rejects it.
+                                      enum:
+                                      - FailClosed
+                                      - FailOpen
+                                      type: string
                                     identifier:
                                       description: Identifier of the Guardrail policy
                                         to use for the backend.
@@ -965,6 +973,14 @@ spec:
                                       - Audit
                                       - Reject
                                       type: string
+                                    failureMode:
+                                      description: |-
+                                        Behavior when the provider is unavailable or returns an error.
+                                        `FailOpen` allows the request to continue; `FailClosed` (default) rejects it.
+                                      enum:
+                                      - FailClosed
+                                      - FailOpen
+                                      type: string
                                     location:
                                       description: |-
                                         Google Cloud location, for example `us-central1`.
@@ -1433,6 +1449,14 @@ spec:
                                       enum:
                                       - Audit
                                       - Reject
+                                      type: string
+                                    failureMode:
+                                      description: |-
+                                        Behavior when the provider is unavailable or returns an error.
+                                        `FailOpen` allows the request to continue; `FailClosed` (default) rejects it.
+                                      enum:
+                                      - FailClosed
+                                      - FailOpen
                                       type: string
                                     model:
                                       description: |-
@@ -2151,6 +2175,14 @@ spec:
                                       - Audit
                                       - Reject
                                       type: string
+                                    failureMode:
+                                      description: |-
+                                        Behavior when the provider is unavailable or returns an error.
+                                        `FailOpen` allows the request to continue; `FailClosed` (default) rejects it.
+                                      enum:
+                                      - FailClosed
+                                      - FailOpen
+                                      type: string
                                     identifier:
                                       description: Identifier of the Guardrail policy
                                         to use for the backend.
@@ -2797,6 +2829,14 @@ spec:
                                       enum:
                                       - Audit
                                       - Reject
+                                      type: string
+                                    failureMode:
+                                      description: |-
+                                        Behavior when the provider is unavailable or returns an error.
+                                        `FailOpen` allows the request to continue; `FailClosed` (default) rejects it.
+                                      enum:
+                                      - FailClosed
+                                      - FailOpen
                                       type: string
                                     location:
                                       description: |-

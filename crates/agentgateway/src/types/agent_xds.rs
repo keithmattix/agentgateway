@@ -931,6 +931,7 @@ fn convert_backend_ai_policy(
 						let md = llm::policy::Moderation {
 							model: m.model.as_deref().map(strng::new),
 							action: convert_reject_audit(m.action),
+							failure_mode: convert_guardrail_failure_mode(m.failure_mode),
 							policies: pols,
 						};
 						llm::policy::RequestGuardKind::OpenAIModeration(md)
@@ -946,6 +947,7 @@ fn convert_backend_ai_policy(
 							project_id: strng::new(&gma.project_id),
 							location: gma.location.as_ref().map(strng::new),
 							action: convert_reject_audit(gma.action),
+							failure_mode: convert_guardrail_failure_mode(gma.failure_mode),
 							policies: pols,
 						})
 					},
@@ -960,6 +962,7 @@ fn convert_backend_ai_policy(
 							guardrail_version: strng::new(&bg.version),
 							region: strng::new(&bg.region),
 							action: convert_reject_audit(bg.action),
+							failure_mode: convert_guardrail_failure_mode(bg.failure_mode),
 							policies: pols,
 						})
 					},
@@ -972,6 +975,7 @@ fn convert_backend_ai_policy(
 						llm::policy::RequestGuardKind::AzureContentSafety(llm::policy::AzureContentSafety {
 							endpoint: strng::new(&acs.endpoint),
 							action: convert_reject_audit(acs.action),
+							failure_mode: Default::default(),
 							policies: pols,
 							cached_azure_auth: Default::default(),
 							analyze_text: Some(llm::policy::AnalyzeTextConfig {
@@ -1036,6 +1040,7 @@ fn convert_backend_ai_policy(
 						project_id: strng::new(&gma.project_id),
 						location: gma.location.as_ref().map(strng::new),
 						action: convert_reject_audit(gma.action),
+						failure_mode: convert_guardrail_failure_mode(gma.failure_mode),
 						policies: pols,
 					})
 				},
@@ -1050,6 +1055,7 @@ fn convert_backend_ai_policy(
 						guardrail_version: strng::new(&bg.version),
 						region: strng::new(&bg.region),
 						action: convert_reject_audit(bg.action),
+						failure_mode: convert_guardrail_failure_mode(bg.failure_mode),
 						policies: pols,
 					})
 				},
@@ -1062,6 +1068,7 @@ fn convert_backend_ai_policy(
 					llm::policy::ResponseGuardKind::AzureContentSafety(llm::policy::AzureContentSafety {
 						endpoint: strng::new(&acs.endpoint),
 						action: convert_reject_audit(acs.action),
+						failure_mode: Default::default(),
 						policies: pols,
 						cached_azure_auth: Default::default(),
 						analyze_text: Some(llm::policy::AnalyzeTextConfig {
@@ -4081,6 +4088,16 @@ fn convert_reject_audit(action: i32) -> llm::policy::RejectAuditAction {
 	}
 }
 
+fn convert_guardrail_failure_mode(mode: i32) -> llm::policy::FailureMode {
+	match proto::agent::backend_policy_spec::ai::webhook::FailureMode::try_from(mode) {
+		Ok(proto::agent::backend_policy_spec::ai::webhook::FailureMode::FailOpen) => {
+			llm::policy::FailureMode::FailOpen
+		},
+		// Default to FailClosed (proto default is FAIL_CLOSED = 0)
+		_ => llm::policy::FailureMode::FailClosed,
+	}
+}
+
 fn convert_webhook(
 	w: &proto::agent::backend_policy_spec::ai::Webhook,
 	diagnostics: &mut Diagnostics,
@@ -4098,14 +4115,7 @@ fn convert_webhook(
 		&w.forward_header_matches,
 	)?;
 
-	let failure_mode =
-		match proto::agent::backend_policy_spec::ai::webhook::FailureMode::try_from(w.failure_mode) {
-			Ok(proto::agent::backend_policy_spec::ai::webhook::FailureMode::FailOpen) => {
-				llm::policy::FailureMode::FailOpen
-			},
-			// Default to FailClosed (proto default is FAIL_CLOSED = 0)
-			_ => llm::policy::FailureMode::FailClosed,
-		};
+	let failure_mode = convert_guardrail_failure_mode(w.failure_mode);
 
 	let headers: Vec<(HeaderOrPseudo, Arc<cel::Expression>)> = w
 		.headers

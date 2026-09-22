@@ -214,6 +214,11 @@ type CustomResponse struct {
 }
 
 type OpenAIModeration struct {
+	// Behavior when the provider is unavailable or returns an error.
+	// `FailOpen` allows the request to continue; `FailClosed` (default) rejects it.
+	// +optional
+	FailureMode FailureMode `json:"failureMode,omitempty"`
+
 	// Moderation model to use. For example,
 	// `omni-moderation`.
 	// +optional
@@ -229,6 +234,11 @@ type OpenAIModeration struct {
 }
 
 type BedrockGuardrails struct {
+	// Behavior when the provider is unavailable or returns an error.
+	// `FailOpen` allows the request to continue; `FailClosed` (default) rejects it.
+	// +optional
+	FailureMode FailureMode `json:"failureMode,omitempty"`
+
 	// Identifier of the Guardrail policy to use for the backend.
 	// +required
 	GuardrailIdentifier ShortString `json:"identifier"`
@@ -257,6 +267,11 @@ type BedrockGuardrails struct {
 }
 
 type GoogleModelArmor struct {
+	// Behavior when the provider is unavailable or returns an error.
+	// `FailOpen` allows the request to continue; `FailClosed` (default) rejects it.
+	// +optional
+	FailureMode FailureMode `json:"failureMode,omitempty"`
+
 	// Template ID for Google Model Armor.
 	// +required
 	TemplateID ShortString `json:"templateId"`
