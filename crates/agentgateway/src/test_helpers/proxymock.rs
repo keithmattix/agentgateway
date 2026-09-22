@@ -875,6 +875,7 @@ impl TestBind {
 		)
 	}
 
+	#[allow(clippy::too_many_arguments)]
 	fn with_multiplex_mcp_backend_options(
 		self,
 		name: &str,
