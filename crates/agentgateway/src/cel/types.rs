@@ -2183,7 +2183,7 @@ pub struct ExecutorSerde {
 	/// `mcp` contains attributes about the MCP request.
 	/// Request-time CEL includes identity fields (`tool`, `prompt`, `resource`,
 	/// `task`) plus `methodName`. Post-request CEL may also include fields like
-	/// `sessionId` and tool payloads.
+	/// `sessionId`, tool payloads, and list results.
 	#[serde(default, skip_serializing_if = "Option::is_none")]
 	pub mcp: Option<MCPInfo>,
 
@@ -2499,6 +2499,10 @@ pub fn full_example_executor() -> ExecutorSerde {
 			prompt: None,
 			resource: None,
 			task: None,
+			tools_list: None,
+			prompts_list: None,
+			resources_list: None,
+			resource_templates_list: None,
 			error: None,
 		}),
 		backend: Some(BackendContext {

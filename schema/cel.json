@@ -962,7 +962,7 @@
       "additionalProperties": false
     },
     "mcp": {
-      "description": "`mcp` contains attributes about the MCP request.\nRequest-time CEL includes identity fields (`tool`, `prompt`, `resource`,\n`task`) plus `methodName`. Post-request CEL may also include fields like\n`sessionId` and tool payloads.",
+      "description": "`mcp` contains attributes about the MCP request.\nRequest-time CEL includes identity fields (`tool`, `prompt`, `resource`,\n`task`) plus `methodName`. Post-request CEL may also include fields like\n`sessionId`, tool payloads, and list results.",
       "type": [
         "object",
         "null"
@@ -1073,6 +1073,18 @@
             "target",
             "name"
           ]
+        },
+        "toolsList": {
+          "description": "The terminal tools/list result returned to the client, if available."
+        },
+        "promptsList": {
+          "description": "The terminal prompts/list result returned to the client, if available."
+        },
+        "resourcesList": {
+          "description": "The terminal resources/list result returned to the client, if available."
+        },
+        "resourceTemplatesList": {
+          "description": "The terminal resources/templates/list result returned to the client, if available."
         }
       },
       "additionalProperties": false

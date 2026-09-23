@@ -518,6 +518,18 @@ pub struct MCPInfo {
 	pub resource: Option<ResourceId>,
 	#[serde(default, skip_serializing_if = "Option::is_none")]
 	pub task: Option<MCPTask>,
+	/// The terminal tools/list result returned to the client, if available.
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub tools_list: Option<serde_json::Value>,
+	/// The terminal prompts/list result returned to the client, if available.
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub prompts_list: Option<serde_json::Value>,
+	/// The terminal resources/list result returned to the client, if available.
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub resources_list: Option<serde_json::Value>,
+	/// The terminal resources/templates/list result returned to the client, if available.
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub resource_templates_list: Option<serde_json::Value>,
 	// Terminal errors arrive while the response body is drained. Keep them out of CEL so policy
 	// evaluation cannot depend on asynchronous stream timing; they are emitted as access-log fields.
 	#[dynamic(skip)]
@@ -603,6 +615,10 @@ impl MCPInfo {
 			&& self.prompt.is_none()
 			&& self.resource.is_none()
 			&& self.task.is_none()
+			&& self.tools_list.is_none()
+			&& self.prompts_list.is_none()
+			&& self.resources_list.is_none()
+			&& self.resource_templates_list.is_none()
 			&& self.error.is_none()
 	}
 

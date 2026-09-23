@@ -2102,10 +2102,23 @@ fn capture_terminal_mcp_payload(
 ) -> bool {
 	match message {
 		ServerJsonRpcMessage::Response(response) if response.id == *request_id => {
-			if let ServerResult::CallToolResult(result) = &response.result
-				&& let Some(log) = log
-			{
-				log.non_atomic_mutate(|mcp| mcp.capture_call_result(result));
+			if let Some(log) = log {
+				log.non_atomic_mutate(|mcp| match &response.result {
+					ServerResult::CallToolResult(result) => mcp.capture_call_result(result),
+					ServerResult::ListToolsResult(result) => {
+						mcp.tools_list = serde_json::to_value(result).ok();
+					},
+					ServerResult::ListPromptsResult(result) => {
+						mcp.prompts_list = serde_json::to_value(result).ok();
+					},
+					ServerResult::ListResourcesResult(result) => {
+						mcp.resources_list = serde_json::to_value(result).ok();
+					},
+					ServerResult::ListResourceTemplatesResult(result) => {
+						mcp.resource_templates_list = serde_json::to_value(result).ok();
+					},
+					_ => {},
+				});
 			}
 			true
 		},
