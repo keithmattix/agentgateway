@@ -862,7 +862,6 @@ impl TestBind {
 		name: &str,
 		servers: Vec<(&str, SocketAddr, bool)>,
 		stateful: bool,
-		failure_mode: FailureMode,
 		conditions: Vec<Option<Arc<crate::cel::Expression>>>,
 	) -> Self {
 		self.with_multiplex_mcp_backend_options(
@@ -871,7 +870,7 @@ impl TestBind {
 			stateful,
 			vec![],
 			Default::default(),
-			failure_mode,
+			FailureMode::FailClosed,
 			conditions,
 		)
 	}

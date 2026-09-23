@@ -516,7 +516,7 @@ impl UpstreamGroup {
 		};
 		s.setup_connections()?;
 		if s.by_name.is_empty() {
-			if all_targets_conditioned_out && s.failure_mode == FailureMode::FailOpen {
+			if all_targets_conditioned_out {
 				return Ok(s);
 			}
 			if s.backend.targets.is_empty() && s.failure_mode == FailureMode::FailOpen {

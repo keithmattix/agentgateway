@@ -241,7 +241,6 @@ async fn multiplex_target_condition_skips_denied_upstream() {
 				("unfiltered", unfiltered.addr, false),
 			],
 			true,
-			FailureMode::FailClosed,
 			vec![Some(condition.clone()), Some(condition), None],
 		)
 		.with_bind(simple_bind())
@@ -284,7 +283,6 @@ async fn multiplex_target_conditions_can_select_no_targets() {
 				("denied-b", denied_b.addr, false),
 			],
 			true,
-			FailureMode::FailOpen,
 			vec![Some(condition.clone()), Some(condition)],
 		)
 		.with_bind(simple_bind())

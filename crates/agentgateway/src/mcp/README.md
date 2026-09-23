@@ -17,8 +17,7 @@ This is distinct from `mcpAuthorization`: target conditions choose which upstrea
 in the virtual MCP request, while `mcpAuthorization` evaluates individual returned tools and other
 MCP resources after an upstream has responded.
 
-When every configured target's condition is false, Agentgateway presents an empty virtual MCP when
-`failureMode` is `failOpen`; otherwise it returns a no-backends error.
+When every configured target's condition is false, Agentgateway presents an empty virtual MCP.
 
 Version negotiation is how we handle the disparate protocol versions between the clients and servers, and Agentgateway itself.
 This is particularly important for 2026-07-28+, which has a very different protocol than the other versions (which are all much more incremental differences).
