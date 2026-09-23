@@ -4,8 +4,10 @@ package conformance_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/netip"
+	"os"
 	"slices"
 	"strings"
 	"testing"
@@ -76,7 +78,10 @@ func TestConformance(t *testing.T) {
 			},
 		}
 	} else {
-		t.Logf("Failed to guess MetalLB address: %v, skipping test", err)
+		if os.Getenv("CI") == "true" {
+			t.Fatalf("Failed to find a MetalLB address for GatewayStaticAddresses: %v", err)
+		}
+		t.Logf("Failed to find a MetalLB address: %v, skipping GatewayStaticAddresses", err)
 		options.SkipTests = append(options.SkipTests, string(features.GatewayStaticAddressesFeature.Name))
 	}
 	options.Debug = true
@@ -183,9 +188,9 @@ func guessMetallbAddress() (string, error) {
 	}
 
 	// Fall back to ConfigMap format (older format)
-	address, err = guessFromConfigMap(cfg)
-	if err != nil {
-		return "", fmt.Errorf("failed to guess address from both IPAddressPool and ConfigMap: %w", err)
+	address, configMapErr := guessFromConfigMap(cfg)
+	if configMapErr != nil {
+		return "", fmt.Errorf("failed to guess address from both IPAddressPool and ConfigMap: %w", errors.Join(err, configMapErr))
 	}
 
 	return address, nil
