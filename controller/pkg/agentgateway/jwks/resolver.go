@@ -67,7 +67,7 @@ func (r *defaultResolver) ResolveOwner(krtctx krt.HandlerContext, owner RemoteJw
 		return nil, err
 	}
 
-	endpoint, err := ResolveEndpoint(krtctx, r.endpointResolver, owner.ID.Name, owner.DefaultNamespace, owner.Remote)
+	endpoint, err := ResolveEndpoint(krtctx, r.endpointResolver, owner.ID.Kind, owner.ID.Name, owner.DefaultNamespace, owner.Remote)
 	if err != nil {
 		return nil, err
 	}
