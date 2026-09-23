@@ -4,10 +4,8 @@ import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 
 import type { McpSettingsResource } from '@/api/configResourcesApi';
-import { refreshBaseCosts } from '@/api/costsApi';
 import { PageHeader, StatusBanner } from '@/components/Primitives';
 import { ensureLlm, fileOwnedMcpSettingFields } from '@/config';
-import { refreshBaseCostsAndConfigure } from '@/costs';
 import {
 	useConfigDumpMode,
 	useEnableSurface,
@@ -76,7 +74,6 @@ export function HomePage() {
 	const traffic = trafficStats(trafficData.data);
 	const [startupEvaluated, setStartupEvaluated] = useState(false);
 	const [startupFlow, setStartupFlow] = useState(false);
-	const [costRefreshError, setCostRefreshError] = useState<string | null>(null);
 	const [llmSettingsOpen, setLlmSettingsOpen] = useState(false);
 	const [mcpSettingsOpen, setMcpSettingsOpen] = useState(false);
 	const showStartup = Boolean(config.data && startupFlow);
@@ -92,22 +89,11 @@ export function HomePage() {
 	}, [config.data, pageDataError, pageDataLoading, hasLlm, hasMcp, hasTraffic, startupEvaluated]);
 
 	async function enableSurface(surface: StartupSurface) {
-		setCostRefreshError(null);
 		try {
-			const { hybrid } = await enable.mutateAsync({
+			await enable.mutateAsync({
 				surface: surface === 'apis' ? 'traffic' : surface
 			});
 			setLocallyEnabled(current => new Set(current).add(surface));
-			if (surface === 'llm') {
-				try {
-					if (hybrid) await refreshBaseCosts();
-					else await refreshBaseCostsAndConfigure(update);
-				} catch (err) {
-					setCostRefreshError(
-						err instanceof Error ? err.message : 'Failed to refresh base cost catalog'
-					);
-				}
-			}
 		} catch {
 			// The enable mutation exposes the save error.
 		}
@@ -160,11 +146,6 @@ export function HomePage() {
 					{enable.isError || update.isError ? (
 						<StatusBanner state="bad" title="Save failed">
 							{enable.error?.message ?? update.error?.message}
-						</StatusBanner>
-					) : null}
-					{costRefreshError ? (
-						<StatusBanner state="warn" title="Cost catalog refresh failed">
-							{costRefreshError}
 						</StatusBanner>
 					) : null}
 
@@ -233,10 +214,6 @@ export function HomePage() {
 			) : pageDataError ? (
 				<StatusBanner state="bad" title="Configuration API unavailable">
 					{pageDataError.message}
-				</StatusBanner>
-			) : costRefreshError ? (
-				<StatusBanner state="warn" title="Cost catalog refresh failed">
-					{costRefreshError}
 				</StatusBanner>
 			) : !hasLlm && !hasMcp && !hasTraffic ? (
 				<StatusBanner state="warn" title="No gateway surfaces enabled yet">

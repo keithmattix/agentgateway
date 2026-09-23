@@ -2,17 +2,14 @@ import { Link, useNavigate } from '@tanstack/react-router';
 import { Bot, Network, Server } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-import { refreshBaseCosts } from '@/api/costsApi';
 import { gatewayOptions } from '@/components/GatewayBindingEditor';
 import { Dropdown, FieldGroup, PageHeader, Panel, StatusBanner } from '@/components/Primitives';
 import { startupGatewayRefs } from '@/config';
-import { refreshBaseCostsAndConfigure } from '@/costs';
 import {
 	useEffectiveGatewayConfig,
 	useEnableSurface,
 	useMcpConfigData,
-	useTrafficConfigData,
-	useUpdateConfig
+	useTrafficConfigData
 } from '@/hooks';
 import type { GatewayConfig } from '@/types';
 
@@ -75,7 +72,6 @@ function GetStartedPage(props: { surface: SurfaceKind }) {
 	const config = useEffectiveGatewayConfig();
 	const mcpData = useMcpConfigData();
 	const trafficData = useTrafficConfigData();
-	const update = useUpdateConfig();
 	const enableSurface = useEnableSurface();
 	const navigate = useNavigate();
 	const surface = surfaceConfig[props.surface];
@@ -114,16 +110,11 @@ function GetStartedPage(props: { surface: SurfaceKind }) {
 			return;
 		}
 		try {
-			const { hybrid } = await enableSurface.mutateAsync({
+			await enableSurface.mutateAsync({
 				surface: props.surface,
 				gateway: gateway || undefined
 			});
 			void navigate({ to: surface.destination });
-			if (props.surface === 'llm') {
-				void (hybrid ? refreshBaseCosts() : refreshBaseCostsAndConfigure(update)).catch(
-					() => undefined
-				);
-			}
 		} catch {
 			// The enable mutation exposes the save error.
 		}
@@ -147,9 +138,9 @@ function GetStartedPage(props: { surface: SurfaceKind }) {
 					{configError.message}
 				</StatusBanner>
 			) : null}
-			{enableSurface.isError || update.isError ? (
+			{enableSurface.isError ? (
 				<StatusBanner state="bad" title="Save failed">
-					{enableSurface.error?.message ?? update.error?.message}
+					{enableSurface.error?.message}
 				</StatusBanner>
 			) : null}
 
@@ -202,7 +193,7 @@ function GetStartedPage(props: { surface: SurfaceKind }) {
 						<button
 							className="button primary"
 							type="button"
-							disabled={loading || enableSurface.isPending || update.isPending}
+							disabled={loading || enableSurface.isPending}
 							onClick={() => void enable()}
 						>
 							Enable
