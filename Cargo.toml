@@ -195,12 +195,11 @@ schemars = { version = "=1.2.1", git = "https://github.com/howardjohn/schemars",
 ] }
 secrecy = { version = "0.10", features = ["serde"] }
 serde = { version = "1.0", features = ["derive", "rc"] }
-serde-transcode = "1.1"
 serde_json = { version = "1.0", features = ["preserve_order", "raw_value"] }
 serde-untagged = "0.1"
-serde_json_path_to_error = "0.1"
 serde_regex = "1.1"
-serde_yaml = "0.9"
+serde_norway = "0.9.42"
+yaml-serde-edit = "0.1.1"
 sha1 = "0.11"
 sha2 = "0.11"
 shellexpand = "3.1"

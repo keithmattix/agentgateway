@@ -332,9 +332,8 @@ backends:
 fn test_local_backend_policies_reject_unknown_fields() {
 	// serde(flatten) disables deny_unknown_fields on the outer struct, but the
 	// flattened SimpleLocalBackendPolicies still rejects leftover unknown keys.
-	let err =
-		crate::serdes::yamlviajson::from_str::<super::LocalBackendPolicies>("mcpAuthorizatoin: {}")
-			.unwrap_err();
+	let err = crate::serdes::yaml::from_str::<super::LocalBackendPolicies>("mcpAuthorizatoin: {}")
+		.unwrap_err();
 	assert!(err.to_string().contains("unknown field"), "{err}");
 }
 
@@ -2066,7 +2065,8 @@ binds:
 #[test]
 fn test_migrate_deprecated_local_config_moves_fields() {
 	let _env = ClearTracingEnv::new();
-	let input = r#"
+	let input = r#"# yaml-language-server: $schema=./config.schema.json
+# Gateway settings
 config:
   logging:
     level: info
@@ -2081,9 +2081,27 @@ config:
     headers:
       authorization: token
     otlpProtocol: http
+
+# Public listeners
+binds:
+  - port: 8080 # keep this port
+    listeners: []
 "#;
 	let out = super::migrate_deprecated_local_config(input).unwrap();
-	let v: serde_json::Value = crate::serdes::yamlviajson::from_str(&out).unwrap();
+	assert!(
+		out.starts_with("# yaml-language-server: $schema=./config.schema.json\n# Gateway settings\n")
+	);
+	assert!(
+		out
+			.contains("# Public listeners\nbinds:\n  - port: 8080 # keep this port\n    listeners: []\n"),
+		"{out}"
+	);
+	let unchanged = "# Current config\nbinds: [] # no listeners\n";
+	assert_eq!(
+		super::migrate_deprecated_local_config(unchanged).unwrap(),
+		unchanged
+	);
+	let v: serde_json::Value = crate::serdes::yaml::from_str(&out).unwrap();
 	let cfg = v.get("config").unwrap();
 	let logging = cfg.get("logging").unwrap();
 	assert_eq!(logging.get("level").unwrap(), "info");
@@ -2120,7 +2138,7 @@ config:
     otlpProtocol: http
 "#;
 	let out = super::migrate_deprecated_local_config(input).unwrap();
-	let v: serde_json::Value = crate::serdes::yamlviajson::from_str(&out).unwrap();
+	let v: serde_json::Value = crate::serdes::yaml::from_str(&out).unwrap();
 	let tracing = v.get("frontendPolicies").unwrap().get("tracing").unwrap();
 	let policies = tracing
 		.get("policies")
@@ -2148,7 +2166,7 @@ config:
     otlpProtocol: http
 "#;
 	let out = super::migrate_deprecated_local_config(input).unwrap();
-	let v: serde_json::Value = crate::serdes::yamlviajson::from_str(&out).unwrap();
+	let v: serde_json::Value = crate::serdes::yaml::from_str(&out).unwrap();
 	let tracing = v.get("frontendPolicies").unwrap().get("tracing").unwrap();
 	assert_eq!(
 		tracing.get("inlineBackend").unwrap(),
@@ -2171,7 +2189,7 @@ fn test_deprecated_tracing_endpoint_schemes(
 	let input =
 		format!("config:\n  tracing:\n    otlpEndpoint: {endpoint}\n    otlpProtocol: {protocol}\n");
 	let out = super::migrate_deprecated_local_config(&input).unwrap();
-	let v: serde_json::Value = crate::serdes::yamlviajson::from_str(&out).unwrap();
+	let v: serde_json::Value = crate::serdes::yaml::from_str(&out).unwrap();
 	let tracing = v.get("frontendPolicies").unwrap().get("tracing").unwrap();
 	assert_eq!(tracing.get("inlineBackend").unwrap(), expected);
 }
