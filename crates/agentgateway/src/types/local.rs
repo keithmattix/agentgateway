@@ -4507,12 +4507,6 @@ async fn convert_llm_config(
 				})
 			},
 			LocalModelAIProvider::Builtin(LocalBuiltinModelAIProvider::Custom(custom_provider)) => {
-				if custom_provider.formats.is_empty() && model_config.passthrough.is_none() {
-					bail!(
-						"custom provider for model {} must specify at least one format",
-						model_config.name
-					);
-				}
 				if p.host_override.is_none() {
 					bail!(
 						"custom provider for model {} requires params.baseUrl",

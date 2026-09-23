@@ -9296,10 +9296,7 @@
           }
         }
       },
-      "additionalProperties": false,
-      "required": [
-        "formats"
-      ]
+      "additionalProperties": false
     },
     "ProviderFormatConfig": {
       "type": "object",

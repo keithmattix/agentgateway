@@ -55,13 +55,12 @@ export function CostsPage() {
 			},
 		[catalogResource]
 	);
-	const databaseCatalog = catalogResource ? catalog : {};
 	const sources = useMemo(
 		() => [
-			...databaseCostSources(databaseCatalog),
+			...databaseCostSources(catalog),
 			...configuredCostSources(rawConfig.data).map(fileCostSource)
 		],
-		[rawConfig.data, databaseCatalog]
+		[rawConfig.data, catalog]
 	);
 	const baseFile = useMemo(
 		() => configuredCostSources(rawConfig.data).find(source => source.file)?.file,
@@ -71,14 +70,14 @@ export function CostsPage() {
 		() =>
 			inlineCostRows(
 				hybrid
-					? databaseCatalog.custom === undefined
+					? catalog.custom === undefined
 						? []
-						: [{ inline: databaseCatalog.custom }]
+						: [{ inline: catalog.custom }]
 					: catalog.custom === undefined
 						? sources
 						: [{ inline: catalog.custom }]
 			),
-		[catalog.custom, databaseCatalog.custom, hybrid, sources]
+		[catalog.custom, hybrid, sources]
 	);
 	const saving = updateConfig.isPending || upsertResource.isPending;
 	const [editingCustom, setEditingCustom] = useState(false);
@@ -392,7 +391,7 @@ export function CostsPage() {
 			await upsertResource.mutateAsync({
 				kind: 'modelCatalog',
 				value: {
-					...(hybrid ? databaseCatalog : catalog),
+					...catalog,
 					custom: inlineCatalog(customDraft)
 				}
 			});
