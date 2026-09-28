@@ -119,20 +119,33 @@ impl RequestPolicyTrait for SubstrateEgress {
 		log.ate_actor_name = Some(actor.name.clone());
 		log.ate_actor_uid = identity.actor_uid.clone();
 		log.ate_atespace = Some(actor.atespace.clone());
-		let channel = self
-			.target
-			.grpc_channel(client.with_outbound(OutboundCallKind::Policy, OutboundCallSubtype::Substrate));
+		let policy_client =
+			client.with_outbound(OutboundCallKind::Policy, OutboundCallSubtype::Substrate);
+		let channel = self.target.grpc_channel(policy_client.clone());
 		let mut control = protos::ateapi::control_client::ControlClient::new(channel);
+		let mut request = tonic::Request::new(protos::ateapi::GetActorEgressPolicyRequest {
+			actor: Some(protos::ateapi::ObjectRef {
+				atespace: actor.atespace,
+				name: actor.name,
+			}),
+		});
+		let mut span = policy_client.start_grpc_span(
+			&mut request,
+			self.target.target.as_ref(),
+			"/ateapi.Control/GetActorEgressPolicy",
+		);
+		if let Some(span) = span.as_deref_mut() {
+			span.rename_span("ateapi.Control/GetActorEgressPolicy");
+		}
 		let policy = crate::proxy::dtrace::scope_future(
 			Some(TRACE_POLICY_KIND),
-			control.get_actor_egress_policy(protos::ateapi::GetActorEgressPolicyRequest {
-				actor: Some(protos::ateapi::ObjectRef {
-					atespace: actor.atespace,
-					name: actor.name,
-				}),
-			}),
+			control.get_actor_egress_policy(request),
 		)
 		.await;
+		if let Some(span) = span.as_deref_mut() {
+			span.record_grpc_result(&policy);
+		}
+		drop(span);
 		let policy = match policy {
 			Ok(response) => response.into_inner(),
 			Err(status) if matches!(status.code(), Code::Unavailable | Code::DeadlineExceeded) => {
@@ -203,17 +216,29 @@ impl SubstrateEgress {
 			return Ok(secret);
 		}
 
-		let channel = provider
-			.target
-			.grpc_channel(client.with_outbound(OutboundCallKind::Policy, OutboundCallSubtype::Substrate));
+		let policy_client =
+			client.with_outbound(OutboundCallKind::Policy, OutboundCallSubtype::Substrate);
+		let channel = provider.target.grpc_channel(policy_client.clone());
+		let mut request = tonic::Request::new(protos::credprovider::FetchSecretRequest {
+			uri: uri.to_owned(),
+			actor_spiffe_id: actor_identity,
+		});
+		let mut span = policy_client.start_grpc_span(
+			&mut request,
+			provider.target.target.as_ref(),
+			"/credprovider.CredentialProvider/FetchSecret",
+		);
+		if let Some(span) = span.as_deref_mut() {
+			span.rename_span("credprovider.CredentialProvider/FetchSecret");
+		}
 		let mut provider =
 			protos::credprovider::credential_provider_client::CredentialProviderClient::new(channel);
-		let response = provider
-			.fetch_secret(protos::credprovider::FetchSecretRequest {
-				uri: uri.to_owned(),
-				actor_spiffe_id: actor_identity,
-			})
-			.await
+		let response = provider.fetch_secret(request).await;
+		if let Some(span) = span.as_deref_mut() {
+			span.record_grpc_result(&response);
+		}
+		drop(span);
+		let response = response
 			.map_err(|status| credential_provider_error(uri, status))?
 			.into_inner();
 		let secret = credential_secret(response.opaque_bytes)?;
