@@ -1372,6 +1372,126 @@ async fn substrate_egress_connect_status(
 }
 
 #[tokio::test]
+async fn substrate_egress_actor_resolution_refreshes_on_long_lived_tunnel() {
+	#[derive(Clone)]
+	struct CountingHandler {
+		calls: Arc<AtomicUsize>,
+	}
+
+	#[async_trait::async_trait]
+	impl ateapimock::Handler for CountingHandler {
+		async fn get_actor(
+			&mut self,
+			_request: &protos::ateapi::GetActorRequest,
+		) -> Result<Actor, tonic::Status> {
+			self.calls.fetch_add(1, Ordering::Relaxed);
+			Ok(Actor {
+				metadata: Some(ResourceMetadata {
+					uid: "uid-1".to_owned(),
+					..Default::default()
+				}),
+				status: Some(ActorStatus {
+					state: ActorState::Running as i32,
+					worker_assignment: None,
+				}),
+			})
+		}
+	}
+
+	let first_calls = Arc::new(AtomicUsize::new(0));
+	let first_api = ateapimock::AteApiMock::new({
+		let calls = first_calls.clone();
+		move || CountingHandler {
+			calls: calls.clone(),
+		}
+	})
+	.spawn()
+	.await;
+	let second_calls = Arc::new(AtomicUsize::new(0));
+	let second_api = ateapimock::AteApiMock::new({
+		let calls = second_calls.clone();
+		move || CountingHandler {
+			calls: calls.clone(),
+		}
+	})
+	.spawn()
+	.await;
+
+	let mut outer = simple_bind();
+	outer.key = strng::literal!("outer");
+	outer.address = "127.0.0.1:15012".parse().unwrap();
+	let mut inner = simple_bind();
+	inner.address = "0.0.0.0:18080".parse().unwrap();
+	inner.mode = BindMode::Internal;
+	let mut gateway = setup_proxy_test("{}")
+		.unwrap()
+		.with_bind(outer)
+		.with_bind(inner)
+		.with_connect_mode_on_port(agentgateway::types::frontend::ConnectMode::Tunnel, 15012);
+	gateway
+		.attach_frontend_policy(json!({
+			"substrateEgressActorResolution": {
+				"host": first_api.address.to_string(),
+			}
+		}))
+		.await;
+
+	let io = gateway.serve_tunnel_with_tls_info(
+		strng::literal!("outer"),
+		Some(TLSConnectionInfo {
+			src_identity: Some(TlsInfo {
+				certificate: Some(
+					actor_certificate("spiffe://substrate-actor.local/ateom-for-actor/demo/my-actor").into(),
+				),
+				..Default::default()
+			}),
+			..Default::default()
+		}),
+	);
+	let (mut sender, connection) =
+		hyper::client::conn::http2::Builder::new(hyper_util::rt::TokioExecutor::new())
+			.handshake(hyper_util::rt::TokioIo::new(io))
+			.await
+			.unwrap();
+	let connection = tokio::spawn(connection);
+
+	let connect = || {
+		::http::Request::builder()
+			.method(Method::CONNECT)
+			.uri("allowed.example:18080")
+			.body(Body::empty())
+			.unwrap()
+	};
+	assert_eq!(
+		sender.send_request(connect()).await.unwrap().status(),
+		StatusCode::OK
+	);
+	assert_eq!(first_calls.load(Ordering::Relaxed), 1);
+
+	gateway
+		.pi
+		.stores
+		.binds
+		.write()
+		.remove_policy(strng::literal!("pol/1"));
+	gateway
+		.attach_frontend_policy(json!({
+			"substrateEgressActorResolution": {
+				"host": second_api.address.to_string(),
+			}
+		}))
+		.await;
+
+	assert_eq!(
+		sender.send_request(connect()).await.unwrap().status(),
+		StatusCode::OK
+	);
+	assert_eq!(first_calls.load(Ordering::Relaxed), 1);
+	assert_eq!(second_calls.load(Ordering::Relaxed), 1);
+	connection.abort();
+}
+
+#[tokio::test]
 async fn substrate_egress_injects_provider_credentials_into_the_upstream_request() {
 	let upstream = simple_mock().await;
 	let policy = EgressPolicy {
