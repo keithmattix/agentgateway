@@ -134,9 +134,6 @@ impl RequestPolicyTrait for SubstrateEgress {
 			self.target.target.as_ref(),
 			"/ateapi.Control/GetActorEgressPolicy",
 		);
-		if let Some(span) = span.as_deref_mut() {
-			span.rename_span("ateapi.Control/GetActorEgressPolicy");
-		}
 		let policy = crate::proxy::dtrace::scope_future(
 			Some(TRACE_POLICY_KIND),
 			control.get_actor_egress_policy(request),
@@ -228,9 +225,6 @@ impl SubstrateEgress {
 			provider.target.target.as_ref(),
 			"/credprovider.CredentialProvider/FetchSecret",
 		);
-		if let Some(span) = span.as_deref_mut() {
-			span.rename_span("credprovider.CredentialProvider/FetchSecret");
-		}
 		let mut provider =
 			protos::credprovider::credential_provider_client::CredentialProviderClient::new(channel);
 		let response = provider.fetch_secret(request).await;
