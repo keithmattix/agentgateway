@@ -1852,17 +1852,30 @@ async fn substrate_egress_propagates_trace_context_to_policy_and_credential_call
 		.find(|span| hex_id(&span.parent_span_id) == client_tp[36..52])
 		.expect("request span should be exported");
 	for (method, tp) in &seen {
-		let name = match *method {
-			"GetActorEgressPolicy" => "ateapi.Control/GetActorEgressPolicy",
-			"FetchSecret" => "credprovider.CredentialProvider/FetchSecret",
+		let path = match *method {
+			"GetActorEgressPolicy" => "/ateapi.Control/GetActorEgressPolicy",
+			"FetchSecret" => "/credprovider.CredentialProvider/FetchSecret",
 			other => panic!("unexpected method {other}"),
 		};
 		let span = spans
 			.iter()
-			.find(|span| span.name == name)
-			.unwrap_or_else(|| panic!("{name} span should be exported"));
-		assert_eq!(hex_id(&span.span_id), tp[36..52], "{name}");
-		assert_eq!(span.parent_span_id, request.span_id, "{name}");
+			.find(|span| {
+				span.name == "Substrate"
+					&& span.attributes.iter().any(|attribute| {
+						attribute.key == "http.path"
+							&& matches!(
+								attribute.value.as_ref().and_then(|value| value.value.as_ref()),
+								Some(
+									opentelemetry_proto::tonic::common::v1::any_value::Value::StringValue(
+										value
+									)
+								) if value == path
+							)
+					})
+			})
+			.unwrap_or_else(|| panic!("{path} span should be exported"));
+		assert_eq!(hex_id(&span.span_id), tp[36..52], "{path}");
+		assert_eq!(span.parent_span_id, request.span_id, "{path}");
 	}
 }
 
