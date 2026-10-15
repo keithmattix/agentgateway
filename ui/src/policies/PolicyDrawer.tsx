@@ -2,7 +2,7 @@ import { Trash2 } from 'lucide-react';
 import { useRef, useState } from 'react';
 
 import { ConfigDiffSaveActions, ConfigSaveButton } from '@/components/ConfigDiffDrawer';
-import { EditorValueContext } from '@/components/EditorContracts';
+import { EditorSchemaContext, EditorValueContext } from '@/components/EditorContracts';
 import { ConfirmDialog, Drawer, type DrawerRaw, Tooltip } from '@/components/Primitives';
 import type { BackendAuth, LoggingPolicy, TracingConfig } from '@/gateway-config';
 import { takeHybridFileWriteOverride } from '@/hooks';
@@ -221,133 +221,134 @@ export function PolicyEditorBody(props: {
 function CustomPolicyEditor(
 	props: Parameters<typeof PolicyEditorBody>[0] & { customEditor: PolicyEditorKind }
 ) {
-	const description = props.help.propertyDescription(props.schemaRoot ?? 'LocalLLMPolicy', [
-		props.policyKey
-	]);
+	const schemaRoot = props.schemaRoot ?? 'LocalLLMPolicy';
+	const description = props.help.propertyDescription(schemaRoot, [props.policyKey]);
 	return (
-		<div className="policy-custom-editor">
-			{description ? <p className="policy-schema-description">{description}</p> : null}
-			{props.customEditor === 'accessLog' ? (
-				<AccessLogPolicyEditor
-					formId={props.formId}
-					accessLog={props.policyValue as LoggingPolicy | null | undefined}
-					help={props.help}
-					saving={props.saving}
-					onSave={props.onSave}
-				/>
-			) : props.customEditor === 'authorization' ? (
-				<AuthorizationPolicyEditor
-					formId={props.formId}
-					authorization={props.policyValue as AuthorizationDraft | null | undefined}
-					saving={props.saving}
-					onSave={props.onSave}
-				/>
-			) : props.customEditor === 'backendAuth' ? (
-				<BackendAuthPolicyEditor
-					formId={props.formId}
-					backendAuth={props.policyValue as BackendAuth | null | undefined}
-					help={props.help}
-					saving={props.saving}
-					onSave={props.onSave}
-				/>
-			) : props.customEditor === 'cors' ? (
-				<CorsPolicyEditor
-					formId={props.formId}
-					cors={props.policyValue as CorsPolicy | null | undefined}
-					help={props.help}
-					saving={props.saving}
-					onSave={props.onSave}
-				/>
-			) : props.customEditor === 'extAuthz' ? (
-				<ExtAuthzPolicyEditor
-					formId={props.formId}
-					extAuthz={props.policyValue as ExtAuthzDraft | null | undefined}
-					help={props.help}
-					saving={props.saving}
-					onSave={props.onSave}
-				/>
-			) : props.customEditor === 'extProc' ? (
-				<ExtProcPolicyEditor
-					formId={props.formId}
-					extProc={props.policyValue as ExtProcDraft | null | undefined}
-					help={props.help}
-					saving={props.saving}
-					onSave={props.onSave}
-				/>
-			) : props.customEditor === 'jwtAuth' ? (
-				<JwtPolicyEditor
-					formId={props.formId}
-					jwt={props.policyValue as JwtPolicy | null | undefined}
-					help={props.help}
-					saving={props.saving}
-					onSave={props.onSave}
-				/>
-			) : props.customEditor === 'localRateLimit' ? (
-				<LocalRateLimitPolicyEditor
-					formId={props.formId}
-					localRateLimit={props.policyValue as LocalRateLimitConfig | null | undefined}
-					help={props.help}
-					saving={props.saving}
-					onSave={props.onSave}
-				/>
-			) : props.customEditor === 'mcpAuthentication' ? (
-				<McpAuthenticationPolicyEditor
-					formId={props.formId}
-					authentication={props.policyValue as McpAuthenticationDraft | null | undefined}
-					help={props.help}
-					saving={props.saving}
-					onSave={props.onSave}
-				/>
-			) : props.customEditor === 'mcpAuthorization' ? (
-				<AuthorizationPolicyEditor
-					formId={props.formId}
-					authorization={props.policyValue as AuthorizationDraft | null | undefined}
-					newRuleExpression={'mcp.tool.name == "get_weather"'}
-					saving={props.saving}
-					onSave={props.onSave}
-				/>
-			) : props.customEditor === 'mcpGuardrails' ? (
-				<McpGuardrailsPolicyEditor
-					formId={props.formId}
-					guardrails={props.policyValue as McpGuardrailsDraft | null | undefined}
-					help={props.help}
-					saving={props.saving}
-					onSave={props.onSave}
-				/>
-			) : props.customEditor === 'oidc' ? (
-				<OidcPolicyEditor
-					formId={props.formId}
-					oidc={props.policyValue as OidcDraft | null | undefined}
-					help={props.help}
-					saving={props.saving}
-					onSave={props.onSave}
-				/>
-			) : props.customEditor === 'remoteRateLimit' ? (
-				<RemoteRateLimitPolicyEditor
-					formId={props.formId}
-					remoteRateLimit={props.policyValue as RemoteRateLimitDraft | null | undefined}
-					help={props.help}
-					saving={props.saving}
-					onSave={props.onSave}
-				/>
-			) : props.customEditor === 'tracing' ? (
-				<TracingPolicyEditor
-					formId={props.formId}
-					tracing={props.policyValue as TracingConfig | null | undefined}
-					help={props.help}
-					saving={props.saving}
-					onSave={props.onSave}
-				/>
-			) : (
-				<TransformationsPolicyEditor
-					formId={props.formId}
-					transformations={props.policyValue as TransformationDraft | null | undefined}
-					help={props.help}
-					saving={props.saving}
-					onSave={props.onSave}
-				/>
-			)}
-		</div>
+		<EditorSchemaContext.Provider value={['$defs', schemaRoot, 'properties', props.policyKey]}>
+			<div className="policy-custom-editor">
+				{description ? <p className="policy-schema-description">{description}</p> : null}
+				{props.customEditor === 'accessLog' ? (
+					<AccessLogPolicyEditor
+						formId={props.formId}
+						accessLog={props.policyValue as LoggingPolicy | null | undefined}
+						help={props.help}
+						saving={props.saving}
+						onSave={props.onSave}
+					/>
+				) : props.customEditor === 'authorization' ? (
+					<AuthorizationPolicyEditor
+						formId={props.formId}
+						authorization={props.policyValue as AuthorizationDraft | null | undefined}
+						saving={props.saving}
+						onSave={props.onSave}
+					/>
+				) : props.customEditor === 'backendAuth' ? (
+					<BackendAuthPolicyEditor
+						formId={props.formId}
+						backendAuth={props.policyValue as BackendAuth | null | undefined}
+						help={props.help}
+						saving={props.saving}
+						onSave={props.onSave}
+					/>
+				) : props.customEditor === 'cors' ? (
+					<CorsPolicyEditor
+						formId={props.formId}
+						cors={props.policyValue as CorsPolicy | null | undefined}
+						help={props.help}
+						saving={props.saving}
+						onSave={props.onSave}
+					/>
+				) : props.customEditor === 'extAuthz' ? (
+					<ExtAuthzPolicyEditor
+						formId={props.formId}
+						extAuthz={props.policyValue as ExtAuthzDraft | null | undefined}
+						help={props.help}
+						saving={props.saving}
+						onSave={props.onSave}
+					/>
+				) : props.customEditor === 'extProc' ? (
+					<ExtProcPolicyEditor
+						formId={props.formId}
+						extProc={props.policyValue as ExtProcDraft | null | undefined}
+						help={props.help}
+						saving={props.saving}
+						onSave={props.onSave}
+					/>
+				) : props.customEditor === 'jwtAuth' ? (
+					<JwtPolicyEditor
+						formId={props.formId}
+						jwt={props.policyValue as JwtPolicy | null | undefined}
+						help={props.help}
+						saving={props.saving}
+						onSave={props.onSave}
+					/>
+				) : props.customEditor === 'localRateLimit' ? (
+					<LocalRateLimitPolicyEditor
+						formId={props.formId}
+						localRateLimit={props.policyValue as LocalRateLimitConfig | null | undefined}
+						help={props.help}
+						saving={props.saving}
+						onSave={props.onSave}
+					/>
+				) : props.customEditor === 'mcpAuthentication' ? (
+					<McpAuthenticationPolicyEditor
+						formId={props.formId}
+						authentication={props.policyValue as McpAuthenticationDraft | null | undefined}
+						help={props.help}
+						saving={props.saving}
+						onSave={props.onSave}
+					/>
+				) : props.customEditor === 'mcpAuthorization' ? (
+					<AuthorizationPolicyEditor
+						formId={props.formId}
+						authorization={props.policyValue as AuthorizationDraft | null | undefined}
+						newRuleExpression={'mcp.tool.name == "get_weather"'}
+						saving={props.saving}
+						onSave={props.onSave}
+					/>
+				) : props.customEditor === 'mcpGuardrails' ? (
+					<McpGuardrailsPolicyEditor
+						formId={props.formId}
+						guardrails={props.policyValue as McpGuardrailsDraft | null | undefined}
+						help={props.help}
+						saving={props.saving}
+						onSave={props.onSave}
+					/>
+				) : props.customEditor === 'oidc' ? (
+					<OidcPolicyEditor
+						formId={props.formId}
+						oidc={props.policyValue as OidcDraft | null | undefined}
+						help={props.help}
+						saving={props.saving}
+						onSave={props.onSave}
+					/>
+				) : props.customEditor === 'remoteRateLimit' ? (
+					<RemoteRateLimitPolicyEditor
+						formId={props.formId}
+						remoteRateLimit={props.policyValue as RemoteRateLimitDraft | null | undefined}
+						help={props.help}
+						saving={props.saving}
+						onSave={props.onSave}
+					/>
+				) : props.customEditor === 'tracing' ? (
+					<TracingPolicyEditor
+						formId={props.formId}
+						tracing={props.policyValue as TracingConfig | null | undefined}
+						help={props.help}
+						saving={props.saving}
+						onSave={props.onSave}
+					/>
+				) : (
+					<TransformationsPolicyEditor
+						formId={props.formId}
+						transformations={props.policyValue as TransformationDraft | null | undefined}
+						help={props.help}
+						saving={props.saving}
+						onSave={props.onSave}
+					/>
+				)}
+			</div>
+		</EditorSchemaContext.Provider>
 	);
 }
 

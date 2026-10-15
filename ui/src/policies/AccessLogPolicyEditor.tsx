@@ -1,7 +1,7 @@
 import { Database, ScrollText, Send } from 'lucide-react';
 import { useState } from 'react';
 
-import { UnsupportedInForm, useReportEditorValue } from '@/components/EditorContracts';
+import { UnsupportedInForm, useMergedEdits } from '@/components/EditorContracts';
 import { EnumSelector } from '@/components/EnumSelector';
 import { MiniMonacoEditor } from '@/components/MiniMonacoEditor';
 import { Field, FieldGroup } from '@/components/Primitives';
@@ -36,31 +36,31 @@ export function AccessLogPolicyEditor(props: {
 	const [llmMode, setLlmMode] = useState<LlmMode>(original?.database?.llm ?? 'default');
 	const [databaseAdd, setDatabaseAdd] = useState(original?.database?.add ?? {});
 
-	const policy = cleanEmpty({
-		...original,
-		preset: preset === 'otel' ? 'otel' : undefined,
-		filter: filter.trim(),
-		add: Object.keys(add).length ? add : undefined,
-		remove,
-		otlp: otlpEnabled
-			? ({
-					...original?.otlp,
-					host: otlpHost.trim(),
-					protocol: otlpProtocol,
-					path: otlpProtocol === 'http' ? otlpPath.trim() : undefined,
-					filter: otlpFilter.trim()
-				} as OtlpLoggingConfig)
-			: undefined,
-		database:
-			llmMode !== 'default' || Object.keys(databaseAdd).length
-				? {
-						...original?.database,
-						llm: llmMode === 'default' ? undefined : llmMode,
-						add: Object.keys(databaseAdd).length ? databaseAdd : undefined
-					}
-				: undefined
-	}) as LoggingPolicy;
-	useReportEditorValue(policy);
+	const merged = useMergedEdits(
+		original,
+		cleanEmpty({
+			preset: preset === 'otel' ? 'otel' : undefined,
+			filter: filter.trim(),
+			add: Object.keys(add).length ? add : undefined,
+			remove,
+			otlp: otlpEnabled
+				? ({
+						host: otlpHost.trim(),
+						protocol: otlpProtocol,
+						path: otlpProtocol === 'http' ? otlpPath.trim() : undefined,
+						filter: otlpFilter.trim()
+					} as OtlpLoggingConfig)
+				: undefined,
+			database:
+				llmMode !== 'default' || Object.keys(databaseAdd).length
+					? {
+							llm: llmMode === 'default' ? undefined : llmMode,
+							add: Object.keys(databaseAdd).length ? databaseAdd : undefined
+						}
+					: undefined
+		}) as LoggingPolicy
+	);
+	const policy = merged.value;
 
 	if (original?.otlp && hasUnsupportedTarget(original.otlp)) {
 		return <UnsupportedInForm supports="OTLP export to a host target" />;

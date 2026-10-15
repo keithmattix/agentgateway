@@ -1,7 +1,7 @@
 import { Gauge, Send, Tags } from 'lucide-react';
 import { useState } from 'react';
 
-import { UnsupportedInForm, useReportEditorValue } from '@/components/EditorContracts';
+import { UnsupportedInForm, useMergedEdits } from '@/components/EditorContracts';
 import { EnumSelector } from '@/components/EnumSelector';
 import { MiniMonacoEditor } from '@/components/MiniMonacoEditor';
 import { Field, FieldGroup } from '@/components/Primitives';
@@ -45,20 +45,22 @@ export function TracingPolicyEditor(props: {
 	const [resources, setResources] = useState(original?.resources ?? {});
 	const [remove, setRemove] = useState(original?.remove ?? []);
 
-	const policy = cleanEmpty({
-		...original,
-		...target,
-		protocol,
-		path: protocol === 'http' ? path.trim() : undefined,
-		randomSampling: samplingValue(randomSampling),
-		clientSampling: samplingValue(clientSampling),
-		parentNotSampled: samplingValue(parentNotSampled),
-		filter: filter.trim(),
-		attributes: Object.keys(attributes).length ? attributes : undefined,
-		resources: Object.keys(resources).length ? resources : undefined,
-		remove
-	}) as TracingConfig;
-	useReportEditorValue(policy);
+	const merged = useMergedEdits(
+		original,
+		cleanEmpty({
+			...target,
+			protocol,
+			path: protocol === 'http' ? path.trim() : undefined,
+			randomSampling: samplingValue(randomSampling),
+			clientSampling: samplingValue(clientSampling),
+			parentNotSampled: samplingValue(parentNotSampled),
+			filter: filter.trim(),
+			attributes: Object.keys(attributes).length ? attributes : undefined,
+			resources: Object.keys(resources).length ? resources : undefined,
+			remove
+		}) as TracingConfig
+	);
+	const policy = merged.value;
 
 	if (hasUnsupportedTarget(original)) {
 		return <UnsupportedInForm supports="host targets" />;

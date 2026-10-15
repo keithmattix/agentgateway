@@ -1,6 +1,7 @@
 import { createContext, Fragment, useContext, useLayoutEffect, useState } from 'react';
 
 import { PinRawContext, StatusBanner } from '@/components/Primitives';
+import { withoutSchemaDefaults } from '@/configValidation';
 import { mergeEdits } from '@/mergeEdits';
 
 // Rendered by a form that cannot represent its value: the drawer switches to
@@ -17,19 +18,27 @@ export function UnsupportedInForm(props: { supports: string }) {
 // submitting the form (and so without the editor's save validation).
 export const EditorValueContext = createContext<((value: unknown) => void) | null>(null);
 
+// The config schema path of the value an editor edits (see useMergedEdits).
+export const EditorSchemaContext = createContext<string[] | null>(null);
+
 export function useReportEditorValue(value: unknown) {
 	useContext(EditorValueContext)?.(value);
 }
 
 // Structured editors save through this: `edited` is the value rebuilt from form
 // state, and the first one seen is the editor's baseline. Returns the edit
-// applied onto `original` (see mergeEdits) and any paths it would replace.
+// applied onto `original` (see mergeEdits) and any paths it would replace, so
+// only fields the user changed are written. A new value has no original: its
+// starting form output minus schema defaults (`schemaPath`, or
+// EditorSchemaContext) stands in, so defaults nobody touched are left out.
 // Pass `edited` before any cleanup that drops modeled fields (e.g. implied
 // defaults) and apply that cleanup to the result. `reset` makes a value loaded
 // into the form (e.g. from raw mode) the new original.
-export function useMergedEdits<T>(original: unknown, edited: T) {
+export function useMergedEdits<T>(original: unknown, edited: T, schemaPath?: string[]) {
+	const contextPath = useContext(EditorSchemaContext);
+	const path = schemaPath ?? contextPath;
 	const [base, setBase] = useState<{ original: unknown; baseline: { value: T } | null }>(() => ({
-		original,
+		original: original ?? (path ? withoutSchemaDefaults(edited, path) : undefined),
 		baseline: { value: edited }
 	}));
 	useLayoutEffect(() => {

@@ -481,7 +481,8 @@ function GatewayEditor(props: {
 	};
 	const merged = useMergedEdits(
 		props.initial.previousName ? props.initial.gateway : undefined,
-		preview
+		preview,
+		['$defs', 'LocalGateway']
 	);
 	// Normalize after merging so fields this cleanup drops still count as edited.
 	// TLS without cert/key (e.g. SPIFFE) shows as `tls: null` either way, so the
@@ -777,7 +778,8 @@ function GatewayListenerEditor(props: {
 	};
 	const merged = useMergedEdits(
 		typeof props.editing.listenerIndex === 'number' ? props.editing.listener : undefined,
-		preview
+		preview,
+		['$defs', 'LocalGatewayListener']
 	);
 	// Normalize after merging so fields this cleanup drops still count as edited.
 	// See GatewayEditor for why TLS is dropped here.

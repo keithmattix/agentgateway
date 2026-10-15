@@ -218,8 +218,8 @@ export function KeysPage() {
 					{saveError}
 				</StatusBanner>
 			) : null}
-			{policy?.mode && policy.mode !== 'strict' ? (
-				<StatusBanner state="warn" title={`Policy mode is ${modeLabel(policy.mode)}`}>
+			{policy && (policy.mode ?? 'optional') !== 'strict' ? (
+				<StatusBanner state="warn" title={`Policy mode is ${modeLabel(policy.mode ?? 'optional')}`}>
 					Use strict mode when keys should be mandatory.
 				</StatusBanner>
 			) : null}
@@ -489,7 +489,7 @@ function PolicyControls(props: {
 	onDisable: () => void;
 	onSave: (policy: Partial<LlmApiKeyPolicy>) => void;
 }) {
-	const [mode, setMode] = useState(props.policy?.mode ?? 'strict');
+	const [mode, setMode] = useState(props.policy?.mode ?? 'optional');
 	const [location, setLocation] = useState(() => authorizationLocationFrom(props.policy?.location));
 	const patch: Partial<LlmApiKeyPolicy> = {
 		mode,
@@ -683,7 +683,10 @@ function KeyEditor(props: {
 		...(props.config?.llm?.models ?? []).map(model => model.name),
 		...(props.config?.llm?.virtualModels ?? []).map(model => model.name)
 	].filter((name): name is string => typeof name === 'string');
-	const merged = useMergedEdits(props.previousKey ? props.initial : undefined, virtualKey());
+	const merged = useMergedEdits(props.previousKey ? props.initial : undefined, virtualKey(), [
+		'$defs',
+		'LocalAPIKey'
+	]);
 
 	function virtualKey() {
 		const metadata: Record<string, unknown> = {
@@ -1459,11 +1462,10 @@ function withoutServerMetadata(value: Record<string, unknown>) {
 	);
 }
 
+// The metadata the key/value editor can show. Other values are kept as they are
+// by the merge on save.
 function stringMetadata(value: Record<string, unknown>) {
 	return Object.fromEntries(
-		Object.entries(value).map(([key, item]) => [
-			key,
-			typeof item === 'string' ? item : String(item)
-		])
+		Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === 'string')
 	);
 }

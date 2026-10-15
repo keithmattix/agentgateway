@@ -94,8 +94,11 @@ export function ExtAuthzPolicyEditor(props: {
 				protocolMode === 'grpc'
 					? {
 							grpc: {
-								context: grpcContext,
-								metadata: grpcMetadata
+								context: Object.keys(grpcContext).length ? grpcContext : undefined,
+								// Without metadata the gateway forwards JWT claims, so an
+								// emptied map stays.
+								metadata:
+									Object.keys(grpcMetadata).length || grpc.metadata ? grpcMetadata : undefined
 							}
 						}
 					: {
@@ -103,8 +106,10 @@ export function ExtAuthzPolicyEditor(props: {
 								path: httpPath,
 								redirect: httpRedirect,
 								includeResponseHeaders,
-								addRequestHeaders,
-								metadata: httpMetadata
+								addRequestHeaders: Object.keys(addRequestHeaders).length
+									? addRequestHeaders
+									: undefined,
+								metadata: Object.keys(httpMetadata).length ? httpMetadata : undefined
 							}
 						}
 		}) as ExtAuthzDraft;

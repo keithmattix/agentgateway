@@ -575,7 +575,8 @@ function McpServerEditor(props: {
 	const [error, setError] = useState<string | null>(null);
 	const merged = useMergedEdits(
 		props.previousName ? props.initial : undefined,
-		safeTargetPreview()
+		safeTargetPreview(),
+		['$defs', 'LocalMcpTarget']
 	);
 
 	function targetPreview() {

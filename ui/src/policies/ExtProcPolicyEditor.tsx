@@ -124,8 +124,8 @@ export function ExtProcPolicyEditor(props: {
 				responseTrailerMode,
 				allowModeOverride: allowModeOverride ? true : undefined
 			},
-			requestAttributes,
-			responseAttributes,
+			requestAttributes: Object.keys(requestAttributes).length ? requestAttributes : undefined,
+			responseAttributes: Object.keys(responseAttributes).length ? responseAttributes : undefined,
 			metadataContext
 		}) as ExtProcDraft;
 	}

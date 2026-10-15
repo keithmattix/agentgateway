@@ -2,6 +2,7 @@ import type { ErrorObject } from 'ajv';
 import Ajv2020 from 'ajv/dist/2020';
 
 import configSchema from '@/generated/schema.json';
+import { deepEqual } from '@/mergeEdits';
 import type { GatewayConfig } from '@/types';
 
 let validatorPromise: Promise<ReturnType<Ajv2020['compile']>> | null = null;
@@ -62,6 +63,62 @@ export function configSchemaNode(path: string[]) {
 			node && typeof node === 'object' ? (node as Record<string, unknown>)[key] : undefined,
 		configSchema
 	);
+}
+
+// Removes fields that equal their schema default, so a form does not write out
+// values nobody chose. `path` is a config schema node path.
+export function withoutSchemaDefaults<T>(value: T, path: string[]): T {
+	return stripDefaults(value, configSchemaNode(path)) as T;
+}
+
+type SchemaNode = Record<string, unknown>;
+
+function stripDefaults(value: unknown, schema: unknown): unknown {
+	const variants = schemaVariants(schema);
+	if (Array.isArray(value)) {
+		const items = variants.find(node => node.items)?.items;
+		return items ? value.map(item => stripDefaults(item, items)) : value;
+	}
+	if (!value || typeof value !== 'object') return value;
+	const properties = Object.assign(
+		{},
+		...[...variants].reverse().map(node => (node.properties ?? {}) as Record<string, SchemaNode>)
+	) as Record<string, SchemaNode>;
+	const next: Record<string, unknown> = {};
+	for (const [key, item] of Object.entries(value)) {
+		const property = properties[key];
+		if (!property) {
+			next[key] = item;
+			continue;
+		}
+		if ('default' in property && deepEqual(item, property.default)) continue;
+		const stripped = stripDefaults(item, property);
+		// Every field was a default, and so is leaving the object out.
+		if (
+			'default' in property &&
+			stripped &&
+			typeof stripped === 'object' &&
+			!Array.isArray(stripped) &&
+			!Object.keys(stripped).length
+		)
+			continue;
+		next[key] = stripped;
+	}
+	return next;
+}
+
+// The node with its $ref resolved, plus every oneOf/anyOf/allOf branch.
+function schemaVariants(schema: unknown): SchemaNode[] {
+	if (!schema || typeof schema !== 'object') return [];
+	const node = schema as SchemaNode;
+	const ref = typeof node.$ref === 'string' ? node.$ref.replace('#/', '').split('/') : null;
+	return [
+		node,
+		...(ref ? schemaVariants(configSchemaNode(ref)) : []),
+		...[node.oneOf, node.anyOf, node.allOf].flatMap(branches =>
+			Array.isArray(branches) ? branches.flatMap(schemaVariants) : []
+		)
+	];
 }
 
 function sanitizeEmptyEnums(value: unknown): unknown {

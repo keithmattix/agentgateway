@@ -91,7 +91,7 @@ export function JwtPolicyEditor(props: {
 					? 'inline'
 					: 'url';
 
-	const [mode, setMode] = useState<JwtMode>(props.jwt?.mode ?? 'strict');
+	const [mode, setMode] = useState<JwtMode>(props.jwt?.mode ?? 'optional');
 	const [location, setLocation] = useState(() => authorizationLocationFrom(props.jwt?.location));
 	const [issuer, setIssuer] = useState(props.jwt?.issuer ?? '');
 	const [audiences, setAudiences] = useState(props.jwt?.audiences ?? []);

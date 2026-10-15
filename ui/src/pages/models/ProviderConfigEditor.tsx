@@ -2,6 +2,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { CloudRegionCombobox } from '@/components/CloudRegionCombobox';
+import { UnsupportedInForm } from '@/components/EditorContracts';
 import { EnumSelector } from '@/components/EnumSelector';
 import { Dropdown, Field, FieldGroup } from '@/components/Primitives';
 import { ProviderIcon } from '@/components/ProviderIcon';
@@ -12,6 +13,7 @@ import {
 	visibleProviderNames
 } from '@/config';
 import { CustomFormats } from '@/pages/models/CustomFormats';
+import { cleanEmpty, isRecord } from '@/policies/policyUtils';
 import type { SchemaHelp } from '@/schemaHelp';
 import type {
 	CanonicalProviderAuth,
@@ -418,7 +420,19 @@ function AwsCredentials(props: {
 
 	function setAmbient() {
 		setMode('ambient');
-		props.onChange?.(null);
+		// Ambient credentials keep the region, service, and assumed role.
+		const implicit = aws
+			? cleanEmpty({
+					region: aws.region,
+					serviceName: aws.serviceName,
+					assumeRole: 'assumeRole' in aws ? aws.assumeRole : undefined
+				})
+			: undefined;
+		props.onChange?.(
+			isRecord(implicit) && Object.keys(implicit).length
+				? ({ aws: implicit } as CanonicalProviderAuth)
+				: null
+		);
 	}
 
 	function saveStatic(next: {
@@ -439,9 +453,9 @@ function AwsCredentials(props: {
 			aws: {
 				accessKeyId: merged.accessKeyId ?? '',
 				secretAccessKey: merged.secretAccessKey ?? '',
-				region: null,
+				region: aws?.region ?? null,
 				sessionToken: merged.sessionToken || null,
-				serviceName: null
+				serviceName: aws?.serviceName ?? null
 			}
 		});
 	}
@@ -520,11 +534,20 @@ function GcpCredentials(props: {
 			? gcp.credential.file
 			: '';
 	const [mode, setMode] = useState<GcpCredentialMode>(file ? 'file' : 'ambient');
+	if (gcp?.credential && !file) {
+		return <UnsupportedInForm supports="Google credentials from ADC or a file" />;
+	}
+
+	// Keeps the token type and audience, which the form does not show.
+	function setCredential(credential: { file: string } | null) {
+		const next = cleanEmpty({ ...gcp, credential });
+		props.onChange?.(
+			isRecord(next) && Object.keys(next).length ? ({ gcp: next } as CanonicalProviderAuth) : null
+		);
+	}
 
 	function setFile(path: string) {
-		props.onChange?.({
-			gcp: { credential: path.trim() ? { file: path } : null }
-		});
+		setCredential(path.trim() ? { file: path } : null);
 	}
 
 	return (
@@ -539,7 +562,7 @@ function GcpCredentials(props: {
 						type="button"
 						onClick={() => {
 							setMode('ambient');
-							props.onChange?.(null);
+							setCredential(null);
 						}}
 					>
 						ADC
@@ -586,6 +609,11 @@ function AzureCredentials(props: {
 		props.apiKey ? 'apiKey' : managed ? 'managedIdentity' : 'default'
 	);
 	const [clientId, setClientId] = useState(azureManagedIdentityClientId(managed));
+	if (azure && ('developerImplicit' in azure || ('explicitConfig' in azure && !managed))) {
+		return (
+			<UnsupportedInForm supports="default, managed identity, and API key Azure credentials" />
+		);
+	}
 
 	function setDefault() {
 		setMode('default');

@@ -519,7 +519,8 @@ function ListenerEditor(props: {
 	};
 	const merged = useMergedEdits(
 		typeof props.editing.listenerIndex === 'number' ? props.editing.listener : undefined,
-		preview
+		preview,
+		['$defs', 'LocalListener']
 	);
 
 	return (
