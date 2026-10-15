@@ -1043,7 +1043,6 @@ impl HTTPProxy {
 		// Register all expressions
 		route_policies.register_cel_expressions(log.cel.ctx());
 		let explicit_route_retry = !route_policies.retry.is_empty();
-		log.cel.ctx().maybe_buffer_request_body(&mut req).await;
 
 		// Resolve early so request policies can use the backend protocol. Defer any
 		// error because backendless policies such as redirects and direct responses
@@ -1058,6 +1057,12 @@ impl HTTPProxy {
 			.and_then(Option::as_ref)
 			.map(|backend| classify_request_protocol(&req, &backend.backend.backend))
 			.unwrap_or(RequestProtocol::Http);
+		if request_protocol == RequestProtocol::AI {
+			req
+				.extensions_mut()
+				.get_or_insert_with(|| crate::transport::BufferLimit::new(llm::DEFAULT_BUFFER_LIMIT));
+		}
+		log.cel.ctx().maybe_buffer_request_body(&mut req).await;
 		if let Ok(Some(selected_backend)) = selected_backend.as_ref() {
 			let backend = &selected_backend.backend.backend;
 			let info = backend.backend_info();
@@ -2439,10 +2444,6 @@ async fn make_backend_call(
 	let resolved_backend;
 	let mut model_route_type = None;
 	let backend = if let Backend::LLMRouter(_, router) = backend {
-		// Model routing parses the LLM body before provider request processing.
-		req
-			.extensions_mut()
-			.get_or_insert_with(|| crate::transport::BufferLimit::new(llm::DEFAULT_BUFFER_LIMIT));
 		if let Some(path_match) = router.trace_path(&req) {
 			log.add(|log| log.path_match = Some(path_match));
 		}
@@ -2804,9 +2805,6 @@ async fn make_backend_call(
 
 	let (mut req, llm_response_policies, llm_request) =
 		if let Some(llm) = &backend_call.backend_policies.llm_provider {
-			req
-				.extensions_mut()
-				.get_or_insert_with(|| crate::transport::BufferLimit::new(llm::DEFAULT_BUFFER_LIMIT));
 			// LLM requires CEL execution after the snapshot so we do not clear extensions
 			let mut req = req.take_and_snapshot_without_clearing_extensions(log.as_mut())?;
 			let route_type = resolve_llm_route_type(
