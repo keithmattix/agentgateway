@@ -581,7 +581,11 @@ function ListenerEditor(props: {
 						/>
 					</FieldGroup>
 				) : null}
-				<Field label="Name" tooltip={props.help.field<TrafficListener>('LocalListener', 'name')}>
+				<Field
+					label="Name"
+					path="name"
+					tooltip={props.help.field<TrafficListener>('LocalListener', 'name')}
+				>
 					<input
 						value={listener.name ?? ''}
 						onChange={event => setListener({ ...listener, name: event.target.value })}
@@ -590,6 +594,7 @@ function ListenerEditor(props: {
 				</Field>
 				<Field
 					label="Hostname"
+					path="hostname"
 					tooltip={props.help.field<TrafficListener>(
 						'LocalListener',
 						'hostname',
@@ -604,6 +609,7 @@ function ListenerEditor(props: {
 				</Field>
 				<FieldGroup
 					label="Protocol"
+					path="protocol"
 					tooltip={props.help.field<TrafficListener>('LocalListener', 'protocol')}
 				>
 					<EnumSelector
@@ -620,6 +626,7 @@ function ListenerEditor(props: {
 				<div className="form-grid">
 					<Field
 						label="Certificate"
+						path="tls.cert"
 						tooltip={props.help.field<LocalTLSServerConfig>('LocalTLSServerConfig', 'cert')}
 					>
 						<input
@@ -630,6 +637,7 @@ function ListenerEditor(props: {
 					</Field>
 					<Field
 						label="Key"
+						path="tls.key"
 						tooltip={props.help.field<LocalTLSServerConfig>('LocalTLSServerConfig', 'key')}
 					>
 						<input

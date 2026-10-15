@@ -66,6 +66,28 @@ export const PinRawContext = createContext<((reason: string) => void) | null>(nu
 // (with the errors shown on the form) when it is invalid.
 export const DrawerCheckContext = createContext<(() => boolean) | null>(null);
 
+// A drawer footer's primary button, which checks the form first (see
+// DrawerCheckContext).
+export function DrawerSaveButton(props: {
+	disabled?: boolean;
+	onClick: () => void;
+	children: ReactNode;
+}) {
+	const check = useContext(DrawerCheckContext);
+	return (
+		<button
+			className="button primary"
+			type="button"
+			disabled={props.disabled}
+			onClick={() => {
+				if (!check || check()) props.onClick();
+			}}
+		>
+			{props.children}
+		</button>
+	);
+}
+
 // Schema errors for a drawer's form, which Field and FieldGroup show for their
 // `path`.
 const FieldErrorsContext = createContext<{
@@ -73,6 +95,8 @@ const FieldErrorsContext = createContext<{
 	// Errors for the current value once a save was attempted; null before.
 	errors: () => ConfigValueError[] | null;
 	register: (path: string) => () => void;
+	// Fields the form needs that are empty (see Field's `missing`).
+	missing: Set<symbol>;
 } | null>(null);
 
 // Forms hold unset text fields as '' (or whitespace), which the schema would
@@ -94,13 +118,24 @@ function pathsOverlap(error: string, field: string) {
 	);
 }
 
-function useFieldError(path: string | undefined) {
+function useFieldError(path: string | undefined, missing: boolean | undefined) {
 	const context = useContext(FieldErrorsContext);
+	const [id] = useState(() => Symbol('field'));
 	useLayoutEffect(() => (path && context ? context.register(path) : undefined), [context, path]);
-	if (!path || !context) return { required: false, error: undefined };
+	useLayoutEffect(() => {
+		if (!context || !missing) return;
+		context.missing.add(id);
+		return () => {
+			context.missing.delete(id);
+		};
+	}, [context, missing, id]);
+	if (!context) return { required: false, error: undefined };
+	const errors = context.errors();
 	return {
-		required: schemaRequires(context.schemaPath, path),
-		error: context.errors()?.find(error => pathsOverlap(error.path, path))?.message
+		required: missing !== undefined || (path ? schemaRequires(context.schemaPath, path) : false),
+		error:
+			(path ? errors?.find(error => pathsOverlap(error.path, path))?.message : undefined) ??
+			(errors && missing ? 'Required' : undefined)
 	};
 }
 
@@ -628,6 +663,8 @@ export function Drawer(props: {
 	const drawerRef = useRef<HTMLElement>(null);
 	const [rawText, setRawText] = useState<string | null>(null);
 	const [rawPinned, setRawPinned] = useState<string | null>(null);
+	// Raw mode was asked for while the form had no value to show.
+	const [rawBlocked, setRawBlocked] = useState(false);
 	// Raw edits can change fields an editor's own `dirty` check does not see.
 	const [rawEdited, setRawEdited] = useState(false);
 	const schemaHelp = useSchemaHelp();
@@ -647,6 +684,7 @@ export function Drawer(props: {
 			return;
 		}
 		const value = props.raw?.value();
+		setRawBlocked(value === undefined);
 		if (value === undefined) return;
 		props.raw?.onOpen?.(value);
 		setRawText(dump(value ?? {}, { noRefs: true, lineWidth: 100 }));
@@ -655,6 +693,7 @@ export function Drawer(props: {
 	// Form fields that show errors for a path, which also pick the shape errors
 	// are reported against (see configValueErrors).
 	const fieldPaths = useRef(new Map<string, number>());
+	const missingFields = useRef(new Set<symbol>());
 	const lastErrors = useRef<{ value: unknown; errors: ConfigValueError[] } | null>(null);
 	const [checked, setChecked] = useState(false);
 	function formErrors() {
@@ -688,7 +727,8 @@ export function Drawer(props: {
 								if (count) fieldPaths.current.set(path, count);
 								else fieldPaths.current.delete(path);
 							};
-						}
+						},
+						missing: missingFields.current
 					}
 				: null,
 		[checked, schemaPathKey]
@@ -698,7 +738,7 @@ export function Drawer(props: {
 		if (rawText !== null) return true;
 		lastErrors.current = null;
 		setChecked(true);
-		return !formErrors().length;
+		return !formErrors().length && !missingFields.current.size;
 	}
 	const unshownErrors =
 		checked && rawText === null
@@ -891,6 +931,11 @@ export function Drawer(props: {
 								</FieldErrorsContext.Provider>
 							</PinRawContext.Provider>
 						)}
+						{rawBlocked && rawText === null ? (
+							<StatusBanner state="warn" title="Raw mode is unavailable">
+								Part of the form is not valid yet. Fix it to edit as raw YAML.
+							</StatusBanner>
+						) : null}
 						{unshownErrors.length ? (
 							<StatusBanner state="bad" title="Invalid configuration">
 								{unshownErrors.map(error => (
@@ -1077,10 +1122,14 @@ export function Field(props: {
 	// `jwks.url`: it is marked when the schema requires it, and shows schema
 	// errors for it after a save attempt.
 	path?: string;
+	// Set on a field the form needs beyond the schema (e.g. a name identifying
+	// the item): whether it is empty. It is marked as required, and saving
+	// fails while it is empty.
+	missing?: boolean;
 }) {
 	const generatedId = useId();
 	const hintId = useId();
-	const field = useFieldError(props.path);
+	const field = useFieldError(props.path, props.missing);
 	const hint = field.error ?? props.hint;
 	const describedBy = hint ? hintId : undefined;
 	const id =
@@ -1128,8 +1177,9 @@ export function FieldGroup(props: {
 	tooltip?: string;
 	// As for Field.
 	path?: string;
+	missing?: boolean;
 }) {
-	const field = useFieldError(props.path);
+	const field = useFieldError(props.path, props.missing);
 	const hint = field.error ?? props.hint;
 	return (
 		<div

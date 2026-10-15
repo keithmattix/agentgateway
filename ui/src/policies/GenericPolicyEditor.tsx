@@ -13,7 +13,6 @@ export function GenericPolicyEditor(props: {
 	help: SchemaHelp;
 	saving: boolean;
 	schemaRoot?: string;
-	showSchemaDescription?: boolean;
 	onSave: (value: unknown) => void;
 }) {
 	const initialValue = props.value ?? {};
@@ -59,11 +58,7 @@ export function GenericPolicyEditor(props: {
 					{error}
 				</StatusBanner>
 			) : null}
-			<SchemaHelpPanel
-				schema={schema}
-				help={props.help}
-				showDescription={props.showSchemaDescription}
-			/>
+			<SchemaHelpPanel schema={schema} help={props.help} />
 			<FieldGroup label="Policy YAML" className="policy-yaml-editor-field">
 				<SchemaYamlEditor
 					className="policy-yaml-editor"

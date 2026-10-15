@@ -99,7 +99,7 @@ export function TrafficGatewaysPage() {
 	const migration = useMemo(() => bindMigration(config.data), [config.data]);
 	const activeGateway =
 		drawer === 'new'
-			? { name: 'public', gateway: { port: 8080 } }
+			? { name: availableGatewayName(config.data?.gateways, undefined), gateway: { port: 8080 } }
 			: drawer && !drawer.startsWith('listener:')
 				? gatewayEditorFromName(drawer, config.data?.gateways)
 				: null;
@@ -524,7 +524,7 @@ function GatewayEditor(props: {
 					diffTitle="Gateway config diff"
 					saveLabel="Save gateway"
 					saving={props.saving}
-					saveDisabled={!name.trim() || invalidDefaultName || duplicateName}
+					saveDisabled={invalidDefaultName || duplicateName}
 					onCancel={props.onCancel}
 					onSave={() =>
 						props.onSave({
@@ -545,7 +545,11 @@ function GatewayEditor(props: {
 		>
 			<LostFieldsWarning lost={merged.lost} />
 			<div className="form-grid gateway-identity-grid">
-				<Field label="Name" tooltip="Features and routes reference this gateway by name.">
+				<Field
+					label="Name"
+					missing={!name.trim()}
+					tooltip="Features and routes reference this gateway by name."
+				>
 					<input
 						value={name}
 						disabled={defaultGateway}
@@ -553,7 +557,11 @@ function GatewayEditor(props: {
 						placeholder="public"
 					/>
 				</Field>
-				<Field label="Port" tooltip={props.help.field<TrafficGateway>('LocalGateway', 'port')}>
+				<Field
+					label="Port"
+					path="port"
+					tooltip={props.help.field<TrafficGateway>('LocalGateway', 'port')}
+				>
 					<input
 						value={gateway.port?.toString() ?? ''}
 						onChange={event =>
@@ -615,6 +623,7 @@ function GatewayEditor(props: {
 				<div className="form-grid">
 					<Field
 						label="Protocol"
+						path="protocol"
 						tooltip={props.help.field<TrafficGateway>('LocalGateway', 'protocol')}
 					>
 						<Dropdown
@@ -731,6 +740,7 @@ function GatewayTLSFields(props: {
 			<div className="form-grid">
 				<Field
 					label="Certificate"
+					path="tls.cert"
 					tooltip={props.help.field<LocalTLSServerConfig>('LocalTLSServerConfig', 'cert')}
 				>
 					<input
@@ -741,6 +751,7 @@ function GatewayTLSFields(props: {
 				</Field>
 				<Field
 					label="Key"
+					path="tls.key"
 					tooltip={props.help.field<LocalTLSServerConfig>('LocalTLSServerConfig', 'key')}
 				>
 					<input
@@ -851,6 +862,7 @@ function GatewayListenerEditor(props: {
 			<div className="form-grid">
 				<Field
 					label="Name"
+					path="name"
 					tooltip={props.help.field<TrafficGatewayListener>('LocalGatewayListener', 'name')}
 				>
 					<input
@@ -861,6 +873,7 @@ function GatewayListenerEditor(props: {
 				</Field>
 				<Field
 					label="Protocol"
+					path="protocol"
 					tooltip={props.help.field<TrafficGatewayListener>('LocalGatewayListener', 'protocol')}
 				>
 					<Dropdown
@@ -883,6 +896,7 @@ function GatewayListenerEditor(props: {
 				</Field>
 				<Field
 					label="Hostname"
+					path="hostname"
 					tooltip={props.help.field<TrafficGatewayListener>(
 						'LocalGatewayListener',
 						'hostname',

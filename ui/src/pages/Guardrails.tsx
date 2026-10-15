@@ -13,6 +13,7 @@ import { EnumSelector, type EnumSelectorOption } from '@/components/EnumSelector
 import {
 	ConfirmDialog,
 	Drawer,
+	DrawerSaveButton,
 	Field,
 	FieldGroup,
 	PageHeader,
@@ -516,7 +517,8 @@ function AddGuardModal(props: {
 			dirty={guard != null}
 			raw={{
 				schemaPath,
-				value: () => merged.value,
+				// Before a type is chosen, raw mode starts from nothing.
+				value: () => merged.value ?? null,
 				onChange: value => {
 					const next = draftFromGuard(value as GuardObject);
 					setGuard(next);
@@ -530,15 +532,13 @@ function AddGuardModal(props: {
 					<button className="button" type="button" onClick={requestClose}>
 						Cancel
 					</button>
-					<button
-						className="button primary"
-						type="button"
+					<DrawerSaveButton
 						disabled={!merged.value}
 						onClick={() => guard && merged.value && props.onAdd(withValue(guard, merged.value))}
 					>
 						<Plus size={16} />
 						Add guard
-					</button>
+					</DrawerSaveButton>
 				</div>
 			)}
 		>
@@ -635,14 +635,10 @@ function EditGuardDrawer(props: {
 					<button className="button" type="button" onClick={requestClose}>
 						Cancel
 					</button>
-					<button
-						className="button primary"
-						type="button"
-						onClick={() => props.onApply(withValue(draft, merged.value))}
-					>
+					<DrawerSaveButton onClick={() => props.onApply(withValue(draft, merged.value))}>
 						<Save size={16} />
 						Apply changes
-					</button>
+					</DrawerSaveButton>
 				</div>
 			)}
 		>
@@ -753,7 +749,11 @@ function BuiltinGuardFields(props: {
 	}
 	return (
 		<>
-			<FieldGroup label="Action" tooltip={props.help.field<RegexRules>('RegexRules', 'action')}>
+			<FieldGroup
+				label="Action"
+				path="regex.action"
+				tooltip={props.help.field<RegexRules>('RegexRules', 'action')}
+			>
 				<EnumSelector
 					ariaLabel="Action"
 					value={props.guard.action}
@@ -781,6 +781,7 @@ function BuiltinGuardFields(props: {
 			<FieldGroup
 				className="guardrail-builtins"
 				label="Built-in detectors"
+				path="regex.rules"
 				tooltip={props.help.field<RegexRules>('RegexRules', 'rules')}
 			>
 				<div className="method-grid">
@@ -828,7 +829,11 @@ function RegexGuardFields(props: {
 	}
 	return (
 		<>
-			<FieldGroup label="Action" tooltip={props.help.field<RegexRules>('RegexRules', 'action')}>
+			<FieldGroup
+				label="Action"
+				path="regex.action"
+				tooltip={props.help.field<RegexRules>('RegexRules', 'action')}
+			>
 				<EnumSelector
 					ariaLabel="Action"
 					value={props.guard.action}
@@ -878,6 +883,7 @@ function WebhookGuardFields(props: {
 	return (
 		<Field
 			label="Webhook target"
+			path="webhook.target.host"
 			tooltip={props.help.field<Webhook>('Webhook', 'target')}
 			hint="Backend host URL for guardrail checks."
 		>
@@ -903,6 +909,7 @@ function RemoteGuardFields(props: {
 		<div className="form-grid">
 			<FieldGroup
 				label="Failure mode"
+				path={`${props.guard.kind}.failureMode`}
 				tooltip={props.help.field<Moderation>('Moderation', 'failureMode')}
 			>
 				<EnumSelector
@@ -928,7 +935,11 @@ function RemoteGuardFields(props: {
 					}
 				/>
 			</FieldGroup>
-			<FieldGroup label="Action" tooltip={props.help.field<Moderation>('Moderation', 'action')}>
+			<FieldGroup
+				label="Action"
+				path={`${props.guard.kind}.action`}
+				tooltip={props.help.field<Moderation>('Moderation', 'action')}
+			>
 				<EnumSelector
 					ariaLabel="Action"
 					value={props.guard.action}
@@ -964,6 +975,7 @@ function OpenAIModerationFields(props: {
 	return (
 		<Field
 			label="Moderation model"
+			path="openAIModeration.model"
 			tooltip={props.help.field<Moderation>('Moderation', 'model')}
 			hint="Optional. Defaults to omni-moderation-latest."
 		>
@@ -989,6 +1001,7 @@ function BedrockGuardFields(props: {
 		<div className="form-grid">
 			<Field
 				label="Guardrail identifier"
+				path="bedrockGuardrails.guardrailIdentifier"
 				tooltip={props.help.field<BedrockGuardrails>('BedrockGuardrails', 'guardrailIdentifier')}
 			>
 				<input
@@ -1002,6 +1015,7 @@ function BedrockGuardFields(props: {
 			</Field>
 			<Field
 				label="Guardrail version"
+				path="bedrockGuardrails.guardrailVersion"
 				tooltip={props.help.field<BedrockGuardrails>('BedrockGuardrails', 'guardrailVersion')}
 			>
 				<input
@@ -1015,6 +1029,7 @@ function BedrockGuardFields(props: {
 			</Field>
 			<Field
 				label="AWS region"
+				path="bedrockGuardrails.region"
 				tooltip={props.help.field<BedrockGuardrails>('BedrockGuardrails', 'region')}
 			>
 				<CloudRegionCombobox
@@ -1042,6 +1057,7 @@ function GoogleModelArmorFields(props: {
 		<div className="form-grid">
 			<Field
 				label="Template ID"
+				path="googleModelArmor.templateId"
 				tooltip={props.help.field<GoogleModelArmor>('GoogleModelArmor', 'templateId')}
 			>
 				<input
@@ -1055,6 +1071,7 @@ function GoogleModelArmorFields(props: {
 			</Field>
 			<Field
 				label="Project ID"
+				path="googleModelArmor.projectId"
 				tooltip={props.help.field<GoogleModelArmor>('GoogleModelArmor', 'projectId')}
 			>
 				<input
@@ -1068,6 +1085,7 @@ function GoogleModelArmorFields(props: {
 			</Field>
 			<Field
 				label="Location"
+				path="googleModelArmor.location"
 				tooltip={props.help.field<GoogleModelArmor>('GoogleModelArmor', 'location')}
 				hint="Optional. Defaults to us-central1."
 			>
@@ -1097,6 +1115,7 @@ function AzureContentSafetyFields(props: {
 		<>
 			<Field
 				label="Endpoint"
+				path="azureContentSafety.endpoint"
 				tooltip={props.help.field<AzureContentSafety>('AzureContentSafety', 'endpoint')}
 			>
 				<input
@@ -1112,6 +1131,7 @@ function AzureContentSafetyFields(props: {
 			<div className="form-grid">
 				<Field
 					label="Severity threshold"
+					path="azureContentSafety.analyzeText.severityThreshold"
 					tooltip={props.help.field<AnalyzeTextConfig>('AnalyzeTextConfig', 'severityThreshold')}
 					hint="Optional. 0-6; default is 2."
 				>
@@ -1127,6 +1147,7 @@ function AzureContentSafetyFields(props: {
 				</Field>
 				<Field
 					label="Analyze API version"
+					path="azureContentSafety.analyzeText.apiVersion"
 					tooltip={props.help.field<AnalyzeTextConfig>('AnalyzeTextConfig', 'apiVersion')}
 				>
 					<input
@@ -1141,6 +1162,7 @@ function AzureContentSafetyFields(props: {
 				</Field>
 				<Field
 					label="Blocklists"
+					path="azureContentSafety.analyzeText.blocklistNames"
 					tooltip={props.help.field<AnalyzeTextConfig>('AnalyzeTextConfig', 'blocklistNames')}
 					hint="Comma-separated names."
 				>
@@ -1183,6 +1205,7 @@ function AzureContentSafetyFields(props: {
 					{props.guard.detectJailbreak ? (
 						<Field
 							label="Jailbreak API version"
+							path="azureContentSafety.detectJailbreak.apiVersion"
 							tooltip={props.help.field<DetectJailbreakConfig>(
 								'DetectJailbreakConfig',
 								'apiVersion'
@@ -1215,6 +1238,7 @@ function RejectionFields(props: {
 		<div className="form-grid">
 			<Field
 				label="Rejection status"
+				path="rejection.status"
 				tooltip={
 					props.phase === 'request'
 						? props.help.field<RequestRejection>('RequestRejection', 'status')
@@ -1233,6 +1257,7 @@ function RejectionFields(props: {
 			</Field>
 			<Field
 				label="Rejection body"
+				path="rejection.body"
 				tooltip={
 					props.phase === 'request'
 						? props.help.field<RequestRejection>(
@@ -1271,6 +1296,7 @@ function PatternList(props: {
 		<FieldGroup
 			className="guardrail-pattern-list"
 			label="Custom regex patterns"
+			path="regex.rules"
 			tooltip={props.help.field<RegexRules>('RegexRules', 'rules')}
 		>
 			{props.patterns.map((pattern, index) => (

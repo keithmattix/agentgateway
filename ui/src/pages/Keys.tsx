@@ -584,6 +584,33 @@ function apiKeyPolicyResourceValue(policy: LlmApiKeyPolicy) {
 	return value;
 }
 
+type KeyFields = ReturnType<typeof keyFieldsFrom>;
+
+// The gateway's format for `keyHash` (see APIKeyHash::parse).
+function keyHashError(key: VirtualApiKey) {
+	if (!('keyHash' in key) || typeof key.keyHash !== 'string' || !key.keyHash) return null;
+	return /^sha256:[0-9a-fA-F]{64}$/.test(key.keyHash)
+		? null
+		: 'Use sha256: followed by the 64 hex digit SHA-256 of the key.';
+}
+
+// The form fields for a key, other than the key itself.
+function keyFieldsFrom(key: VirtualApiKey) {
+	const metadata = metadataObject(key.metadata);
+	const allowedModels = key.allowedModels ?? undefined;
+	return {
+		name: String(metadata.name ?? ''),
+		metadataValues: stringMetadata(withoutManagedMetadata(metadata)),
+		modelAccess: (allowedModels === undefined
+			? 'unrestricted'
+			: allowedModels.length === 0
+				? 'deny'
+				: 'restricted') as 'unrestricted' | 'deny' | 'restricted',
+		allowedModels: allowedModels ?? [],
+		budgets: structuredClone(key.budgets ?? []) as VirtualApiKeyBudget[]
+	};
+}
+
 function KeyEditor(props: {
 	initial: VirtualApiKey;
 	config?: GatewayConfig | null;
@@ -598,28 +625,14 @@ function KeyEditor(props: {
 }) {
 	const isNew = !props.previousKey;
 	const initialMetadata = metadataObject(props.initial.metadata);
-	const [name, setName] = useState(String(initialMetadata.name ?? ''));
+	const [fields, setFields] = useState(() => keyFieldsFrom(props.initial));
+	const { name, metadataValues, modelAccess, allowedModels, budgets } = fields;
 	const [keyMode, setKeyMode] = useState<'auto' | 'custom'>(isNew ? 'auto' : 'custom');
 	const [key, setKey] = useState(isNew || !hasKeyValue(props.initial) ? '' : props.initial.key);
 	const [replaceKey, setReplaceKey] = useState(false);
 	const [storeRaw, setStoreRaw] = useState(!keyHashSupported);
 	const [generatedKey] = useState(newGeneratedKey);
 	const [hashed, setHashed] = useState<{ key: string; hash: string } | null>(null);
-	const [metadataValues, setMetadataValues] = useState(() =>
-		stringMetadata(withoutManagedMetadata(initialMetadata))
-	);
-	const initialAllowedModels = props.initial.allowedModels ?? undefined;
-	const [modelAccess, setModelAccess] = useState<'unrestricted' | 'deny' | 'restricted'>(() =>
-		initialAllowedModels === undefined
-			? 'unrestricted'
-			: initialAllowedModels.length === 0
-				? 'deny'
-				: 'restricted'
-	);
-	const [allowedModels, setAllowedModels] = useState(initialAllowedModels ?? []);
-	const [budgets, setBudgets] = useState<VirtualApiKeyBudget[]>(() =>
-		structuredClone(props.initial.budgets ?? [])
-	);
 	const [submitted, setSubmitted] = useState(false);
 	const replacing = isNew || replaceKey;
 	const generatedFormat = !isNew && keyDisplay(props.initial).startsWith('agw_sk_');
@@ -714,15 +727,28 @@ function KeyEditor(props: {
 		return value;
 	}
 
+	// Checked on the saved value, which raw edits can change.
+	const hashError = keyHashError(merged.value);
+
 	function nextVirtualKey() {
 		setSubmitted(true);
-		return nameRequired || modelError || invalidBudgets ? null : merged.value;
+		return nameRequired || modelError || invalidBudgets || hashError ? null : merged.value;
+	}
+
+	function update(patch: Partial<KeyFields>) {
+		setFields(current => ({ ...current, ...patch }));
 	}
 
 	function save() {
 		const virtualKey = nextVirtualKey();
 		if (!virtualKey) return;
-		props.onSave(virtualKey, props.previousKey, replacing && !storeRaw ? rawKey : undefined);
+		// Only a key whose hash was saved unchanged (e.g. not edited as raw YAML)
+		// is shown to the user.
+		const created =
+			replacing && !storeRaw && 'keyHash' in virtualKey && virtualKey.keyHash === hashed?.hash
+				? rawKey
+				: undefined;
+		props.onSave(virtualKey, props.previousKey, created);
 	}
 
 	const keyInput = (
@@ -749,6 +775,18 @@ function KeyEditor(props: {
 			onClose={props.onCancel}
 			dirty={draft !== initialDraft}
 			saving={props.saving}
+			raw={{
+				schemaPath: ['$defs', 'LocalAPIKey'],
+				value: () => merged.value,
+				// The key or its hash stays as edited here: the form only replaces
+				// it when asked to.
+				onChange: value => {
+					const next = value as VirtualApiKey;
+					setFields(keyFieldsFrom(next));
+					if (replacing) setStoreRaw(hasKeyValue(next) || !keyHashSupported);
+					merged.reset(value);
+				}
+			}}
 			footer={requestClose => (
 				<ConfigDiffSaveActions
 					config={props.config}
@@ -765,10 +803,7 @@ function KeyEditor(props: {
 					}
 					saveLabel="Save key"
 					saving={props.saving}
-					saveDisabled={
-						(((isNew && keyMode === 'custom') || (!isNew && replaceKey)) && !key.trim()) ||
-						hashPending
-					}
+					saveDisabled={hashPending}
 					onCancel={requestClose}
 					onSave={save}
 					beforeDiff={() => Boolean(nextVirtualKey())}
@@ -785,10 +820,15 @@ function KeyEditor(props: {
 			<Field label="Name">
 				<input
 					value={name}
-					onChange={event => setName(event.target.value)}
+					onChange={event => update({ name: event.target.value })}
 					placeholder="Platform team"
 				/>
 			</Field>
+			{submitted && hashError ? (
+				<StatusBanner state="bad" title="Invalid key hash">
+					{hashError}
+				</StatusBanner>
+			) : null}
 			{submitted && nameRequired ? (
 				<StatusBanner state="bad" title="Name is required">
 					Add a metadata name before saving this virtual API key.
@@ -818,6 +858,7 @@ function KeyEditor(props: {
 			) : (
 				<FieldGroup
 					label="Key value"
+					missing={replaceKey ? !key.trim() : undefined}
 					tooltip={props.help.field<VirtualApiKey>('LocalAPIKey', 'key')}
 				>
 					<div className="key-editor-value-row">
@@ -853,7 +894,11 @@ function KeyEditor(props: {
 				</FieldGroup>
 			)}
 			{isNew && keyMode === 'custom' ? (
-				<Field label="Key value" tooltip={props.help.field<VirtualApiKey>('LocalAPIKey', 'key')}>
+				<Field
+					label="Key value"
+					missing={!key.trim()}
+					tooltip={props.help.field<VirtualApiKey>('LocalAPIKey', 'key')}
+				>
 					{keyInput}
 				</Field>
 			) : null}
@@ -894,7 +939,11 @@ function KeyEditor(props: {
 						API key budgets require <code>config.database</code> to be configured.
 					</StatusBanner>
 				) : null}
-				<BudgetEditor budgets={budgets} apiKeyName={keyName(props.initial)} onChange={setBudgets} />
+				<BudgetEditor
+					budgets={budgets}
+					apiKeyName={keyName(props.initial)}
+					onChange={value => update({ budgets: value })}
+				/>
 				{submitted && invalidBudgets ? (
 					<StatusBanner state="bad" title="Invalid budgets">
 						Budget names must be present and unique, and amounts must be non-negative whole numbers.
@@ -936,7 +985,7 @@ function KeyEditor(props: {
 							{ value: 'restricted', label: 'Selected models' },
 							{ value: 'deny', label: 'Deny all' }
 						]}
-						onChange={setModelAccess}
+						onChange={value => update({ modelAccess: value })}
 					/>
 				</FieldGroup>
 				{modelAccess === 'restricted' ? (
@@ -944,7 +993,7 @@ function KeyEditor(props: {
 						label="Allowed model patterns"
 						tooltip={props.help.field<VirtualApiKey>('LocalAPIKey', 'allowedModels')}
 						values={allowedModels}
-						onChange={setAllowedModels}
+						onChange={value => update({ allowedModels: value })}
 						placeholder="gpt-5.5 or openai/*"
 						emptyText="No model patterns configured."
 						suggestions={modelSuggestions}
@@ -974,7 +1023,7 @@ function KeyEditor(props: {
 					quickKeys={['user', 'group']}
 					keyPlaceholder="owner"
 					valuePlaceholder="platform"
-					onChange={setMetadataValues}
+					onChange={value => update({ metadataValues: value })}
 				/>
 			</CollapsiblePolicySection>
 			{props.saveError ? (

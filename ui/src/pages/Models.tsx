@@ -1289,7 +1289,6 @@ function VirtualModelEditor(props: {
 	const defaultTarget = defaultVirtualTargetModel(props.baseModels);
 	const saveDisabled =
 		props.saving ||
-		!model.name.trim() ||
 		(strategy !== undefined &&
 			(activeTargets.length === 0 || hasInvalidTarget || hasInvalidConditionalFallback));
 	const [initialDraft] = useState(() => JSON.stringify(model));

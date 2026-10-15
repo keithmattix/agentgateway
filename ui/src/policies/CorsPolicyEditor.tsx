@@ -145,7 +145,11 @@ export function CorsPolicyEditor(props: {
 						</span>
 					</label>
 				</FieldGroup>
-				<Field label="Max age" tooltip={props.help.field<CorsPolicy>('CorsSerde', 'maxAge')}>
+				<Field
+					label="Max age"
+					path="maxAge"
+					tooltip={props.help.field<CorsPolicy>('CorsSerde', 'maxAge')}
+				>
 					<input
 						value={maxAge}
 						onChange={event => setMaxAge(event.target.value)}

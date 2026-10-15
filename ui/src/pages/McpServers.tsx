@@ -684,7 +684,6 @@ function McpServerEditor(props: {
 					diffTitle="MCP server config diff"
 					saveLabel="Save server"
 					saving={props.saving}
-					saveDisabled={kind === 'openapi' && !schemaValue.trim()}
 					onCancel={requestClose}
 					onSave={save}
 					beforeDiff={() => Boolean(validTargetPreview())}
@@ -849,6 +848,7 @@ function McpServerEditor(props: {
 							{schemaMode === 'inline' ? (
 								<FieldGroup
 									label="Schema"
+									missing={!schemaValue.trim()}
 									tooltip={props.help.field<McpTarget>(
 										'LocalMcpTarget1',
 										'openapi.schema',
@@ -864,6 +864,7 @@ function McpServerEditor(props: {
 							) : (
 								<Field
 									label="Schema"
+									missing={!schemaValue.trim()}
 									tooltip={props.help.field<McpTarget>(
 										'LocalMcpTarget1',
 										'openapi.schema',

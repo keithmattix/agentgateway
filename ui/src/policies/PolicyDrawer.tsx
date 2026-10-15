@@ -198,7 +198,6 @@ export function PolicyEditorBody(props: {
 	help: SchemaHelp;
 	saving: boolean;
 	schemaRoot?: string;
-	showGenericSchemaDescription?: boolean;
 	onSave: (value: unknown) => void;
 }) {
 	if (!props.customEditor) {
@@ -210,7 +209,6 @@ export function PolicyEditorBody(props: {
 				help={props.help}
 				saving={props.saving}
 				schemaRoot={props.schemaRoot}
-				showSchemaDescription={props.showGenericSchemaDescription}
 				onSave={props.onSave}
 			/>
 		);

@@ -51,10 +51,7 @@ export function RemoteRateLimitPolicyEditor(props: {
 		descriptorDrafts(props.remoteRateLimit)
 	);
 	const [attemptedSave, setAttemptedSave] = useState(false);
-	const errors = useMemo(
-		() => validate({ domain, target, descriptors }),
-		[domain, target, descriptors]
-	);
+	const errors = useMemo(() => validate(descriptors), [descriptors]);
 
 	const merged = useMergedEdits(
 		props.remoteRateLimit,
@@ -109,8 +106,8 @@ export function RemoteRateLimitPolicyEditor(props: {
 				<div className="form-grid">
 					<Field
 						label="Domain"
+						path="domain"
 						tooltip={props.help.field<RemoteRateLimit>('RemoteRateLimit', 'domain')}
-						className={attemptedSave && !domain.trim() ? 'invalid' : undefined}
 					>
 						<input
 							value={domain}
@@ -120,6 +117,7 @@ export function RemoteRateLimitPolicyEditor(props: {
 					</Field>
 					<FieldGroup
 						label="Failure mode"
+						path="failureMode"
 						tooltip={props.help.field<RemoteRateLimit>('RemoteRateLimit', 'failureMode')}
 					>
 						<EnumSelector<FailureMode>
@@ -228,6 +226,7 @@ function DescriptorEditor(props: {
 			</div>
 			<FieldGroup
 				label="Type"
+				path={`descriptors.${props.index}.type`}
 				tooltip={props.help.field<DescriptorEntry>('DescriptorEntry', 'type')}
 			>
 				<EnumSelector<DescriptorType>
@@ -250,6 +249,7 @@ function DescriptorEditor(props: {
 			</FieldGroup>
 			<FieldGroup
 				label="Entries"
+				path={`descriptors.${props.index}.entries`}
 				tooltip={props.help.field<DescriptorEntry>('DescriptorEntry', 'entries')}
 			>
 				<div className="remote-entry-list">
@@ -305,6 +305,7 @@ function DescriptorEditor(props: {
 			<div className="form-grid">
 				<FieldGroup
 					label="Cost expression"
+					path={`descriptors.${props.index}.cost`}
 					tooltip={props.help.field<DescriptorEntry>('DescriptorEntry', 'cost')}
 				>
 					<MiniMonacoEditor
@@ -317,6 +318,7 @@ function DescriptorEditor(props: {
 				</FieldGroup>
 				<FieldGroup
 					label="Limit override"
+					path={`descriptors.${props.index}.limitOverride`}
 					tooltip={props.help.field<DescriptorEntry>('DescriptorEntry', 'limitOverride')}
 				>
 					<MiniMonacoEditor
@@ -367,13 +369,11 @@ function isConditional(value: unknown) {
 	return isRecord(value) && Array.isArray(value.conditional);
 }
 
-function validate(args: { domain: string; target: TargetDraft; descriptors: DescriptorDraft[] }) {
+function validate(descriptors: DescriptorDraft[]) {
 	const errors: string[] = [];
-	if (!args.domain.trim()) errors.push('Domain is required.');
-	if (!('host' in args.target) || !args.target.host.trim()) errors.push('Host is required.');
 	if (
-		!args.descriptors.length ||
-		args.descriptors.every(descriptor =>
+		!descriptors.length ||
+		descriptors.every(descriptor =>
 			descriptor.entries.every(entry => !entry.key.trim() || !entry.value.trim())
 		)
 	) {

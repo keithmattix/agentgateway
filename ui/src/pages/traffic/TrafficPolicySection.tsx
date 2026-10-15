@@ -24,16 +24,10 @@ import {
 	Workflow
 } from 'lucide-react';
 import type { ComponentType } from 'react';
-import { useContext, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { EditorValueContext } from '@/components/EditorContracts';
-import {
-	Drawer,
-	DrawerCheckContext,
-	EmptyState,
-	Tooltip,
-	YamlBlock
-} from '@/components/Primitives';
+import { Drawer, DrawerSaveButton, EmptyState, Tooltip, YamlBlock } from '@/components/Primitives';
 import { PolicyEditorBody, type PolicyEditorKind, usePolicyRaw } from '@/policies/PolicyDrawer';
 import { policyEnabled, policySummary, titleFromKey } from '@/policies/policyUtils';
 import { policyUi } from '@/policies/registry';
@@ -352,7 +346,12 @@ function TrafficPolicyEditorDrawer(props: {
 					</Tooltip>
 				</>
 			}
-			footer={<PolicySaveButton onSave={policy.submit} />}
+			footer={
+				<DrawerSaveButton onClick={policy.submit}>
+					<Save size={16} />
+					Save
+				</DrawerSaveButton>
+			}
 		>
 			<EditorValueContext.Provider value={policy.report}>
 				<TrafficPolicyEditor
@@ -368,22 +367,6 @@ function TrafficPolicyEditorDrawer(props: {
 	);
 }
 
-function PolicySaveButton(props: { onSave: () => void }) {
-	const check = useContext(DrawerCheckContext);
-	return (
-		<button
-			className="button primary"
-			type="button"
-			onClick={() => {
-				if (!check || check()) props.onSave();
-			}}
-		>
-			<Save size={16} />
-			Save
-		</button>
-	);
-}
-
 function TrafficPolicyEditor(props: {
 	formId?: string;
 	policy: TrafficPolicyItem;
@@ -394,9 +377,6 @@ function TrafficPolicyEditor(props: {
 	const help = useSchemaHelp();
 	return (
 		<div className="traffic-policy-drawer-stack">
-			<div className="section-heading">
-				<p>{props.policy.description}</p>
-			</div>
 			<PolicyEditorBody
 				formId={props.formId}
 				policyKey={props.policy.key}
@@ -405,7 +385,6 @@ function TrafficPolicyEditor(props: {
 				help={help}
 				saving={false}
 				schemaRoot={props.schemaRoot}
-				showGenericSchemaDescription={false}
 				onSave={props.onSave}
 			/>
 		</div>
