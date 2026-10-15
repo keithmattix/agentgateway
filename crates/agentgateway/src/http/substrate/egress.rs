@@ -183,14 +183,77 @@ impl SubstrateEgress {
 			if !req.headers().contains_key(&injection.header) {
 				continue;
 			}
-			let provider = self.provider_for_uri(&injection.credential_uri)?;
-			let secret = self
-				.credential(client, identity, provider, &injection.credential_uri)
-				.await?;
+			let secret = match (injection.credential_uri.as_str(), &injection.actor_jwt) {
+				(uri, None) if !uri.is_empty() => {
+					let provider = self.provider_for_uri(uri)?;
+					self.credential(client, identity, provider, uri).await?
+				},
+				("", Some(source)) => self.actor_jwt(client, identity, source).await?,
+				_ => {
+					return Err(
+						ProxyError::SubstrateEgressDenied(
+							"credential effect must specify exactly one credential source".to_owned(),
+						)
+						.into(),
+					);
+				},
+			};
 			let (name, value) = credential_header(injection, secret)?;
 			req.headers_mut().insert(name, value);
 		}
 		Ok(())
+	}
+
+	async fn actor_jwt(
+		&self,
+		client: &PolicyClient,
+		identity: &ActorIdentity,
+		source: &protos::ateapi::ActorJwtSource,
+	) -> Result<Vec<u8>, ProxyResponse> {
+		let mut audiences = source.audiences.clone();
+		audiences.sort_unstable();
+		let key = CredentialCacheKey {
+			actor_identity: actor_spiffe_uri(&identity.atespace, &identity.actor_name),
+			uri: format!("actor-jwt:{}:{audiences:?}", source.expiration_seconds),
+		};
+		let ttl = Duration::from_secs(
+			u64::try_from(source.expiration_seconds)
+				.unwrap_or_default()
+				.saturating_mul(2)
+				/ 3,
+		);
+		if let Some(jwt) = self.credential_cache.get(&key, Instant::now(), ttl) {
+			return Ok(jwt);
+		}
+
+		let policy_client =
+			client.with_outbound(OutboundCallKind::Policy, OutboundCallSubtype::Substrate);
+		let channel = self.target.grpc_channel(policy_client.clone());
+		let mut request = tonic::Request::new(protos::ateapi::MintActorJwtRequest {
+			actor: Some(protos::ateapi::ObjectRef {
+				atespace: identity.atespace.clone(),
+				name: identity.actor_name.clone(),
+			}),
+			audiences: source.audiences.clone(),
+			expiration_seconds: source.expiration_seconds,
+		});
+		let mut span = policy_client.start_grpc_span(
+			&mut request,
+			self.target.target.as_ref(),
+			"/ateapi.Control/MintActorJwt",
+		);
+		let mut control = protos::ateapi::control_client::ControlClient::new(channel);
+		let response = control.mint_actor_jwt(request).await;
+		if let Some(span) = span.as_deref_mut() {
+			span.record_grpc_result(&response);
+		}
+		drop(span);
+		let response = response.map_err(actor_jwt_error)?.into_inner();
+		let jwt = credential_secret(response.actor_jwt.into_bytes())?;
+		self
+			.credential_cache
+			.insert(key, jwt.clone(), Instant::now());
+		Ok(jwt)
 	}
 
 	async fn credential(
@@ -317,6 +380,15 @@ fn credential_provider_error(uri: &str, status: tonic::Status) -> ProxyError {
 		_ => {
 			ProxyError::SubstrateEgressDenied(format!("credential provider {provider} denied: {status}"))
 		},
+	}
+}
+
+fn actor_jwt_error(status: tonic::Status) -> ProxyError {
+	match status.code() {
+		Code::Unavailable | Code::DeadlineExceeded => {
+			ProxyError::SubstrateEgressUnavailable(format!("actor JWT issuer unavailable: {status}"))
+		},
+		_ => ProxyError::SubstrateEgressDenied(format!("actor JWT denied: {status}")),
 	}
 }
 
@@ -896,6 +968,7 @@ mod tests {
 				header: "authorization".to_owned(),
 				prefix: "Bearer ".to_owned(),
 				credential_uri: "ate-secret://kubernetes.io/default/token".to_owned(),
+				actor_jwt: None,
 			},
 			b"token\n".to_vec(),
 		)
@@ -923,6 +996,7 @@ mod tests {
 				header: header.to_owned(),
 				prefix: String::new(),
 				credential_uri: "ate-secret://kubernetes.io/default/token".to_owned(),
+				actor_jwt: None,
 			};
 			assert!(credential_header(&injection, b"token".to_vec()).is_err());
 		}
@@ -953,6 +1027,7 @@ mod tests {
 			header: "authorization".to_owned(),
 			prefix: "Bearer ".to_owned(),
 			credential_uri: "ate-secret://kubernetes.io/default/token".to_owned(),
+			actor_jwt: None,
 		};
 		assert!(credential_header(&injection, Vec::new()).is_err());
 		assert!(credential_header(&injection, b"bad\nsecret".to_vec()).is_err());

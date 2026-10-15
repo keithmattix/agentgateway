@@ -366,15 +366,16 @@ impl SubstrateIngress {
 									"ResumeActor response did not include a worker assignment".to_owned(),
 								)
 							})?;
-						let ip = assignment
-							.worker_pod_ip
-							.parse::<IpAddr>()
-							.map_err(|error| {
-								ResumeError::InvalidResponse(format!(
-									"invalid worker_assignment.worker_pod_ip {:?}: {error}",
-									assignment.worker_pod_ip
-								))
-							})?;
+						let worker_pod_ip = assignment.worker_pod_ips.first().ok_or_else(|| {
+							ResumeError::InvalidResponse(
+								"ResumeActor worker assignment did not include a pod IP".to_owned(),
+							)
+						})?;
+						let ip = worker_pod_ip.parse::<IpAddr>().map_err(|error| {
+							ResumeError::InvalidResponse(format!(
+								"invalid worker_assignment.worker_pod_ips[0] {worker_pod_ip:?}: {error}"
+							))
+						})?;
 						return Ok((
 							SocketAddr::new(ip, self.connect_target_port.get()),
 							resumed,
@@ -662,11 +663,7 @@ impl RequestPolicyTrait for SubstrateIngress {
 		let connect_authority = req
 			.extensions()
 			.get::<crate::cel::SourceContext>()
-			.and_then(|source| {
-				let mut values = source.connect_headers.get_all(::http::header::HOST).iter();
-				let authority = values.next()?.to_str().ok()?;
-				(values.next().is_none()).then_some(authority)
-			});
+			.and_then(|source| single_header(&source.connect_headers, ::http::header::HOST.as_str()));
 		// We detect whether this was from the connect tunnel based on whether there's
 		// a CONNECT authority in source context.
 		let from_connect_tunnel = connect_authority.is_some();
@@ -691,16 +688,16 @@ impl RequestPolicyTrait for SubstrateIngress {
 			})?;
 		let actor_port = actor_port(&authority, from_connect_tunnel);
 		let connect_authority = format!("{}:{actor_port}", authority.host());
-		let target_actor = if let Some(source) = req
+		let target_actor_headers = if let Some(source) = req
 			.extensions()
 			.get::<crate::cel::SourceContext>()
 			.filter(|source| source.connect_headers.contains_key(TARGET_ACTOR_HEADER))
 		{
-			source.connect_headers.get(TARGET_ACTOR_HEADER)
+			&source.connect_headers
 		} else {
-			req.headers().get(TARGET_ACTOR_HEADER)
-		}
-		.and_then(|value| value.to_str().ok());
+			req.headers()
+		};
+		let target_actor = single_header(target_actor_headers, TARGET_ACTOR_HEADER);
 		let Some((atespace, name)) = target_actor
 			.and_then(|target| target.split_once('/'))
 			.filter(|(_, name)| !name.contains('/'))
@@ -744,6 +741,14 @@ impl RequestPolicyTrait for SubstrateIngress {
 	}
 }
 
+fn single_header<'a>(headers: &'a ::http::HeaderMap, name: &str) -> Option<&'a str> {
+	let mut values = headers.get_all(name).iter();
+	values
+		.next()
+		.filter(|_| values.next().is_none())
+		.and_then(|value| value.to_str().ok())
+}
+
 #[cfg(test)]
 mod tests {
 	use std::sync::Arc;
@@ -782,9 +787,17 @@ mod tests {
 		assert_eq!(super::actor_port(&authority, true), 43123);
 	}
 
+	#[test]
+	fn duplicate_target_actor_headers_are_rejected() {
+		let mut headers = ::http::HeaderMap::new();
+		headers.append(TARGET_ACTOR_HEADER, "one/actor".parse().unwrap());
+		headers.append(TARGET_ACTOR_HEADER, "two/actor".parse().unwrap());
+		assert!(super::single_header(&headers, TARGET_ACTOR_HEADER).is_none());
+	}
+
 	#[derive(Clone)]
 	struct MockControl {
-		pod_ip: String,
+		pod_ips: Vec<String>,
 		calls: Arc<AtomicUsize>,
 		resumed: bool,
 	}
@@ -812,7 +825,7 @@ mod tests {
 					status: Some(ActorStatus {
 						state: 0,
 						worker_assignment: Some(protos::ateapi::WorkerAssignment {
-							worker_pod_ip: self.pod_ip.clone(),
+							worker_pod_ips: self.pod_ips.clone(),
 						}),
 					}),
 					..Default::default()
@@ -825,6 +838,13 @@ mod tests {
 			&self,
 			_request: GrpcRequest<GetActorEgressPolicyRequest>,
 		) -> Result<GrpcResponse<EgressPolicy>, Status> {
+			Err(Status::unimplemented("not used"))
+		}
+
+		async fn mint_actor_jwt(
+			&self,
+			_request: GrpcRequest<protos::ateapi::MintActorJwtRequest>,
+		) -> Result<GrpcResponse<protos::ateapi::MintActorJwtResponse>, Status> {
 			Err(Status::unimplemented("not used"))
 		}
 	}
@@ -847,7 +867,7 @@ mod tests {
 			.await;
 		let control_calls = Arc::new(AtomicUsize::new(0));
 		let control = crate::test_helpers::spawn_service(ControlServer::new(MockControl {
-			pod_ip: actor.address().ip().to_string(),
+			pod_ips: vec![actor.address().ip().to_string(), "not-an-ip".to_owned()],
 			calls: control_calls.clone(),
 			resumed: true,
 		}))
@@ -898,7 +918,7 @@ mod tests {
 			.mount(&actor)
 			.await;
 		let control = crate::test_helpers::spawn_service(ControlServer::new(MockControl {
-			pod_ip: actor.address().ip().to_string(),
+			pod_ips: vec![actor.address().ip().to_string()],
 			calls: Arc::new(AtomicUsize::new(0)),
 			resumed: true,
 		}))

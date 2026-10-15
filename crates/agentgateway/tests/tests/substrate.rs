@@ -55,6 +55,7 @@ struct EgressHandler {
 struct CredentialEgressHandler {
 	policy: Result<EgressPolicy, tonic::Status>,
 	state: ActorState,
+	mint_calls: Option<Arc<AtomicUsize>>,
 }
 
 #[async_trait::async_trait]
@@ -90,6 +91,27 @@ impl ateapimock::Handler for CredentialEgressHandler {
 			("demo", "my-actor")
 		);
 		self.policy.clone()
+	}
+
+	async fn mint_actor_jwt(
+		&mut self,
+		request: &protos::ateapi::MintActorJwtRequest,
+	) -> Result<protos::ateapi::MintActorJwtResponse, tonic::Status> {
+		let actor = request.actor.as_ref().unwrap();
+		assert_eq!(
+			(actor.atespace.as_str(), actor.name.as_str()),
+			("demo", "my-actor")
+		);
+		assert_eq!(request.audiences, ["https://api.example.com"]);
+		assert_eq!(request.expiration_seconds, 600);
+		self
+			.mint_calls
+			.as_ref()
+			.unwrap()
+			.fetch_add(1, Ordering::Relaxed);
+		Ok(protos::ateapi::MintActorJwtResponse {
+			actor_jwt: "minted-actor-jwt".to_owned(),
+		})
 	}
 }
 
@@ -165,7 +187,7 @@ impl ateapimock::Handler for IngressHandler {
 				status: Some(ActorStatus {
 					state: 0,
 					worker_assignment: Some(protos::ateapi::WorkerAssignment {
-						worker_pod_ip: self.pod_ip.clone(),
+						worker_pod_ips: vec![self.pod_ip.clone()],
 					}),
 				}),
 			}),
@@ -216,7 +238,7 @@ impl ateapimock::Handler for SelectiveParkingHandler {
 				status: Some(ActorStatus {
 					state: 0,
 					worker_assignment: Some(protos::ateapi::WorkerAssignment {
-						worker_pod_ip: self.pod_ip.clone(),
+						worker_pod_ips: vec![self.pod_ip.clone()],
 					}),
 				}),
 			}),
@@ -249,7 +271,7 @@ impl ateapimock::Handler for ParkingHandler {
 				status: Some(ActorStatus {
 					state: 0,
 					worker_assignment: Some(protos::ateapi::WorkerAssignment {
-						worker_pod_ip: self.pod_ip.clone(),
+						worker_pod_ips: vec![self.pod_ip.clone()],
 					}),
 				}),
 				..Default::default()
@@ -1713,14 +1735,16 @@ async fn open_actor_egress_tunnel(gateway: &TestBind, port: u16) -> tokio::io::D
 
 #[cfg(feature = "crypto-aws-lc")]
 #[rstest::rstest]
-#[case(false, false)]
-#[case(false, true)]
-#[case(true, false)]
-#[case(true, true)]
+#[case(false, false, false)]
+#[case(false, true, false)]
+#[case(true, false, false)]
+#[case(true, true, false)]
+#[case(false, true, true)]
 #[tokio::test]
 async fn substrate_egress_replaces_only_requested_credentials(
 	#[case] https: bool,
 	#[case] placeholder: bool,
+	#[case] actor_jwt: bool,
 	#[values(ActorState::Running, ActorState::Resuming)] state: ActorState,
 ) {
 	let (upstream, backend_tls) = if https {
@@ -1742,7 +1766,13 @@ async fn substrate_egress_replaces_only_requested_credentials(
 		replace_headers: vec![protos::ateapi::CredentialHeader {
 			header: "authorization".to_owned(),
 			prefix: "Bearer ".to_owned(),
-			credential_uri: "ate-secret://kubernetes.io/default/upstream-token".to_owned(),
+			credential_uri: (!actor_jwt)
+				.then(|| "ate-secret://kubernetes.io/default/upstream-token".to_owned())
+				.unwrap_or_default(),
+			actor_jwt: actor_jwt.then_some(protos::ateapi::ActorJwtSource {
+				audiences: vec!["https://api.example.com".to_owned()],
+				expiration_seconds: 600,
+			}),
 		}],
 	});
 	let ports = Some(protos::ateapi::Ports {
@@ -1793,9 +1823,14 @@ async fn substrate_egress_replaces_only_requested_credentials(
 		rules: vec![fallback, rule],
 		..Default::default()
 	};
-	let api = ateapimock::AteApiMock::new(move || CredentialEgressHandler {
-		policy: Ok(policy.clone()),
-		state,
+	let mint_calls = Arc::new(AtomicUsize::new(0));
+	let api = ateapimock::AteApiMock::new({
+		let mint_calls = mint_calls.clone();
+		move || CredentialEgressHandler {
+			policy: Ok(policy.clone()),
+			state,
+			mint_calls: actor_jwt.then(|| mint_calls.clone()),
+		}
 	})
 	.spawn()
 	.await;
@@ -1919,7 +1954,11 @@ async fn substrate_egress_replaces_only_requested_credentials(
 
 	assert_eq!(
 		credential_calls.load(Ordering::Relaxed),
-		usize::from(placeholder)
+		usize::from(placeholder && !actor_jwt)
+	);
+	assert_eq!(
+		mint_calls.load(Ordering::Relaxed),
+		usize::from(placeholder && actor_jwt)
 	);
 	let upstream_requests = upstream.received_requests().await.unwrap();
 	assert_eq!(upstream_requests.len(), 1);
@@ -1928,8 +1967,15 @@ async fn substrate_egress_replaces_only_requested_credentials(
 			.headers
 			.get("authorization")
 			.map(|v| v.to_str().unwrap()),
-		placeholder.then_some("Bearer injected-token")
+		placeholder.then_some(if actor_jwt {
+			"Bearer minted-actor-jwt"
+		} else {
+			"Bearer injected-token"
+		})
 	);
+	if actor_jwt {
+		return;
+	}
 	let log = find_request_log(&path).await;
 	assert_eq!(log["ate.actor.uid"].as_str(), Some("uid-1"), "{log:#?}");
 	assert_eq!(log["ate.actor.name"].as_str(), Some("my-actor"), "{log:#?}");
@@ -1947,6 +1993,7 @@ async fn substrate_tls_gateway(
 	let api = ateapimock::AteApiMock::new(move || CredentialEgressHandler {
 		policy: policy.clone(),
 		state,
+		mint_calls: None,
 	})
 	.spawn()
 	.await;
@@ -2753,6 +2800,7 @@ async fn substrate_egress_propagates_trace_context_to_policy_and_credential_call
 						header: "authorization".to_owned(),
 						prefix: "Bearer ".to_owned(),
 						credential_uri: "ate-secret://kubernetes.io/default/upstream-token".to_owned(),
+						actor_jwt: None,
 					}],
 				}),
 			}),
@@ -2768,6 +2816,7 @@ async fn substrate_egress_propagates_trace_context_to_policy_and_credential_call
 				CredentialEgressHandler {
 					policy: Ok(policy.clone()),
 					state: ActorState::Running,
+					mint_calls: None,
 				},
 				seen.clone(),
 			)
