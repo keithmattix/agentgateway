@@ -240,6 +240,7 @@ tokio-test = "0.4"
 tokio-util = { version = "0.7", features = ["codec", "io"] }
 tokio_sse_codec = "0.0.2"
 tonic = { version = "0.14", features = ["codegen", "transport"] }
+tonic-types = "0.14"
 tonic-prost = { version = "0.14" }
 tonic-prost-build = { version = "0.14", features = ["transport"] }
 tonic-build = { version = "0.14", features = ["transport"] }

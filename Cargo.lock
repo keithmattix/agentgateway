@@ -382,6 +382,7 @@ dependencies = [
  "tokio-util",
  "tokio_sse_codec",
  "tonic",
+ "tonic-types",
  "tower",
  "tower-http 0.7.1",
  "tower-serve-static",

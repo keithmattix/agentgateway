@@ -8,7 +8,8 @@ use ::http::StatusCode;
 use prometheus_client::metrics::gauge::Gauge;
 use quick_cache::sync::Cache;
 use tokio::sync::{OwnedSemaphorePermit, Semaphore};
-use tonic::Code;
+use tonic::{Code, Status};
+use tonic_types::{ErrorDetail, StatusExt};
 
 use super::ateattr::{ResumeDisposition, RouteOutcome};
 use super::{ActorRef, CACHE_CAPACITY, TRACE_POLICY_KIND, valid_resource_name};
@@ -32,11 +33,15 @@ const DEFAULT_ACTOR_PORT: u16 = 80;
 const DEFAULT_CONNECT_TARGET_PORT: NonZeroU16 = NonZeroU16::new(8443).unwrap();
 const TARGET_PORT_HEADER: &str = "x-ate-target-port";
 pub(crate) const STALE_ASSIGNMENT_HEADER: &str = "x-ate-assignment-stale";
+const ERROR_INFO_DOMAIN: &str = "ate.dev";
+const REASON_API_UNAVAILABLE: &str = "API_UNAVAILABLE";
+const REASON_LOT_FULL: &str = "LOT_FULL";
+const REASON_TERMINAL_STATE: &str = "TERMINAL_STATE";
 
 #[derive(Debug, Clone, thiserror::Error)]
 enum ResumeError {
-	#[error("{0:?}: {1}")]
-	Status(Code, String),
+	#[error("{0}")]
+	Status(Status),
 	#[error("{0}")]
 	InvalidResponse(String),
 	#[error("request parking capacity exhausted")]
@@ -45,46 +50,71 @@ enum ResumeError {
 
 impl ResumeError {
 	fn into_proxy_error(self, actor: &ActorRef) -> ProxyError {
-		let (status, body) = match self {
+		let (status, body, reason) = match self {
 			Self::ParkingFull => (
 				StatusCode::SERVICE_UNAVAILABLE,
 				format!("actor {:?} request parking capacity exhausted", actor.name),
+				Some(REASON_LOT_FULL.to_owned()),
 			),
-			Self::Status(Code::NotFound, _) => (
-				StatusCode::NOT_FOUND,
-				format!("actor {:?} not found", actor.name),
-			),
-			Self::Status(Code::FailedPrecondition, message) => (
-				StatusCode::SERVICE_UNAVAILABLE,
-				format!("actor {:?} unavailable: {message}", actor.name),
-			),
-			Self::Status(Code::Unavailable, _) => (
-				StatusCode::SERVICE_UNAVAILABLE,
-				format!("actor {:?} unavailable", actor.name),
-			),
-			Self::Status(Code::DeadlineExceeded, _) => (
-				StatusCode::GATEWAY_TIMEOUT,
-				format!("actor {:?} request timed out", actor.name),
-			),
-			Self::Status(Code::PermissionDenied, _) => (
-				StatusCode::FORBIDDEN,
-				format!("actor {:?} access denied", actor.name),
-			),
-			Self::Status(Code::Unauthenticated, _) => (
-				StatusCode::UNAUTHORIZED,
-				format!("actor {:?} authentication required", actor.name),
-			),
-			Self::Status(Code::ResourceExhausted, _) => (
-				StatusCode::TOO_MANY_REQUESTS,
-				format!("actor {:?} rate limited", actor.name),
-			),
-			Self::Status(_, _) | Self::InvalidResponse(_) => (
+			Self::Status(status) => {
+				let code = status.code();
+				let message = status.message();
+				let reason = status_reason(&status)
+					.or_else(|| (code == Code::Unavailable).then(|| REASON_API_UNAVAILABLE.to_owned()));
+				let (http_status, body) = match code {
+					Code::NotFound => (
+						StatusCode::NOT_FOUND,
+						format!("actor {:?} not found", actor.name),
+					),
+					Code::FailedPrecondition | Code::Aborted | Code::ResourceExhausted => (
+						StatusCode::SERVICE_UNAVAILABLE,
+						format!("actor {:?} unavailable: {message}", actor.name),
+					),
+					Code::Unavailable => (
+						StatusCode::SERVICE_UNAVAILABLE,
+						format!("actor {:?} unavailable", actor.name),
+					),
+					Code::DeadlineExceeded => (
+						StatusCode::GATEWAY_TIMEOUT,
+						format!("actor {:?} request timed out", actor.name),
+					),
+					Code::PermissionDenied => (
+						StatusCode::FORBIDDEN,
+						format!("actor {:?} access denied", actor.name),
+					),
+					Code::Unauthenticated => (
+						StatusCode::UNAUTHORIZED,
+						format!("actor {:?} authentication required", actor.name),
+					),
+					_ => (
+						StatusCode::INTERNAL_SERVER_ERROR,
+						format!("error resuming actor {:?}", actor.name),
+					),
+				};
+				(http_status, body, reason)
+			},
+			Self::InvalidResponse(_) => (
 				StatusCode::INTERNAL_SERVER_ERROR,
 				format!("error resuming actor {:?}", actor.name),
+				None,
 			),
 		};
-		ProxyError::SubstrateIngressFailed(status, body)
+		ProxyError::SubstrateIngressFailed(status, body, reason)
 	}
+}
+
+fn status_reason(status: &Status) -> Option<String> {
+	status
+		.get_error_details_vec()
+		.into_iter()
+		.find_map(|detail| match detail {
+			ErrorDetail::ErrorInfo(info)
+				if info.domain == ERROR_INFO_DOMAIN && !info.reason.is_empty() =>
+			{
+				Some(info.reason)
+			},
+			_ => None,
+		})
 }
 
 #[derive(Debug, Clone)]
@@ -312,13 +342,13 @@ impl SubstrateIngress {
 				boot: false,
 			};
 			let mut delay = self.request_parking.retry_interval();
+			let mut last_retry_status = None;
 			loop {
 				let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
 				if remaining.is_zero() {
-					return Err(ResumeError::Status(
-						Code::DeadlineExceeded,
-						format!("ResumeActor timed out after {budget:?}"),
-					));
+					return Err(ResumeError::Status(last_retry_status.unwrap_or_else(
+						|| Status::deadline_exceeded(format!("ResumeActor timed out after {budget:?}")),
+					)));
 				}
 				let response = {
 					let mut request = tonic::Request::new(message.clone());
@@ -382,22 +412,19 @@ impl SubstrateIngress {
 							uid,
 						));
 					},
-					Ok(Err(status)) if self.retryable_while_parked(status.code()) => {
+					Ok(Err(status)) if self.retryable_while_parked(&status) => {
+						last_retry_status = Some(status);
 						let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
 						tokio::time::sleep(delay.min(remaining)).await;
 						delay = delay.mul_f64(self.request_parking.retry_factor.max(1.0));
 					},
 					Ok(Err(status)) => {
-						return Err(ResumeError::Status(
-							status.code(),
-							status.message().to_owned(),
-						));
+						return Err(ResumeError::Status(status));
 					},
 					Err(_) => {
-						return Err(ResumeError::Status(
-							Code::DeadlineExceeded,
-							format!("ResumeActor timed out after {budget:?}"),
-						));
+						return Err(ResumeError::Status(last_retry_status.unwrap_or_else(
+							|| Status::deadline_exceeded(format!("ResumeActor timed out after {budget:?}")),
+						)));
 					},
 				}
 			}
@@ -423,13 +450,13 @@ impl SubstrateIngress {
 		}))
 	}
 
-	fn retryable_while_parked(&self, code: Code) -> bool {
-		matches!(code, Code::Aborted)
+	fn retryable_while_parked(&self, status: &Status) -> bool {
+		matches!(status.code(), Code::Aborted)
 			|| (self.request_parking.enabled()
 				&& matches!(
-					code,
+					status.code(),
 					Code::FailedPrecondition | Code::ResourceExhausted | Code::Unavailable
-				))
+				) && status_reason(status).as_deref() != Some(REASON_TERMINAL_STATE))
 	}
 
 	async fn resolve(&self, client: &PolicyClient, actor: ActorRef) -> ResolutionResult {
@@ -604,11 +631,11 @@ impl SubstrateRequestState {
 					}),
 				);
 				match &error {
-					ResumeError::Status(code, message) => warn!(
+					ResumeError::Status(status) => warn!(
 						actor = self.actor.name,
 						atespace = self.actor.atespace,
-						grpc.code = ?code,
-						grpc.message = message,
+						grpc.code = ?status.code(),
+						grpc.message = status.message(),
 						"substrate ResumeActor failed"
 					),
 					ResumeError::InvalidResponse(message) => warn!(
@@ -684,6 +711,7 @@ impl RequestPolicyTrait for SubstrateIngress {
 				ProxyError::SubstrateIngressFailed(
 					StatusCode::NOT_FOUND,
 					format!("invalid actor authority {authority:?}: {error}"),
+					None,
 				)
 			})?;
 		let actor_port = actor_port(&authority, from_connect_tunnel);
@@ -707,6 +735,7 @@ impl RequestPolicyTrait for SubstrateIngress {
 				ProxyError::SubstrateIngressFailed(
 					StatusCode::NOT_FOUND,
 					format!("invalid {TARGET_ACTOR_HEADER:?}: expected <atespace>/<actor>"),
+					None,
 				)
 				.into(),
 			);

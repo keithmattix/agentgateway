@@ -1,3 +1,5 @@
+use std::net::SocketAddr;
+
 use agentgateway::test_helpers::{ateapimock, credprovidermock, oteltracemock};
 use agentgateway::transport::stream::TLSConnectionInfo;
 use agentgateway::transport::tls::TlsInfo;
@@ -7,6 +9,7 @@ use protos::ateapi::{
 };
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::sync::Notify;
+use tonic_types::{ErrorDetails, StatusExt};
 
 use crate::common::prelude::*;
 
@@ -204,6 +207,23 @@ struct ParkingHandler {
 	failure_code: tonic::Code,
 	entered: Option<Arc<Notify>>,
 	resumed: bool,
+}
+
+#[derive(Clone)]
+struct RejectedResumeHandler {
+	status: tonic::Status,
+	calls: Arc<AtomicUsize>,
+}
+
+#[async_trait::async_trait]
+impl ateapimock::Handler for RejectedResumeHandler {
+	async fn resume_actor(
+		&mut self,
+		_request: &protos::ateapi::ResumeActorRequest,
+	) -> Result<ResumeActorResponse, tonic::Status> {
+		self.calls.fetch_add(1, Ordering::Relaxed);
+		Err(self.status.clone())
+	}
 }
 
 #[derive(Clone)]
@@ -695,7 +715,10 @@ async fn resume_disposition_gateway(
 	gateway
 }
 
-async fn unreachable_actor_service_ingress_status(request_parking: Value) -> StatusCode {
+async fn actor_service_ingress_response(
+	api_address: SocketAddr,
+	request_parking: Value,
+) -> Response {
 	let dynamic = Backend::Dynamic(ResourceName::new("dynamic".into(), "".into()), None);
 	let mut gateway = setup_proxy_test("{}")
 		.unwrap()
@@ -705,7 +728,7 @@ async fn unreachable_actor_service_ingress_status(request_parking: Value) -> Sta
 	gateway
 		.attach_route_policy(json!({
 			"substrateIngress": {
-				"host": UNREACHABLE_ADDR,
+				"host": api_address.to_string(),
 				"connectTargetPort": 80,
 				"requestParking": request_parking,
 			}
@@ -717,26 +740,64 @@ async fn unreachable_actor_service_ingress_status(request_parking: Value) -> Sta
 		&actor_url("my-actor", "/"),
 	)
 	.await
-	.status()
 }
 
 #[tokio::test]
-async fn actor_ingress_reports_an_unreachable_actor_service_as_unavailable() {
-	assert_eq!(
-		unreachable_actor_service_ingress_status(json!({ "max": 0 })).await,
-		StatusCode::SERVICE_UNAVAILABLE,
-	);
-	// While parking, an unavailable service is retried until the budget runs out.
-	assert_eq!(
-		unreachable_actor_service_ingress_status(json!({
+async fn actor_ingress_rejections_match_substrate_contract() {
+	let response =
+		actor_service_ingress_response(UNREACHABLE_ADDR.parse().unwrap(), json!({ "max": 0 })).await;
+	assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+	assert_eq!(response.headers()["ate-error-reason"], "API_UNAVAILABLE");
+
+	let response = actor_service_ingress_response(
+		UNREACHABLE_ADDR.parse().unwrap(),
+		json!({
 			"budget": "100ms",
 			"max": 1,
 			"retryInterval": "10ms",
 			"retryFactor": 1.0,
-		}))
-		.await,
-		StatusCode::GATEWAY_TIMEOUT,
-	);
+		}),
+	)
+	.await;
+	assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+	assert_eq!(response.headers()["ate-error-reason"], "API_UNAVAILABLE");
+
+	for (code, reason) in [
+		(tonic::Code::ResourceExhausted, "NO_CAPACITY"),
+		(tonic::Code::FailedPrecondition, "TERMINAL_STATE"),
+	] {
+		let calls = Arc::new(AtomicUsize::new(0));
+		let status = tonic::Status::with_error_details(
+			code,
+			"resume refused",
+			ErrorDetails::with_error_info(reason, "ate.dev", std::collections::HashMap::new()),
+		);
+		let api = ateapimock::AteApiMock::new({
+			let calls = calls.clone();
+			move || RejectedResumeHandler {
+				status: status.clone(),
+				calls: calls.clone(),
+			}
+		})
+		.spawn()
+		.await;
+		let request_parking = if reason == "NO_CAPACITY" {
+			json!({ "max": 0 })
+		} else {
+			json!({
+				"budget": "100ms",
+				"max": 1,
+				"retryInterval": "10ms",
+				"retryFactor": 1.0,
+			})
+		};
+		let response = actor_service_ingress_response(api.address, request_parking).await;
+		assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+		assert_eq!(response.headers()["ate-error-reason"], reason);
+		if reason == "TERMINAL_STATE" {
+			assert_eq!(calls.load(Ordering::Relaxed), 1);
+		}
+	}
 }
 
 #[tokio::test]

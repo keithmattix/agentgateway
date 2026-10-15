@@ -79,7 +79,7 @@ impl ProxyError {
 			| ProxyError::FilterError(_)
 			| ProxyError::Policy(_)
 			| ProxyError::StaleAssignment => ProxyResponseReason::Internal,
-			ProxyError::SubstrateIngressFailed(status, _) => substrate_ingress_reason(*status),
+			ProxyError::SubstrateIngressFailed(status, _, _) => substrate_ingress_reason(*status),
 			ProxyError::AIRequest(error) => classify_ai_request(error).reason,
 			ProxyError::AIResponse(error) => classify_ai_response(error).reason,
 			ProxyError::JwtAuthenticationFailure(_) => ProxyResponseReason::JwtAuth,
@@ -251,7 +251,7 @@ pub enum ProxyError {
 	#[error("processing failed: {0}")]
 	ProcessingString(String),
 	#[error("{1}")]
-	SubstrateIngressFailed(StatusCode, String),
+	SubstrateIngressFailed(StatusCode, String, Option<String>),
 	#[error("{0}")]
 	SubstrateEgressDenied(String),
 	#[error("{0}")]
@@ -454,7 +454,7 @@ impl ProxyError {
 			ProxyError::Body(_) => StatusCode::SERVICE_UNAVAILABLE,
 			ProxyError::ProcessingString(_) => StatusCode::SERVICE_UNAVAILABLE,
 			ProxyError::RequestLimitExceeded => StatusCode::SERVICE_UNAVAILABLE,
-			ProxyError::SubstrateIngressFailed(status, _) => status,
+			ProxyError::SubstrateIngressFailed(status, _, _) => status,
 			ProxyError::RateLimitExceeded { .. } => StatusCode::TOO_MANY_REQUESTS,
 			ProxyError::RemoteRateLimitExceeded { .. } => StatusCode::TOO_MANY_REQUESTS,
 			ProxyError::BudgetExceeded(_) => StatusCode::TOO_MANY_REQUESTS,
@@ -549,6 +549,12 @@ impl ProxyError {
 			&& let Some(hm) = rb.headers_mut()
 		{
 			hm.extend(headers.as_ref().clone());
+		}
+		if let ProxyError::SubstrateIngressFailed(_, _, Some(reason)) = &this
+			&& let Ok(value) = HeaderValue::try_from(reason.as_str())
+			&& let Some(hm) = rb.headers_mut()
+		{
+			hm.insert("ate-error-reason", value);
 		}
 
 		// Add an authentication challenge for basic auth failures. Requests authenticating to the
@@ -819,7 +825,12 @@ mod tests {
 			(StatusCode::GATEWAY_TIMEOUT, ProxyResponseReason::Timeout),
 		] {
 			assert_eq!(
-				ProxyResponse::Error(ProxyError::SubstrateIngressFailed(status, String::new())).as_reason(),
+				ProxyResponse::Error(ProxyError::SubstrateIngressFailed(
+					status,
+					String::new(),
+					None,
+				))
+				.as_reason(),
 				reason
 			);
 		}
