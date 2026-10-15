@@ -586,9 +586,11 @@ impl ProxyError {
 		}
 
 		if let ProxyError::BudgetExceeded(exceeded) = &this {
+			let mut rb = rb.header(hyper::header::CONTENT_TYPE, "application/json");
+			if let Some(retry_after) = exceeded.retry_after {
+				rb = rb.header(hyper::header::RETRY_AFTER, retry_after.to_string());
+			}
 			return rb
-				.header(hyper::header::CONTENT_TYPE, "application/json")
-				.header(hyper::header::RETRY_AFTER, exceeded.retry_after.to_string())
 				.body(http::Body::from(
 					serde_json::json!({
 						"error": {

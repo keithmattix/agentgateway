@@ -674,7 +674,7 @@ function KeyEditor(props: {
 		budgets.some(
 			budget =>
 				!budget.name.trim() ||
-				!budget.window.rolling?.trim() ||
+				(budget.window && !budget.window.rolling.trim()) ||
 				!Number.isFinite(budget.limit.amount) ||
 				budget.limit.amount < 0 ||
 				(budget.limit.unit === 'Tokens' && !Number.isInteger(budget.limit.amount))
@@ -875,7 +875,7 @@ function KeyEditor(props: {
 			<CollapsiblePolicySection
 				icon={<CircleDollarSign size={17} />}
 				title="Budgets"
-				description="Cap how much this key can spend or consume during each rolling window."
+				description="Cap how much this key can spend or consume, per rolling window or in total."
 				summary={
 					submitted && invalidBudgets ? (
 						<span className="badge bad">Invalid</span>
@@ -894,8 +894,7 @@ function KeyEditor(props: {
 				<BudgetEditor budgets={budgets} apiKeyName={keyName(props.initial)} onChange={setBudgets} />
 				{submitted && invalidBudgets ? (
 					<StatusBanner state="bad" title="Invalid budgets">
-						Budget names must be present and unique, rolling windows are required, and amounts must
-						be non-negative whole numbers.
+						Budget names must be present and unique, and amounts must be non-negative whole numbers.
 					</StatusBanner>
 				) : null}
 			</CollapsiblePolicySection>
@@ -1068,13 +1067,18 @@ function BudgetEditor(props: {
 												placeholder="monthly-spend"
 											/>
 										</Field>
-										<Field label="Rolling window" hint="Examples: 24h, 7d, or 30d.">
+										<Field
+											label="Rolling window"
+											hint="Examples: 24h, 7d, or 30d. Leave empty for a budget that never resets."
+										>
 											<input
-												value={budget.window.rolling ?? ''}
+												value={budget.window?.rolling ?? ''}
 												onChange={event =>
 													updateBudget(index, {
 														...budget,
-														window: { rolling: event.target.value }
+														window: event.target.value.trim()
+															? { rolling: event.target.value }
+															: undefined
 													})
 												}
 												placeholder="30d"
@@ -1171,10 +1175,14 @@ function BudgetUsage(props: {
 				</span>
 				<span>
 					{live
-						? `${Math.round(fraction * 100)}% · resets ${formatRelativeTime(
-								new Date(live.window.end).toISOString()
-							)}`
-						: `No usage recorded yet · ${budget.window.rolling || 'unset'} rolling window`}
+						? `${Math.round(fraction * 100)}% · ${
+								live.window.end === null
+									? 'never resets'
+									: `resets ${formatRelativeTime(new Date(live.window.end).toISOString())}`
+							}`
+						: `No usage recorded yet · ${
+								budget.window ? `${budget.window.rolling} rolling window` : 'never resets'
+							}`}
 				</span>
 			</div>
 			<div className="api-key-budget-meter">
@@ -1398,7 +1406,7 @@ function BudgetSummary(props: {
 						content={`${budgetAmountLabel(used, budget.limit.unit)} of ${budgetAmountLabel(
 							budget.limit.amount,
 							budget.limit.unit
-						)} per ${budget.window.rolling}`}
+						)} ${budget.window ? `per ${budget.window.rolling}` : 'total'}`}
 					>
 						<div className="key-budget-summary-row">
 							<span className="key-budget-summary-name">{budget.name}</span>

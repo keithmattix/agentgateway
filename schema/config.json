@@ -7239,8 +7239,15 @@
           "$ref": "#/$defs/BudgetLimit"
         },
         "window": {
-          "description": "Rolling window over which usage will be accumulated.",
-          "$ref": "#/$defs/BudgetWindow"
+          "description": "Rolling window over which usage will be accumulated. If unset, usage accumulates for the\nlifetime of the budget and is never reset.",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BudgetWindow"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "onBudgetExceeded": {
           "description": "Action taken when the budget is exceeded.",
@@ -7251,7 +7258,6 @@
       "required": [
         "name",
         "limit",
-        "window",
         "onBudgetExceeded"
       ]
     },

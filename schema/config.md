@@ -459,7 +459,7 @@
 |`binds[].listeners[].routes[].policies.apiKey.keys[].budgets[].limit`|object|Maximum usage allowed during the window.|
 |`binds[].listeners[].routes[].policies.apiKey.keys[].budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
 |`binds[].listeners[].routes[].policies.apiKey.keys[].budgets[].limit.amount`|number||
-|`binds[].listeners[].routes[].policies.apiKey.keys[].budgets[].window`|object|Rolling window over which usage will be accumulated.|
+|`binds[].listeners[].routes[].policies.apiKey.keys[].budgets[].window`|object|Rolling window over which usage will be accumulated. If unset, usage accumulates for the<br>lifetime of the budget and is never reset.|
 |`binds[].listeners[].routes[].policies.apiKey.keys[].budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
 |`binds[].listeners[].routes[].policies.apiKey.keys[].budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
 |`binds[].listeners[].routes[].policies.apiKey.keys[].keyHash`|string|SHA-256 hash of an API key value to accept, in `sha256:<hex>` format.|
@@ -1559,7 +1559,7 @@
 |`binds[].listeners[].policies.apiKey.keys[].budgets[].limit`|object|Maximum usage allowed during the window.|
 |`binds[].listeners[].policies.apiKey.keys[].budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
 |`binds[].listeners[].policies.apiKey.keys[].budgets[].limit.amount`|number||
-|`binds[].listeners[].policies.apiKey.keys[].budgets[].window`|object|Rolling window over which usage will be accumulated.|
+|`binds[].listeners[].policies.apiKey.keys[].budgets[].window`|object|Rolling window over which usage will be accumulated. If unset, usage accumulates for the<br>lifetime of the budget and is never reset.|
 |`binds[].listeners[].policies.apiKey.keys[].budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
 |`binds[].listeners[].policies.apiKey.keys[].budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
 |`binds[].listeners[].policies.apiKey.keys[].keyHash`|string|SHA-256 hash of an API key value to accept, in `sha256:<hex>` format.|
@@ -2015,7 +2015,7 @@
 |`policies[].policy.apiKey.keys[].budgets[].limit`|object|Maximum usage allowed during the window.|
 |`policies[].policy.apiKey.keys[].budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
 |`policies[].policy.apiKey.keys[].budgets[].limit.amount`|number||
-|`policies[].policy.apiKey.keys[].budgets[].window`|object|Rolling window over which usage will be accumulated.|
+|`policies[].policy.apiKey.keys[].budgets[].window`|object|Rolling window over which usage will be accumulated. If unset, usage accumulates for the<br>lifetime of the budget and is never reset.|
 |`policies[].policy.apiKey.keys[].budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
 |`policies[].policy.apiKey.keys[].budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
 |`policies[].policy.apiKey.keys[].keyHash`|string|SHA-256 hash of an API key value to accept, in `sha256:<hex>` format.|
@@ -3149,7 +3149,7 @@
 |`routeGroups[].routes[].policies.apiKey.keys[].budgets[].limit`|object|Maximum usage allowed during the window.|
 |`routeGroups[].routes[].policies.apiKey.keys[].budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
 |`routeGroups[].routes[].policies.apiKey.keys[].budgets[].limit.amount`|number||
-|`routeGroups[].routes[].policies.apiKey.keys[].budgets[].window`|object|Rolling window over which usage will be accumulated.|
+|`routeGroups[].routes[].policies.apiKey.keys[].budgets[].window`|object|Rolling window over which usage will be accumulated. If unset, usage accumulates for the<br>lifetime of the budget and is never reset.|
 |`routeGroups[].routes[].policies.apiKey.keys[].budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
 |`routeGroups[].routes[].policies.apiKey.keys[].budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
 |`routeGroups[].routes[].policies.apiKey.keys[].keyHash`|string|SHA-256 hash of an API key value to accept, in `sha256:<hex>` format.|
@@ -4221,7 +4221,7 @@
 |`gateways.*.listeners[].apiKey.keys[].budgets[].limit`|object|Maximum usage allowed during the window.|
 |`gateways.*.listeners[].apiKey.keys[].budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
 |`gateways.*.listeners[].apiKey.keys[].budgets[].limit.amount`|number||
-|`gateways.*.listeners[].apiKey.keys[].budgets[].window`|object|Rolling window over which usage will be accumulated.|
+|`gateways.*.listeners[].apiKey.keys[].budgets[].window`|object|Rolling window over which usage will be accumulated. If unset, usage accumulates for the<br>lifetime of the budget and is never reset.|
 |`gateways.*.listeners[].apiKey.keys[].budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
 |`gateways.*.listeners[].apiKey.keys[].budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
 |`gateways.*.listeners[].apiKey.keys[].keyHash`|string|SHA-256 hash of an API key value to accept, in `sha256:<hex>` format.|
@@ -4461,7 +4461,7 @@
 |`gateways.*.apiKey.keys[].budgets[].limit`|object|Maximum usage allowed during the window.|
 |`gateways.*.apiKey.keys[].budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
 |`gateways.*.apiKey.keys[].budgets[].limit.amount`|number||
-|`gateways.*.apiKey.keys[].budgets[].window`|object|Rolling window over which usage will be accumulated.|
+|`gateways.*.apiKey.keys[].budgets[].window`|object|Rolling window over which usage will be accumulated. If unset, usage accumulates for the<br>lifetime of the budget and is never reset.|
 |`gateways.*.apiKey.keys[].budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
 |`gateways.*.apiKey.keys[].budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
 |`gateways.*.apiKey.keys[].keyHash`|string|SHA-256 hash of an API key value to accept, in `sha256:<hex>` format.|
@@ -4772,7 +4772,7 @@
 |`routes[].policies.apiKey.keys[].budgets[].limit`|object|Maximum usage allowed during the window.|
 |`routes[].policies.apiKey.keys[].budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
 |`routes[].policies.apiKey.keys[].budgets[].limit.amount`|number||
-|`routes[].policies.apiKey.keys[].budgets[].window`|object|Rolling window over which usage will be accumulated.|
+|`routes[].policies.apiKey.keys[].budgets[].window`|object|Rolling window over which usage will be accumulated. If unset, usage accumulates for the<br>lifetime of the budget and is never reset.|
 |`routes[].policies.apiKey.keys[].budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
 |`routes[].policies.apiKey.keys[].budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
 |`routes[].policies.apiKey.keys[].keyHash`|string|SHA-256 hash of an API key value to accept, in `sha256:<hex>` format.|
@@ -6122,7 +6122,7 @@
 |`llm.policies.apiKey.keys[].budgets[].limit`|object|Maximum usage allowed during the window.|
 |`llm.policies.apiKey.keys[].budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
 |`llm.policies.apiKey.keys[].budgets[].limit.amount`|number||
-|`llm.policies.apiKey.keys[].budgets[].window`|object|Rolling window over which usage will be accumulated.|
+|`llm.policies.apiKey.keys[].budgets[].window`|object|Rolling window over which usage will be accumulated. If unset, usage accumulates for the<br>lifetime of the budget and is never reset.|
 |`llm.policies.apiKey.keys[].budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
 |`llm.policies.apiKey.keys[].budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
 |`llm.policies.apiKey.keys[].keyHash`|string|SHA-256 hash of an API key value to accept, in `sha256:<hex>` format.|
@@ -6484,7 +6484,7 @@
 |`mcp.policies.apiKey.keys[].budgets[].limit`|object|Maximum usage allowed during the window.|
 |`mcp.policies.apiKey.keys[].budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
 |`mcp.policies.apiKey.keys[].budgets[].limit.amount`|number||
-|`mcp.policies.apiKey.keys[].budgets[].window`|object|Rolling window over which usage will be accumulated.|
+|`mcp.policies.apiKey.keys[].budgets[].window`|object|Rolling window over which usage will be accumulated. If unset, usage accumulates for the<br>lifetime of the budget and is never reset.|
 |`mcp.policies.apiKey.keys[].budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
 |`mcp.policies.apiKey.keys[].budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
 |`mcp.policies.apiKey.keys[].keyHash`|string|SHA-256 hash of an API key value to accept, in `sha256:<hex>` format.|
@@ -6825,7 +6825,7 @@
 |`ui.policies.apiKey.keys[].budgets[].limit`|object|Maximum usage allowed during the window.|
 |`ui.policies.apiKey.keys[].budgets[].limit.unit`|enum|Possible values: `USD`, `Tokens`.|
 |`ui.policies.apiKey.keys[].budgets[].limit.amount`|number||
-|`ui.policies.apiKey.keys[].budgets[].window`|object|Rolling window over which usage will be accumulated.|
+|`ui.policies.apiKey.keys[].budgets[].window`|object|Rolling window over which usage will be accumulated. If unset, usage accumulates for the<br>lifetime of the budget and is never reset.|
 |`ui.policies.apiKey.keys[].budgets[].window.rolling`|string|Duration of the fixed usage window, for example `1h`, `24h`, or `30d`.<br>Windows are aligned to the Unix epoch rather than starting with the first request: `1h`<br>follows UTC clock hours, `24h` starts at midnight UTC, and `30d` uses consecutive 30-day<br>periods rather than calendar months.|
 |`ui.policies.apiKey.keys[].budgets[].onBudgetExceeded`|enum|Action taken when the budget is exceeded.<br>Possible values: `Audit`, `Block`.|
 |`ui.policies.apiKey.keys[].keyHash`|string|SHA-256 hash of an API key value to accept, in `sha256:<hex>` format.|
