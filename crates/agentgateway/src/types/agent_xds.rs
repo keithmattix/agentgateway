@@ -705,6 +705,7 @@ fn convert_route_type(proto_rt: i32, diagnostics: &mut Diagnostics) -> llm::Rout
 		Ok(ProtoRT::Realtime) => llm::RouteType::Realtime,
 		Ok(ProtoRT::Rerank) => llm::RouteType::Rerank,
 		Ok(ProtoRT::Decisions) => llm::RouteType::Decisions,
+		Ok(ProtoRT::SystemOne) => llm::RouteType::SystemOne,
 		Ok(ProtoRT::GenerateContent) => llm::RouteType::GenerateContent,
 		Ok(ProtoRT::GeminiCountTokens) => llm::RouteType::GeminiCountTokens,
 		Err(_) => {

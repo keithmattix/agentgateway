@@ -3607,6 +3607,7 @@ spec:
                           - Realtime
                           - Rerank
                           - Responses
+                          - SystemOne
                           type: string
                         description: |-
                           Rules for identifying the type of traffic to handle.

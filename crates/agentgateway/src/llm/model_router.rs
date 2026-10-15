@@ -81,7 +81,7 @@ static SERVING_ENDPOINTS: LazyLock<Vec<(EndpointMatch, Option<llm::RouteType>, &
 			("/v1/images/variations", Some(Detect)),
 			("/v1/audio/transcriptions", None),
 			("/v1/ocr", Some(Detect)),
-			("/v1/systemone", Some(Detect)),
+			("/v1/systemone", Some(SystemOne)),
 			("/v1/decisions", Some(Decisions)),
 			("/v1/embeddings", Some(Embeddings)),
 			("/v1/rerank", Some(Rerank)),
@@ -2136,10 +2136,6 @@ mod tests {
 	#[test]
 	fn native_routes_send_custom_endpoints_through_detect() {
 		assert_eq!(classify_route("/v1/ocr"), Some(llm::RouteType::Detect));
-		assert_eq!(
-			classify_route("/v1/systemone"),
-			Some(llm::RouteType::Detect)
-		);
 	}
 
 	#[test]

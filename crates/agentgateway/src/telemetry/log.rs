@@ -1389,7 +1389,7 @@ fn gen_ai_operation_name(input_format: InputFormat) -> &'static str {
 		// These operations have no standard GenAI operation name. Keep the custom values bounded.
 		InputFormat::Realtime => "realtime",
 		InputFormat::Rerank => "rerank",
-		InputFormat::Decisions => "decisions",
+		InputFormat::Decisions | InputFormat::SystemOne => "decisions",
 		InputFormat::CountTokens | InputFormat::GeminiCountTokens => "count_tokens",
 		// Detection has not identified the operation; do not assume it is chat.
 		InputFormat::Detect => "unknown",

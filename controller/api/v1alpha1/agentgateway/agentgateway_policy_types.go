@@ -2418,6 +2418,9 @@ const (
 
 	// RouteTypeDecisions processes OpenAI `/v1/decisions` format requests.
 	RouteTypeDecisions RouteType = "Decisions"
+
+	// RouteTypeSystemOne processes TypeSafe `/v1/systemone` format requests.
+	RouteTypeSystemOne RouteType = "SystemOne"
 )
 
 // +kubebuilder:validation:AtLeastOneFieldSet

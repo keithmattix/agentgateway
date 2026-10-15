@@ -2830,6 +2830,7 @@ async fn make_backend_call(
 				| RouteType::Embeddings
 				| RouteType::Rerank
 				| RouteType::Decisions
+				| RouteType::SystemOne
 				| RouteType::Detect => {
 					let request_body_limit = crate::http::buffer_limit(&req);
 					let req = req.map(|b| {
@@ -2885,6 +2886,15 @@ async fn make_backend_call(
 						.await
 						.map_err(ProxyError::AIRequest)?,
 						RouteType::Decisions => Box::pin(llm.provider.process_decisions_request(
+							&backend_info,
+							llm_request_policies.llm.as_deref(),
+							req,
+							llm.tokenize,
+							&mut log,
+						))
+						.await
+						.map_err(ProxyError::AIRequest)?,
+						RouteType::SystemOne => Box::pin(llm.provider.process_systemone_request(
 							&backend_info,
 							llm_request_policies.llm.as_deref(),
 							req,
@@ -3003,8 +3013,7 @@ async fn make_backend_call(
 					log.add(|l| l.llm_request = Some(llm_request.clone()));
 					(req, response_policies, Some(llm_request))
 				},
-				// SystemOne is only an upstream route.
-				RouteType::Models | RouteType::SystemOne => {
+				RouteType::Models => {
 					return Ok(
 						::http::Response::builder()
 							.status(::http::StatusCode::NOT_IMPLEMENTED)

@@ -263,8 +263,8 @@ impl ProviderFormat {
 			Self::GeminiCountTokens => InputFormat::GeminiCountTokens,
 			Self::Realtime => InputFormat::Realtime,
 			Self::Rerank => InputFormat::Rerank,
-			// SystemOne serves decisions requests.
-			Self::Decisions | Self::SystemOne => InputFormat::Decisions,
+			Self::Decisions => InputFormat::Decisions,
+			Self::SystemOne => InputFormat::SystemOne,
 		}
 	}
 

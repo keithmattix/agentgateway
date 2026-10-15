@@ -1570,6 +1570,8 @@ message BackendPolicySpec {
       GEMINI_COUNT_TOKENS = 12;
       // Processes OpenAI /v1/decisions format requests
       DECISIONS = 13;
+      // Processes TypeSafe /v1/systemone format requests
+      SYSTEM_ONE = 14;
     }
 
     // Routes defines how to identify the type of LLM request to handle.

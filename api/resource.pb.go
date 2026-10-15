@@ -1846,6 +1846,8 @@ const (
 	BackendPolicySpec_Ai_GEMINI_COUNT_TOKENS BackendPolicySpec_Ai_RouteType = 12
 	// Processes OpenAI /v1/decisions format requests
 	BackendPolicySpec_Ai_DECISIONS BackendPolicySpec_Ai_RouteType = 13
+	// Processes TypeSafe /v1/systemone format requests
+	BackendPolicySpec_Ai_SYSTEM_ONE BackendPolicySpec_Ai_RouteType = 14
 )
 
 // Enum value maps for BackendPolicySpec_Ai_RouteType.
@@ -1865,6 +1867,7 @@ var (
 		11: "GENERATE_CONTENT",
 		12: "GEMINI_COUNT_TOKENS",
 		13: "DECISIONS",
+		14: "SYSTEM_ONE",
 	}
 	BackendPolicySpec_Ai_RouteType_value = map[string]int32{
 		"UNSPECIFIED":           0,
@@ -1881,6 +1884,7 @@ var (
 		"GENERATE_CONTENT":      11,
 		"GEMINI_COUNT_TOKENS":   12,
 		"DECISIONS":             13,
+		"SYSTEM_ONE":            14,
 	}
 )
 
@@ -19383,7 +19387,7 @@ const file_resource_proto_rawDesc = "" +
 	"\vPolicyPhase\x12\t\n" +
 	"\x05ROUTE\x10\x00\x12\v\n" +
 	"\aGATEWAY\x10\x01B\x06\n" +
-	"\x04kind\"\xbco\n" +
+	"\x04kind\"\xcco\n" +
 	"\x11BackendPolicySpec\x12D\n" +
 	"\x03a2a\x18\x01 \x01(\v20.agentgateway.dev.resource.BackendPolicySpec.A2aH\x00R\x03a2a\x12l\n" +
 	"\x11inference_routing\x18\x02 \x01(\v2=.agentgateway.dev.resource.BackendPolicySpec.InferenceRoutingH\x00R\x10inferenceRouting\x12Z\n" +
@@ -19409,7 +19413,7 @@ const file_resource_proto_rawDesc = "" +
 	"\rauthorization\x18\x13 \x01(\v21.agentgateway.dev.resource.TrafficPolicySpec.RBACH\x00R\rauthorization\x12i\n" +
 	"\x10session_affinity\x18\x14 \x01(\v2<.agentgateway.dev.resource.BackendPolicySpec.SessionAffinityH\x00R\x0fsessionAffinity\x12H\n" +
 	"\vurl_rewrite\x18\x15 \x01(\v2%.agentgateway.dev.resource.UrlRewriteH\x00R\n" +
-	"urlRewrite\x1a\xff9\n" +
+	"urlRewrite\x1a\x8f:\n" +
 	"\x02Ai\x12^\n" +
 	"\fprompt_guard\x18\x01 \x01(\v2;.agentgateway.dev.resource.BackendPolicySpec.Ai.PromptGuardR\vpromptGuard\x12Y\n" +
 	"\bdefaults\x18\x02 \x03(\v2=.agentgateway.dev.resource.BackendPolicySpec.Ai.DefaultsEntryR\bdefaults\x12\\\n" +
@@ -19574,7 +19578,7 @@ const file_resource_proto_rawDesc = "" +
 	"\x1bCONTENT_SCOPE_SYSTEM_PROMPT\x10\x01\x12\x1a\n" +
 	"\x16CONTENT_SCOPE_MESSAGES\x10\x02\x12\x1d\n" +
 	"\x19CONTENT_SCOPE_TOOL_OUTPUT\x10\x03\x12\x1c\n" +
-	"\x18CONTENT_SCOPE_TOOL_INPUT\x10\x04\"\xf6\x01\n" +
+	"\x18CONTENT_SCOPE_TOOL_INPUT\x10\x04\"\x86\x02\n" +
 	"\tRouteType\x12\x0f\n" +
 	"\vUNSPECIFIED\x10\x00\x12\x0f\n" +
 	"\vCOMPLETIONS\x10\x01\x12\f\n" +
@@ -19594,7 +19598,9 @@ const file_resource_proto_rawDesc = "" +
 	"\x12\x14\n" +
 	"\x10GENERATE_CONTENT\x10\v\x12\x17\n" +
 	"\x13GEMINI_COUNT_TOKENS\x10\f\x12\r\n" +
-	"\tDECISIONS\x10\r\x1a\x05\n" +
+	"\tDECISIONS\x10\r\x12\x0e\n" +
+	"\n" +
+	"SYSTEM_ONE\x10\x0e\x1a\x05\n" +
 	"\x03A2a\x1a\x92\x02\n" +
 	"\x10InferenceRouting\x12T\n" +
 	"\x0fendpoint_picker\x18\x01 \x01(\v2+.agentgateway.dev.resource.BackendReferenceR\x0eendpointPicker\x12l\n" +

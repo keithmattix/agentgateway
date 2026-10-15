@@ -177,8 +177,7 @@ pub enum RouteType {
 	Rerank,
 	/// OpenAI /v1/decisions
 	Decisions,
-	/// TypeSafe /v1/systemone. Only used upstream, for translated decisions requests.
-	#[serde(skip)]
+	/// TypeSafe /v1/systemone
 	SystemOne,
 }
 
@@ -194,6 +193,7 @@ pub enum InputFormat {
 	Detect,
 	Rerank,
 	Decisions,
+	SystemOne,
 	/// Native Gemini generateContent body
 	Gemini,
 	/// Native Gemini countTokens body
@@ -217,6 +217,7 @@ impl InputFormat {
 			InputFormat::Messages => true,
 			InputFormat::Responses => true,
 			InputFormat::Decisions => false,
+			InputFormat::SystemOne => false,
 			InputFormat::Gemini => true,
 			InputFormat::Realtime => false,
 			InputFormat::Embeddings => false,
@@ -277,6 +278,7 @@ pub enum ProviderState {
 	},
 	VertexGemini,
 	SystemOneDecisions(Arc<conversion::systemone::from_decisions::State>),
+	DecisionsSystemOne(Arc<conversion::systemone::from_systemone::State>),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize)]
