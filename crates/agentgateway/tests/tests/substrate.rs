@@ -59,6 +59,8 @@ struct CredentialEgressHandler {
 	policy: Result<EgressPolicy, tonic::Status>,
 	state: ActorState,
 	mint_calls: Option<Arc<AtomicUsize>>,
+	mint_delay: Duration,
+	jwt_expiration_seconds: i64,
 }
 
 #[async_trait::async_trait]
@@ -106,12 +108,13 @@ impl ateapimock::Handler for CredentialEgressHandler {
 			("demo", "my-actor")
 		);
 		assert_eq!(request.audiences, ["https://api.example.com"]);
-		assert_eq!(request.expiration_seconds, 600);
+		assert_eq!(request.expiration_seconds, self.jwt_expiration_seconds);
 		self
 			.mint_calls
 			.as_ref()
 			.unwrap()
 			.fetch_add(1, Ordering::Relaxed);
+		tokio::time::sleep(self.mint_delay).await;
 		Ok(protos::ateapi::MintActorJwtResponse {
 			actor_jwt: "minted-actor-jwt".to_owned(),
 		})
@@ -749,8 +752,14 @@ async fn actor_ingress_rejections_match_substrate_contract() {
 	assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
 	assert_eq!(response.headers()["ate-error-reason"], "API_UNAVAILABLE");
 
+	let api = ateapimock::AteApiMock::new(|| RejectedResumeHandler {
+		status: tonic::Status::unavailable("resume unavailable"),
+		calls: Default::default(),
+	})
+	.spawn()
+	.await;
 	let response = actor_service_ingress_response(
-		UNREACHABLE_ADDR.parse().unwrap(),
+		api.address,
 		json!({
 			"budget": "100ms",
 			"max": 1,
@@ -1808,6 +1817,8 @@ async fn substrate_egress_replaces_only_requested_credentials(
 	#[case] actor_jwt: bool,
 	#[values(ActorState::Running, ActorState::Resuming)] state: ActorState,
 ) {
+	let delayed_actor_jwt = actor_jwt && state == ActorState::Running;
+	let jwt_expiration_seconds = if delayed_actor_jwt { 3 } else { 600 };
 	let (upstream, backend_tls) = if https {
 		let (upstream, certs) = tls_mock().await;
 		let tls: agentgateway::http::backendtls::BackendTLS =
@@ -1827,12 +1838,14 @@ async fn substrate_egress_replaces_only_requested_credentials(
 		replace_headers: vec![protos::ateapi::CredentialHeader {
 			header: "authorization".to_owned(),
 			prefix: "Bearer ".to_owned(),
-			credential_uri: (!actor_jwt)
-				.then(|| "ate-secret://kubernetes.io/default/upstream-token".to_owned())
-				.unwrap_or_default(),
+			credential_uri: if actor_jwt {
+				String::new()
+			} else {
+				"ate-secret://kubernetes.io/default/upstream-token".to_owned()
+			},
 			actor_jwt: actor_jwt.then_some(protos::ateapi::ActorJwtSource {
 				audiences: vec!["https://api.example.com".to_owned()],
-				expiration_seconds: 600,
+				expiration_seconds: jwt_expiration_seconds,
 			}),
 		}],
 	});
@@ -1891,6 +1904,12 @@ async fn substrate_egress_replaces_only_requested_credentials(
 			policy: Ok(policy.clone()),
 			state,
 			mint_calls: actor_jwt.then(|| mint_calls.clone()),
+			mint_delay: if delayed_actor_jwt {
+				Duration::from_millis(1500)
+			} else {
+				Duration::ZERO
+			},
+			jwt_expiration_seconds,
 		}
 	})
 	.spawn()
@@ -2021,8 +2040,17 @@ async fn substrate_egress_replaces_only_requested_credentials(
 		mint_calls.load(Ordering::Relaxed),
 		usize::from(placeholder && actor_jwt)
 	);
+	if delayed_actor_jwt {
+		tokio::time::sleep(Duration::from_millis(700)).await;
+		let io = open_actor_egress_tunnel(&gateway, port).await;
+		exchange(io, &request).await;
+		assert_eq!(mint_calls.load(Ordering::Relaxed), 2);
+	}
 	let upstream_requests = upstream.received_requests().await.unwrap();
-	assert_eq!(upstream_requests.len(), 1);
+	assert_eq!(
+		upstream_requests.len(),
+		if delayed_actor_jwt { 2 } else { 1 }
+	);
 	assert_eq!(
 		upstream_requests[0]
 			.headers
@@ -2055,6 +2083,8 @@ async fn substrate_tls_gateway(
 		policy: policy.clone(),
 		state,
 		mint_calls: None,
+		mint_delay: Duration::ZERO,
+		jwt_expiration_seconds: 600,
 	})
 	.spawn()
 	.await;
@@ -2878,6 +2908,8 @@ async fn substrate_egress_propagates_trace_context_to_policy_and_credential_call
 					policy: Ok(policy.clone()),
 					state: ActorState::Running,
 					mint_calls: None,
+					mint_delay: Duration::ZERO,
+					jwt_expiration_seconds: 600,
 				},
 				seen.clone(),
 			)

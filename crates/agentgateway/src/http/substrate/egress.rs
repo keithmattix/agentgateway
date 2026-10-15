@@ -243,6 +243,7 @@ impl SubstrateEgress {
 			"/ateapi.Control/MintActorJwt",
 		);
 		let mut control = protos::ateapi::control_client::ControlClient::new(channel);
+		let requested_at = Instant::now();
 		let response = control.mint_actor_jwt(request).await;
 		if let Some(span) = span.as_deref_mut() {
 			span.record_grpc_result(&response);
@@ -250,9 +251,7 @@ impl SubstrateEgress {
 		drop(span);
 		let response = response.map_err(actor_jwt_error)?.into_inner();
 		let jwt = credential_secret(response.actor_jwt.into_bytes())?;
-		self
-			.credential_cache
-			.insert(key, jwt.clone(), Instant::now());
+		self.credential_cache.insert(key, jwt.clone(), requested_at);
 		Ok(jwt)
 	}
 
