@@ -28,6 +28,7 @@ import {
 } from '@/config';
 import { useStickyQueryParam } from '@/drawerRouteState';
 import { useDeleteConfigResource, useMcpConfigData, useUpsertConfigResource } from '@/hooks';
+import { BackendPoliciesField } from '@/policies/PolicyFormControls';
 import { PolicySection } from '@/policies/PolicyLayout';
 import { parseYamlText, toYamlMappingText } from '@/policies/policyUtils';
 import { type SchemaHelp, useSchemaHelp } from '@/schemaHelp';
@@ -553,7 +554,8 @@ function formFrom(target: McpTarget) {
 		envText: toYamlMappingText(stdio?.env),
 		clearEnv: Boolean(stdio?.clear_env),
 		schemaMode,
-		schemaValue: schemaSourceValue(schema, schemaMode)
+		schemaValue: schemaSourceValue(schema, schemaMode),
+		policies: target.policies
 	};
 }
 
@@ -570,9 +572,28 @@ function McpServerEditor(props: {
 }) {
 	const [form, setForm] = useState(() => formFrom(props.initial));
 	const [initialForm] = useState(form);
-	const { source, name, kind, url, cmd, args, envText, clearEnv, schemaMode, schemaValue } = form;
+	const {
+		source,
+		name,
+		kind,
+		url,
+		cmd,
+		args,
+		envText,
+		clearEnv,
+		schemaMode,
+		schemaValue,
+		policies
+	} = form;
 	const network = networkTarget(source);
 	const [error, setError] = useState<string | null>(null);
+	// A target naming a backend takes that backend's policies; editing the URL
+	// connects it directly instead.
+	const backendReference =
+		network && 'backend' in network && url.trim() === networkUrl(network, targetKind(source))
+			? String(network.backend)
+			: null;
+
 	const merged = useMergedEdits(
 		props.previousName ? props.initial : undefined,
 		safeTargetPreview(),
@@ -583,7 +604,8 @@ function McpServerEditor(props: {
 		const base = {
 			...source,
 			name: name.trim(),
-			policies: source.policies
+			// The gateway rejects target policies on stdio and backend references.
+			policies: kind === 'stdio' || backendReference ? undefined : policies
 		} as McpTarget;
 		delete (base as Record<string, unknown>).mcp;
 		delete (base as Record<string, unknown>).sse;
@@ -863,6 +885,13 @@ function McpServerEditor(props: {
 							)}
 						</>
 					) : null}
+					{backendReference ? null : (
+						<BackendPoliciesField
+							help={props.help}
+							value={policies}
+							onChange={value => update({ policies: value as McpTarget['policies'] })}
+						/>
+					)}
 				</>
 			)}
 			{error ? (
