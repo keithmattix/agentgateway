@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { LostFieldsWarning, useMergedEdits } from '@/components/EditorContracts';
 import { EnumSelector } from '@/components/EnumSelector';
 import { MiniMonacoEditor } from '@/components/MiniMonacoEditor';
-import { Field, FieldGroup, StatusBanner } from '@/components/Primitives';
+import { Field, FieldGroup } from '@/components/Primitives';
 import type { LocalOidcConfig } from '@/gateway-config';
 import { ListEditor } from '@/policies/ListEditor';
 import { PolicySection } from '@/policies/PolicyLayout';
@@ -20,10 +20,6 @@ type SourceDraft = {
 	mode: SourceMode;
 	value: string;
 };
-
-type OidcFieldErrors = Partial<
-	Record<'discovery' | 'authorizationEndpoint' | 'tokenEndpoint' | 'jwks', string>
->;
 
 const providerModes: Array<{
 	value: ProviderMode;
@@ -106,8 +102,6 @@ export function OidcPolicyEditor(props: {
 		props.oidc?.tokenEndpointAuth ?? 'clientSecretBasic'
 	);
 	const [jwks, setJwks] = useState<SourceDraft>(() => sourceFrom(props.oidc?.jwks, 'url'));
-	const [fieldErrors, setFieldErrors] = useState<OidcFieldErrors>({});
-	const [error, setError] = useState<string | null>(null);
 
 	const preview = buildOidcPolicy();
 	const merged = useMergedEdits(props.oidc, preview);
@@ -128,29 +122,7 @@ export function OidcPolicyEditor(props: {
 	}
 
 	function save() {
-		setError(null);
-		const validationErrors = validateOidcPolicy();
-		setFieldErrors(validationErrors);
-		if (Object.keys(validationErrors).length) {
-			setError('Fix the highlighted fields before saving.');
-			return;
-		}
 		props.onSave(merged.value);
-	}
-
-	function validateOidcPolicy() {
-		const errors: OidcFieldErrors = {};
-		if (providerMode === 'discovery') {
-			const discoveryError = validateSource(discovery, false);
-			if (discoveryError) errors.discovery = discoveryError;
-		} else {
-			if (!authorizationEndpoint.trim())
-				errors.authorizationEndpoint = 'Authorization endpoint is required.';
-			if (!tokenEndpoint.trim()) errors.tokenEndpoint = 'Token endpoint is required.';
-			const jwksError = validateSource(jwks, true);
-			if (jwksError) errors.jwks = jwksError;
-		}
-		return errors;
 	}
 
 	return (
@@ -213,10 +185,7 @@ export function OidcPolicyEditor(props: {
 								className={providerMode === mode.value ? 'option-card active' : 'option-card'}
 								type="button"
 								key={mode.value}
-								onClick={() => {
-									setProviderMode(mode.value);
-									clearProviderErrors();
-								}}
+								onClick={() => setProviderMode(mode.value)}
 							>
 								<strong>{mode.label}</strong>
 								<span>{mode.description}</span>
@@ -230,12 +199,9 @@ export function OidcPolicyEditor(props: {
 						label="Discovery override"
 						tooltip={props.help.field<LocalOidcConfig>('LocalOidcConfig', 'discovery')}
 						value={discovery}
-						fieldError={fieldErrors.discovery}
+						missing={discovery.mode === 'none' ? undefined : !discovery.value.trim()}
 						optionalText="Default: issuer + /.well-known/openid-configuration"
-						onChange={value => {
-							setDiscovery(value);
-							clearFieldError('discovery');
-						}}
+						onChange={setDiscovery}
 					/>
 				) : (
 					<>
@@ -245,32 +211,22 @@ export function OidcPolicyEditor(props: {
 								'LocalOidcConfig',
 								'authorizationEndpoint'
 							)}
-							className={fieldErrors.authorizationEndpoint ? 'invalid' : undefined}
-							hint={fieldErrors.authorizationEndpoint}
+							missing={!authorizationEndpoint.trim()}
 						>
 							<input
 								value={authorizationEndpoint}
-								aria-invalid={Boolean(fieldErrors.authorizationEndpoint)}
-								onChange={event => {
-									setAuthorizationEndpoint(event.target.value);
-									clearFieldError('authorizationEndpoint');
-								}}
+								onChange={event => setAuthorizationEndpoint(event.target.value)}
 								placeholder="https://issuer.example.com/oauth2/v1/authorize"
 							/>
 						</Field>
 						<Field
 							label="Token endpoint"
 							tooltip={props.help.field<LocalOidcConfig>('LocalOidcConfig', 'tokenEndpoint')}
-							className={fieldErrors.tokenEndpoint ? 'invalid' : undefined}
-							hint={fieldErrors.tokenEndpoint}
+							missing={!tokenEndpoint.trim()}
 						>
 							<input
 								value={tokenEndpoint}
-								aria-invalid={Boolean(fieldErrors.tokenEndpoint)}
-								onChange={event => {
-									setTokenEndpoint(event.target.value);
-									clearFieldError('tokenEndpoint');
-								}}
+								onChange={event => setTokenEndpoint(event.target.value)}
 								placeholder="https://issuer.example.com/oauth2/v1/token"
 							/>
 						</Field>
@@ -289,11 +245,8 @@ export function OidcPolicyEditor(props: {
 							label="JWKS"
 							tooltip={props.help.field<LocalOidcConfig>('LocalOidcConfig', 'jwks')}
 							value={jwks}
-							fieldError={fieldErrors.jwks}
-							onChange={value => {
-								setJwks(value);
-								clearFieldError('jwks');
-							}}
+							missing={!sourceToConfig(jwks)}
+							onChange={setJwks}
 						/>
 					</>
 				)}
@@ -364,43 +317,16 @@ export function OidcPolicyEditor(props: {
 					onChange={setScopes}
 				/>
 			</PolicySection>
-
-			{error ? (
-				<StatusBanner state="bad" title="Invalid OIDC policy">
-					{error}
-				</StatusBanner>
-			) : null}
 		</form>
 	);
-
-	function clearFieldError(field: keyof OidcFieldErrors) {
-		setFieldErrors(current => {
-			if (!current[field]) return current;
-			const next = { ...current };
-			delete next[field];
-			return next;
-		});
-		setError(null);
-	}
-
-	function clearProviderErrors() {
-		setFieldErrors(current => {
-			const next = { ...current };
-			delete next.discovery;
-			delete next.authorizationEndpoint;
-			delete next.tokenEndpoint;
-			delete next.jwks;
-			return next;
-		});
-		setError(null);
-	}
 }
 
 function SourceEditor(props: {
 	label: string;
 	value: SourceDraft;
 	onChange: (value: SourceDraft) => void;
-	fieldError?: string;
+	// As for Field.
+	missing?: boolean;
 	tooltip?: string;
 	optionalText?: string;
 }) {
@@ -413,8 +339,8 @@ function SourceEditor(props: {
 				: '{\n  "keys": []\n}';
 
 	return (
-		<FieldGroup label={props.label} tooltip={props.tooltip}>
-			<div className={props.fieldError ? 'oidc-source invalid' : 'oidc-source'}>
+		<FieldGroup label={props.label} tooltip={props.tooltip} missing={props.missing}>
+			<div className="oidc-source">
 				<EnumSelector
 					value={activeMode}
 					ariaLabel={props.label}
@@ -432,19 +358,16 @@ function SourceEditor(props: {
 					<MiniMonacoEditor
 						language="json"
 						value={props.value.value}
-						invalid={Boolean(props.fieldError)}
 						onChange={value => props.onChange({ ...props.value, value })}
 						placeholder={placeholder}
 					/>
 				) : (
 					<input
 						value={props.value.value}
-						aria-invalid={Boolean(props.fieldError)}
 						onChange={event => props.onChange({ ...props.value, value: event.target.value })}
 						placeholder={placeholder}
 					/>
 				)}
-				{props.fieldError ? <small>{props.fieldError}</small> : null}
 			</div>
 		</FieldGroup>
 	);
@@ -463,10 +386,4 @@ function sourceToConfig(source: SourceDraft) {
 	if (source.mode === 'url') return { url: value };
 	if (source.mode === 'file') return { file: value };
 	return value;
-}
-
-function validateSource(source: SourceDraft, required: boolean) {
-	if (source.mode === 'none') return required ? 'Source is required.' : undefined;
-	if (!source.value.trim()) return 'Value is required.';
-	return undefined;
 }

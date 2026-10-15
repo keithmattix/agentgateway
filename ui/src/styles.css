@@ -1948,19 +1948,6 @@ details summary {
 	gap: 10px;
 }
 
-.oidc-source.invalid input,
-.oidc-source.invalid textarea,
-.oidc-source.invalid .custom-select-trigger {
-	border-color: color-mix(in srgb, var(--bad) 70%, var(--line));
-	background: color-mix(in srgb, var(--bad-bg) 48%, var(--surface));
-}
-
-.oidc-source > small {
-	color: var(--bad);
-	font-size: 12px;
-	font-weight: 600;
-}
-
 .authz-rule-toolbar {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) auto;
