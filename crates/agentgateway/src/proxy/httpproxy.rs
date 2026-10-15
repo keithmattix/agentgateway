@@ -419,20 +419,13 @@ async fn apply_backend_policies(
 		transformation,
 		// Applied during service endpoint selection
 		session_affinity: _,
-		// Applied elsewhere
-		request_mirror: _,
+		request_mirror,
 		// Applied elsewhere
 		override_dest: _,
 		// Applied elsewhere
 		health: _,
 	} = &*backend_call.backend_policies;
 	rp.backend_response_header = response_header_modifier.as_response_policy();
-
-	let dh = backend::HTTP::default();
-	http
-		.as_ref()
-		.unwrap_or(&dh)
-		.apply(req, backend_call.http_version_override);
 
 	let _ = authorization
 		.apply("backend authorization", &client, log, req, rp.headers())
@@ -481,6 +474,17 @@ async fn apply_backend_policies(
 		}
 		rp.a2a_type = a2a_type;
 	}
+
+	// Mirror once per request (not per retry). Backend HTTP settings apply only to the primary call.
+	if log.as_ref().is_some_and(|l| l.retry_attempt.is_none()) {
+		spawn_mirrors(&backend_info.inputs, &client, request_mirror, req);
+	}
+
+	let dh = backend::HTTP::default();
+	http
+		.as_ref()
+		.unwrap_or(&dh)
+		.apply(req, backend_call.http_version_override);
 
 	crate::http::mark_sensitive_headers(req, &client.inputs.cfg.sensitive_headers);
 	Ok(())
@@ -1150,32 +1154,18 @@ impl HTTPProxy {
 				.snapshot_on_err(log, &mut req);
 		}
 
+		// Backend mirrors are sent from apply_backend_policies, after backend authorization.
 		let route_request_mirrors = route_policies.request_mirror.select("request mirror", &req);
+		spawn_mirrors(
+			&inputs,
+			&self.policy_client(),
+			route_request_mirrors
+				.iter()
+				.flat_map(|mirrors| mirrors.iter()),
+			&req,
+		);
 		let route_llm = route_policies.llm.select("llm", &req);
 		let (head, body) = req.into_parts();
-		for mirror in route_request_mirrors
-			.iter()
-			.flat_map(|mirrors| mirrors.iter())
-			.chain(backend_policies.request_mirror.iter())
-		{
-			if !rand::rng().random_bool(mirror.percentage) {
-				trace!(
-					"skipping mirror, percentage {} not triggered",
-					mirror.percentage
-				);
-				continue;
-			}
-			// TODO: mirror the body. For now, we just ignore the body
-			let req = Request::from_parts(head.clone(), http::Body::empty());
-			let inputs = inputs.clone();
-			let policy_client = self.policy_client();
-			let mirror = mirror.clone();
-			tokio::task::spawn(async move {
-				if let Err(e) = send_mirror(inputs, policy_client, mirror, req).await {
-					warn!("error sending mirror request: {}", e);
-				}
-			});
-		}
 		const MAX_BUFFERED_BYTES: usize = 64 * 1024;
 		let retries = route_retry;
 
@@ -4541,6 +4531,38 @@ pub fn parse_grpc_status(headers: &HeaderMap) -> Option<u8> {
 		.get("grpc-status")
 		.and_then(|status| std::str::from_utf8(status.as_bytes()).ok())
 		.and_then(|status| status.parse().ok())
+}
+
+fn spawn_mirrors<'a>(
+	inputs: &Arc<ProxyInputs>,
+	client: &PolicyClient,
+	mirrors: impl IntoIterator<Item = &'a filters::RequestMirror>,
+	req: &Request,
+) {
+	for mirror in mirrors {
+		if !rand::rng().random_bool(mirror.percentage) {
+			trace!(
+				"skipping mirror, percentage {} not triggered",
+				mirror.percentage
+			);
+			continue;
+		}
+		// TODO: mirror the body. For now, we just ignore the body
+		let mut mirror_req = Request::new(http::Body::empty());
+		*mirror_req.method_mut() = req.method().clone();
+		*mirror_req.uri_mut() = req.uri().clone();
+		*mirror_req.version_mut() = req.version();
+		*mirror_req.headers_mut() = req.headers().clone();
+		*mirror_req.extensions_mut() = req.extensions().clone();
+		let inputs = inputs.clone();
+		let client = client.clone();
+		let mirror = mirror.clone();
+		tokio::task::spawn(async move {
+			if let Err(e) = send_mirror(inputs, client, mirror, mirror_req).await {
+				warn!("error sending mirror request: {}", e);
+			}
+		});
+	}
 }
 
 async fn send_mirror(
