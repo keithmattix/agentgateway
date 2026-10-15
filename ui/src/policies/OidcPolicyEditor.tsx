@@ -9,7 +9,6 @@ import type { LocalOidcConfig } from '@/gateway-config';
 import { ListEditor } from '@/policies/ListEditor';
 import { PolicySection } from '@/policies/PolicyLayout';
 import { cleanEmpty, isRecord } from '@/policies/policyUtils';
-import { ResultingYaml } from '@/policies/ResultingYaml';
 import type { OidcDraft } from '@/policies/types';
 import type { SchemaHelp } from '@/schemaHelp';
 
@@ -401,8 +400,6 @@ export function OidcPolicyEditor(props: {
 					onChange={setScopes}
 				/>
 			</PolicySection>
-
-			<ResultingYaml value={merged.value} />
 
 			{error ? (
 				<StatusBanner state="bad" title="Invalid OIDC policy">

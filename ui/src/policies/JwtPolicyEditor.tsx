@@ -1,7 +1,7 @@
 import { DatabaseZap, FileKey2, Globe2, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 
-import { LostFieldsWarning, useMergedEdits } from '@/components/EditorContracts';
+import { LostFieldsWarning, UnsupportedInForm, useMergedEdits } from '@/components/EditorContracts';
 import { MiniMonacoEditor } from '@/components/MiniMonacoEditor';
 import { Field, FieldGroup, StatusBanner } from '@/components/Primitives';
 import type { JWTValidationOptions, LocalJwtConfig } from '@/gateway-config';
@@ -13,7 +13,6 @@ import {
 import { ListEditor } from '@/policies/ListEditor';
 import { PolicySection } from '@/policies/PolicyLayout';
 import { cleanEmpty, toText } from '@/policies/policyUtils';
-import { ResultingYaml } from '@/policies/ResultingYaml';
 import type { JwtPolicy } from '@/policies/types';
 import type { SchemaHelp } from '@/schemaHelp';
 
@@ -112,8 +111,12 @@ export function JwtPolicyEditor(props: {
 	const [fieldErrors, setFieldErrors] = useState<JwtFieldErrors>({});
 	const [error, setError] = useState<string | null>(null);
 
-	const preview = safeBuildJwtPolicy();
+	const preview = buildJwtPolicy();
 	const merged = useMergedEdits(props.jwt, preview);
+
+	if (props.jwt && 'providers' in props.jwt) {
+		return <UnsupportedInForm supports="a single issuer" />;
+	}
 
 	function buildJwtPolicy() {
 		return {
@@ -133,19 +136,7 @@ export function JwtPolicyEditor(props: {
 	function buildJwks() {
 		if (jwksMode === 'file') return jwksFile.trim() ? { file: jwksFile.trim() } : undefined;
 		if (jwksMode === 'url') return jwksUrl.trim() ? { url: jwksUrl.trim() } : undefined;
-		if (!jwksInline.trim()) return undefined;
-		JSON.parse(jwksInline);
-		return jwksInline;
-	}
-
-	function safeBuildJwtPolicy() {
-		try {
-			return buildJwtPolicy();
-		} catch {
-			return {
-				error: 'Inline JWKS must be valid JSON before it can be saved.'
-			};
-		}
+		return jwksInline.trim() ? jwksInline : undefined;
 	}
 
 	function save() {
@@ -157,7 +148,7 @@ export function JwtPolicyEditor(props: {
 				setError('Fix the highlighted fields before saving.');
 				return;
 			}
-			props.onSave(merged.value as JwtPolicy);
+			props.onSave(merged.value);
 		} catch (err) {
 			setError(err instanceof Error ? err.message : 'Invalid JWT policy');
 		}
@@ -354,8 +345,6 @@ export function JwtPolicyEditor(props: {
 				description="Override where this policy reads the JWT from."
 				onChange={setLocation}
 			/>
-
-			<ResultingYaml value={merged.value} />
 
 			{error ? (
 				<StatusBanner state="bad" title="Invalid JWT policy">

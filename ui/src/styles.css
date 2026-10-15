@@ -883,6 +883,20 @@ td.row-actions > * + * {
 	color: var(--bad);
 }
 
+.drawer-footer-actions {
+	display: contents;
+	min-width: 0;
+	margin: 0;
+	border: 0;
+	padding: 0;
+}
+
+.icon-button.active {
+	border-color: var(--primary);
+	background: var(--accent-soft);
+	color: var(--primary);
+}
+
 .field-label svg {
 	color: var(--muted);
 }
@@ -4837,28 +4851,6 @@ textarea {
 	gap: 10px;
 }
 
-.route-backend-row.readonly {
-	align-items: center;
-}
-
-.route-backend-row.readonly > div {
-	display: flex;
-	min-width: 0;
-	flex-direction: column;
-	gap: 2px;
-}
-
-.route-backend-row.readonly strong {
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-
-.route-backend-row.readonly span {
-	color: var(--muted);
-	font-size: 12px;
-}
-
 .route-backend-inputs {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) minmax(90px, 120px);
@@ -5533,13 +5525,6 @@ textarea {
 
 .traffic-policy-list-item .badge {
 	justify-self: end;
-}
-
-.traffic-policy-editor-topbar {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 10px;
 }
 
 .traffic-policy-drawer-stack .button.primary {

@@ -534,6 +534,29 @@ function McpSettings(props: {
 	);
 }
 
+type McpServerForm = ReturnType<typeof formFrom>;
+
+// The form state for a target: from the saved config, or from raw mode.
+function formFrom(target: McpTarget) {
+	const kind = targetKind(target);
+	const stdio = 'stdio' in target ? target.stdio : undefined;
+	const schema = 'openapi' in target ? target.openapi?.schema : undefined;
+	const schemaMode = schemaSourceMode(schema);
+	return {
+		// The target itself, for the fields the form does not edit.
+		source: target,
+		name: target.name ?? '',
+		kind,
+		url: networkUrl(networkTarget(target), kind),
+		cmd: stdio?.cmd ?? '',
+		args: (stdio?.args ?? []).join(' '),
+		envText: toYamlMappingText(stdio?.env),
+		clearEnv: Boolean(stdio?.clear_env),
+		schemaMode,
+		schemaValue: schemaSourceValue(schema, schemaMode)
+	};
+}
+
 function McpServerEditor(props: {
 	initial: McpTarget;
 	config?: GatewayConfig | null;
@@ -545,35 +568,11 @@ function McpServerEditor(props: {
 	onCancel: () => void;
 	onSave: (target: McpTarget, previousName?: string) => void;
 }) {
-	const [name, setName] = useState(props.initial.name);
-	const [kind, setKind] = useState<McpTargetKind>(() => targetKind(props.initial));
-	const network = networkTarget(props.initial);
-	const stdio = 'stdio' in props.initial ? props.initial.stdio : undefined;
-	const initialSchema = 'openapi' in props.initial ? props.initial.openapi.schema : undefined;
-	const [url, setUrl] = useState(() => networkUrl(network, kind));
-	const [cmd, setCmd] = useState(stdio?.cmd ?? '');
-	const [args, setArgs] = useState((stdio?.args ?? []).join(' '));
-	const [envText, setEnvText] = useState(toYamlMappingText(stdio?.env));
-	const [clearEnv, setClearEnv] = useState(Boolean(stdio?.clear_env));
-	const [schemaMode, setSchemaMode] = useState<SchemaSourceMode>(() =>
-		schemaSourceMode(initialSchema)
-	);
-	const [schemaValue, setSchemaValue] = useState(() =>
-		schemaSourceValue(initialSchema, schemaMode)
-	);
+	const [form, setForm] = useState(() => formFrom(props.initial));
+	const [initialForm] = useState(form);
+	const { source, name, kind, url, cmd, args, envText, clearEnv, schemaMode, schemaValue } = form;
+	const network = networkTarget(source);
 	const [error, setError] = useState<string | null>(null);
-	const draft = JSON.stringify({
-		name,
-		kind,
-		url,
-		cmd,
-		args,
-		envText,
-		clearEnv,
-		schemaMode,
-		schemaValue
-	});
-	const [initialDraft] = useState(() => draft);
 	const merged = useMergedEdits(
 		props.previousName ? props.initial : undefined,
 		safeTargetPreview()
@@ -581,9 +580,9 @@ function McpServerEditor(props: {
 
 	function targetPreview() {
 		const base = {
-			...props.initial,
+			...source,
 			name: name.trim(),
-			policies: props.initial.policies
+			policies: source.policies
 		} as McpTarget;
 		delete (base as Record<string, unknown>).mcp;
 		delete (base as Record<string, unknown>).sse;
@@ -604,13 +603,17 @@ function McpServerEditor(props: {
 		// The URL field folds host, port, and path into one value. Until it is
 		// edited, emit the original address so an edit replaces all of them.
 		const target =
-			network && url.trim() === networkUrl(network, targetKind(props.initial))
+			network && url.trim() === networkUrl(network, targetKind(source))
 				? { ...network }
 				: { host: url.trim() || null };
 		if (kind === 'sse') return { ...base, sse: target };
 		if (kind === 'openapi')
 			return { ...base, openapi: { ...target, schema: schemaFromSource(schemaValue, schemaMode) } };
 		return { ...base, mcp: target };
+	}
+
+	function update(patch: Partial<McpServerForm>) {
+		setForm(current => ({ ...current, ...patch }));
 	}
 
 	function safeTargetPreview() {
@@ -640,7 +643,17 @@ function McpServerEditor(props: {
 		<Drawer
 			title={props.previousName ? 'Edit MCP server' : 'Add MCP server'}
 			onClose={props.onCancel}
-			dirty={draft !== initialDraft}
+			error={props.saveError}
+			raw={{
+				schemaPath: ['$defs', 'LocalMcpTarget'],
+				value: () => merged.value ?? undefined,
+				onChange: value => {
+					setForm(formFrom(value as McpTarget));
+					merged.reset(value);
+				},
+				empty: makeEmptyMcpTarget()
+			}}
+			dirty={JSON.stringify(form) !== JSON.stringify(initialForm)}
 			saving={props.saving}
 			footer={requestClose => (
 				<ConfigDiffSaveActions
@@ -680,7 +693,7 @@ function McpServerEditor(props: {
 				>
 					<input
 						value={name}
-						onChange={event => setName(event.target.value)}
+						onChange={event => update({ name: event.target.value })}
 						placeholder="weather"
 					/>
 				</Field>
@@ -694,11 +707,14 @@ function McpServerEditor(props: {
 						value,
 						label: transportLabel(value)
 					}))}
-					onChange={value => {
-						setKind(value);
-						if (!url.trim())
-							setUrl(value === 'sse' ? 'http://localhost:3001/sse' : 'http://localhost:3001/mcp');
-					}}
+					onChange={value =>
+						update({
+							kind: value,
+							url:
+								url.trim() ||
+								(value === 'sse' ? 'http://localhost:3001/sse' : 'http://localhost:3001/mcp')
+						})
+					}
 				/>
 			</FieldGroup>
 
@@ -712,7 +728,11 @@ function McpServerEditor(props: {
 							'Command to launch for command-line MCP servers.'
 						)}
 					>
-						<input value={cmd} onChange={event => setCmd(event.target.value)} placeholder="npx" />
+						<input
+							value={cmd}
+							onChange={event => update({ cmd: event.target.value })}
+							placeholder="npx"
+						/>
 					</Field>
 					<Field
 						label="Arguments"
@@ -724,7 +744,7 @@ function McpServerEditor(props: {
 					>
 						<input
 							value={args}
-							onChange={event => setArgs(event.target.value)}
+							onChange={event => update({ args: event.target.value })}
 							placeholder="-y @modelcontextprotocol/server-filesystem /tmp"
 						/>
 					</Field>
@@ -736,13 +756,17 @@ function McpServerEditor(props: {
 							'Environment variables set for the MCP server process.'
 						)}
 					>
-						<MiniMonacoEditor language="yaml" value={envText} onChange={setEnvText} />
+						<MiniMonacoEditor
+							language="yaml"
+							value={envText}
+							onChange={value => update({ envText: value })}
+						/>
 					</FieldGroup>
 					<label className="toggle-row">
 						<input
 							type="checkbox"
 							checked={clearEnv}
-							onChange={event => setClearEnv(event.target.checked)}
+							onChange={event => update({ clearEnv: event.target.checked })}
 						/>
 						Clear environment
 					</label>
@@ -773,7 +797,7 @@ function McpServerEditor(props: {
 					>
 						<input
 							value={url}
-							onChange={event => setUrl(event.target.value)}
+							onChange={event => update({ url: event.target.value })}
 							placeholder={
 								kind === 'sse' ? 'http://localhost:3001/sse' : 'http://localhost:3001/mcp'
 							}
@@ -797,7 +821,7 @@ function McpServerEditor(props: {
 										{ value: 'file', label: 'File' },
 										{ value: 'inline', label: 'Inline' }
 									]}
-									onChange={setSchemaMode}
+									onChange={value => update({ schemaMode: value })}
 								/>
 							</FieldGroup>
 							{schemaMode === 'inline' ? (
@@ -809,7 +833,11 @@ function McpServerEditor(props: {
 										'Inline OpenAPI schema document.'
 									)}
 								>
-									<MiniMonacoEditor language="yaml" value={schemaValue} onChange={setSchemaValue} />
+									<MiniMonacoEditor
+										language="yaml"
+										value={schemaValue}
+										onChange={value => update({ schemaValue: value })}
+									/>
 								</FieldGroup>
 							) : (
 								<Field
@@ -824,7 +852,7 @@ function McpServerEditor(props: {
 								>
 									<input
 										value={schemaValue}
-										onChange={event => setSchemaValue(event.target.value)}
+										onChange={event => update({ schemaValue: event.target.value })}
 										placeholder={
 											schemaMode === 'file'
 												? '/etc/agentgateway/openapi.yaml'
@@ -840,11 +868,6 @@ function McpServerEditor(props: {
 			{error ? (
 				<StatusBanner state="bad" title="Invalid server">
 					{error}
-				</StatusBanner>
-			) : null}
-			{props.saveError ? (
-				<StatusBanner state="bad" title="Save failed">
-					{props.saveError}
 				</StatusBanner>
 			) : null}
 		</Drawer>

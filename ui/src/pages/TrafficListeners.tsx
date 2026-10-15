@@ -15,8 +15,7 @@ import {
 	PageHeader,
 	Panel,
 	StatusBanner,
-	Tooltip,
-	YamlBlock
+	Tooltip
 } from '@/components/Primitives';
 import { useStickyQueryParam } from '@/drawerRouteState';
 import type { LocalTLSServerConfig } from '@/gateway-config';
@@ -483,10 +482,6 @@ function BindEditor(props: {
 					<input value={port} onChange={event => setPort(event.target.value)} />
 				</Field>
 			</div>
-			<details open>
-				<summary>Resulting YAML</summary>
-				<YamlBlock value={preview} />
-			</details>
 		</Drawer>
 	);
 }
@@ -531,6 +526,17 @@ function ListenerEditor(props: {
 		<Drawer
 			title={typeof props.editing.listenerIndex === 'number' ? 'Edit listener' : 'Add listener'}
 			onClose={props.onCancel}
+			raw={{
+				schemaPath: ['$defs', 'LocalListener'],
+				value: () => cleanListener(merged.value),
+				onChange: value => {
+					const next = value as TrafficListener;
+					setListener(next);
+					setCert(next.tls?.cert ?? '');
+					setKey(next.tls?.key ?? '');
+					merged.reset(next);
+				}
+			}}
 			dirty={draft !== initialDraft}
 			saving={props.saving}
 			footer={requestClose => (
@@ -639,10 +645,6 @@ function ListenerEditor(props: {
 				policies={listener.policies as Record<string, unknown> | null | undefined}
 				onChange={policies => setListener({ ...listener, policies })}
 			/>
-			<details open>
-				<summary>Resulting YAML</summary>
-				<YamlBlock value={cleanListener(merged.value)} />
-			</details>
 		</Drawer>
 	);
 }

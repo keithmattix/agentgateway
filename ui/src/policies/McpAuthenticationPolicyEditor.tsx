@@ -9,7 +9,6 @@ import type { LocalMcpAuthentication } from '@/gateway-config';
 import { ListEditor } from '@/policies/ListEditor';
 import { PolicySection } from '@/policies/PolicyLayout';
 import { cleanEmpty, parseYamlText, toYamlMappingText } from '@/policies/policyUtils';
-import { ResultingYaml } from '@/policies/ResultingYaml';
 import type { McpAuthenticationDraft } from '@/policies/types';
 import type { SchemaHelp } from '@/schemaHelp';
 
@@ -258,7 +257,6 @@ export function McpAuthenticationPolicyEditor(props: {
 				</FieldGroup>
 			</PolicySection>
 
-			<ResultingYaml value={merged.value} />
 			{error ? (
 				<StatusBanner state="bad" title="Invalid MCP authentication policy">
 					{error}

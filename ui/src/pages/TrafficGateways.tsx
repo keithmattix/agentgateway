@@ -15,8 +15,7 @@ import {
 	PageHeader,
 	Panel,
 	StatusBanner,
-	Tooltip,
-	YamlBlock
+	Tooltip
 } from '@/components/Primitives';
 import { isDatabaseConfigResource } from '@/config';
 import { useStickyQueryParam } from '@/drawerRouteState';
@@ -495,6 +494,18 @@ function GatewayEditor(props: {
 		<Drawer
 			title={props.initial.previousName ? 'Edit gateway' : 'Add gateway'}
 			onClose={props.onCancel}
+			raw={{
+				schemaPath: ['$defs', 'LocalGateway'],
+				value: () => saved,
+				onChange: value => {
+					const next = value as TrafficGateway;
+					setGateway(next);
+					setMultipleListeners(Boolean(next.listeners?.length));
+					setCert(next.tls?.cert ?? '');
+					setKey(next.tls?.key ?? '');
+					merged.reset(next);
+				}
+			}}
 			footer={
 				<ConfigDiffSaveActions
 					config={props.config}
@@ -680,11 +691,6 @@ function GatewayEditor(props: {
 					onChange={policies => setGateway({ ...withoutGatewayPolicies(gateway), ...policies })}
 				/>
 			) : null}
-
-			<details open>
-				<summary>Resulting YAML</summary>
-				<YamlBlock value={{ [name.trim() || 'gateway']: saved }} />
-			</details>
 		</Drawer>
 	);
 }
@@ -793,6 +799,17 @@ function GatewayListenerEditor(props: {
 		<Drawer
 			title={typeof props.editing.listenerIndex === 'number' ? 'Edit listener' : 'Add listener'}
 			onClose={props.onCancel}
+			raw={{
+				schemaPath: ['$defs', 'LocalGatewayListener'],
+				value: () => saved,
+				onChange: value => {
+					const next = value as TrafficGatewayListener;
+					setListener(next);
+					setCert(next.tls?.cert ?? '');
+					setKey(next.tls?.key ?? '');
+					merged.reset(next);
+				}
+			}}
 			footer={
 				<ConfigDiffSaveActions
 					config={props.config}
@@ -897,10 +914,6 @@ function GatewayListenerEditor(props: {
 					})
 				}
 			/>
-			<details open>
-				<summary>Resulting YAML</summary>
-				<YamlBlock value={saved} />
-			</details>
 		</Drawer>
 	);
 }

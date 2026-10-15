@@ -2,7 +2,8 @@ import { Trash2 } from 'lucide-react';
 import { useRef, useState } from 'react';
 
 import { ConfigDiffSaveActions, ConfigSaveButton } from '@/components/ConfigDiffDrawer';
-import { ConfirmDialog, Drawer, StatusBanner, Tooltip } from '@/components/Primitives';
+import { EditorValueContext } from '@/components/EditorContracts';
+import { ConfirmDialog, Drawer, type DrawerRaw, Tooltip } from '@/components/Primitives';
 import type { BackendAuth, LoggingPolicy, TracingConfig } from '@/gateway-config';
 import { takeHybridFileWriteOverride } from '@/hooks';
 import { AccessLogPolicyEditor } from '@/policies/AccessLogPolicyEditor';
@@ -81,10 +82,18 @@ export function PolicyDrawer(props: {
 			})
 		: undefined;
 
+	const policy = usePolicyRaw({
+		formId,
+		policyValue: props.policyValue,
+		schemaPath: ['$defs', props.schemaRoot ?? 'LocalLLMPolicy', 'properties', props.policyKey],
+		onSave: value => {
+			submittedValue.current = value;
+		}
+	});
+
 	function submitPolicyForm() {
 		submittedValue.current = undefined;
-		const form = document.getElementById(formId) as HTMLFormElement | null;
-		form?.requestSubmit();
+		policy.submit();
 		return submittedValue.current !== undefined;
 	}
 
@@ -93,6 +102,8 @@ export function PolicyDrawer(props: {
 			<Drawer
 				title={props.title}
 				onClose={props.onClose}
+				raw={props.customEditor ? policy.raw : undefined}
+				error={props.saveError}
 				headerActions={
 					enabled ? (
 						<ConfigSaveButton
@@ -125,7 +136,10 @@ export function PolicyDrawer(props: {
 						diffDisabled={enabled && !dirty}
 						resourceDiff={saveResourceDiff}
 						onSave={() => {
-							if (submitPolicyForm()) props.onSave(submittedValue.current);
+							if (!submitPolicyForm()) return;
+							// An emptied raw policy is no policy.
+							if (submittedValue.current === null) props.onDisable();
+							else props.onSave(submittedValue.current);
 						}}
 						beforeDiff={submitPolicyForm}
 						applyDiff={next => {
@@ -136,23 +150,21 @@ export function PolicyDrawer(props: {
 					/>
 				)}
 			>
-				<PolicyEditorBody
-					formId={formId}
-					policyKey={props.policyKey}
-					customEditor={props.customEditor}
-					policyValue={props.policyValue}
-					help={props.help}
-					saving={props.saving}
-					schemaRoot={props.schemaRoot}
-					onSave={value => {
-						submittedValue.current = value;
-					}}
-				/>
-				{props.saveError ? (
-					<StatusBanner state="bad" title="Save failed">
-						{props.saveError}
-					</StatusBanner>
-				) : null}
+				<EditorValueContext.Provider value={policy.report}>
+					<PolicyEditorBody
+						key={JSON.stringify(policy.value ?? null)}
+						formId={formId}
+						policyKey={props.policyKey}
+						customEditor={props.customEditor}
+						policyValue={policy.value}
+						help={props.help}
+						saving={props.saving}
+						schemaRoot={props.schemaRoot}
+						onSave={value => {
+							submittedValue.current = value;
+						}}
+					/>
+				</EditorValueContext.Provider>
 			</Drawer>
 			{confirmDelete ? (
 				<ConfirmDialog
@@ -203,13 +215,17 @@ export function PolicyEditorBody(props: {
 			/>
 		);
 	}
+	return <CustomPolicyEditor {...props} customEditor={props.customEditor} />;
+}
+
+function CustomPolicyEditor(
+	props: Parameters<typeof PolicyEditorBody>[0] & { customEditor: PolicyEditorKind }
+) {
 	const description = props.help.propertyDescription(props.schemaRoot ?? 'LocalLLMPolicy', [
 		props.policyKey
 	]);
-	// Remount when the value changes so editors reload their form state and
-	// edit baseline from it.
 	return (
-		<div className="policy-custom-editor" key={JSON.stringify(props.policyValue ?? null)}>
+		<div className="policy-custom-editor">
 			{description ? <p className="policy-schema-description">{description}</p> : null}
 			{props.customEditor === 'accessLog' ? (
 				<AccessLogPolicyEditor
@@ -333,6 +349,47 @@ export function PolicyEditorBody(props: {
 			)}
 		</div>
 	);
+}
+
+// Raw mode for a drawer showing PolicyEditorBody: its editor reports its value
+// (wrap the body in EditorValueContext with `report`), and raw edits reload the
+// editor (key the body on `value`).
+export function usePolicyRaw(props: {
+	formId: string;
+	policyValue: unknown;
+	schemaPath: string[];
+	onSave: (value: unknown) => void;
+}) {
+	const [value, setValue] = useState(props.policyValue);
+	const reported = useRef<{ value: unknown } | null>(null);
+	// No form: raw mode, or an editor that cannot show this value.
+	const form = () => document.getElementById(props.formId) as HTMLFormElement | null;
+
+	return {
+		value,
+		report(next: unknown) {
+			reported.current = { value: next };
+		},
+		// Saves through the editor's form (and its validation), or, without one, the value.
+		submit() {
+			const current = form();
+			if (current) current.requestSubmit();
+			else props.onSave(value);
+		},
+		raw: {
+			schemaPath: props.schemaPath,
+			value() {
+				if (!form() || !reported.current) return value;
+				const next = reported.current.value;
+				// The editor unmounts in raw mode; this is the value it reloads from.
+				// An invalid form stays as it is, since raw mode does not open.
+				if (next !== undefined) setValue(next);
+				return next;
+			},
+			onChange: setValue,
+			empty: null
+		} satisfies DrawerRaw
+	};
 }
 
 function sanitizePolicyFormId(value: string) {

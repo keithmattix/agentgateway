@@ -1,7 +1,7 @@
 import { Gauge, Send, Tags } from 'lucide-react';
 import { useState } from 'react';
 
-import { UnsupportedYamlFallback } from '@/components/EditorContracts';
+import { UnsupportedInForm, useReportEditorValue } from '@/components/EditorContracts';
 import { EnumSelector } from '@/components/EnumSelector';
 import { MiniMonacoEditor } from '@/components/MiniMonacoEditor';
 import { Field, FieldGroup } from '@/components/Primitives';
@@ -11,12 +11,10 @@ import {
 	hasUnsupportedTarget,
 	KeyValueEditor,
 	TargetEditor,
-	targetFrom,
-	unsupportedTargetLabel
+	targetFrom
 } from '@/policies/PolicyFormControls';
 import { PolicySection } from '@/policies/PolicyLayout';
 import { cleanEmpty } from '@/policies/policyUtils';
-import { ResultingYaml } from '@/policies/ResultingYaml';
 import type { SchemaHelp } from '@/schemaHelp';
 
 type Protocol = 'grpc' | 'http';
@@ -47,20 +45,6 @@ export function TracingPolicyEditor(props: {
 	const [resources, setResources] = useState(original?.resources ?? {});
 	const [remove, setRemove] = useState(original?.remove ?? []);
 
-	if (hasUnsupportedTarget(original)) {
-		return (
-			<UnsupportedYamlFallback
-				title="Unsupported target type"
-				value={original ?? {}}
-				schema={props.help.node(['$defs', 'TracingConfig'])}
-				help={props.help}
-			>
-				This policy uses a {unsupportedTargetLabel(original)} target. The visual editor currently
-				supports host targets only.
-			</UnsupportedYamlFallback>
-		);
-	}
-
 	const policy = cleanEmpty({
 		...original,
 		...target,
@@ -74,6 +58,11 @@ export function TracingPolicyEditor(props: {
 		resources: Object.keys(resources).length ? resources : undefined,
 		remove
 	}) as TracingConfig;
+	useReportEditorValue(policy);
+
+	if (hasUnsupportedTarget(original)) {
+		return <UnsupportedInForm supports="host targets" />;
+	}
 
 	return (
 		<form
@@ -203,7 +192,6 @@ export function TracingPolicyEditor(props: {
 					onChange={setRemove}
 				/>
 			</PolicySection>
-			<ResultingYaml value={policy} />
 		</form>
 	);
 }

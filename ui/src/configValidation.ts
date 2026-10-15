@@ -39,6 +39,31 @@ async function getValidator() {
 	return validatorPromise;
 }
 
+let subschemaAjv: Ajv2020 | null = null;
+
+// Validates a value against the config schema node at `path`, such as
+// ['$defs', 'LocalLLMVirtualModel'], returning the first error.
+export function configValueError(path: string[], value: unknown): string | null {
+	if (!subschemaAjv) {
+		const schema = structuredClone(configSchema);
+		sanitizeEmptyEnums(schema);
+		subschemaAjv = new Ajv2020({ validateFormats: false, strict: false });
+		subschemaAjv.addSchema(schema, 'config');
+	}
+	const validate = subschemaAjv.getSchema(`config#/${path.join('/')}`);
+	if (!validate || validate(value)) return null;
+	const error = validate.errors?.[0];
+	return `${error?.instancePath || '/'}: ${error?.message ?? 'invalid value'}`;
+}
+
+export function configSchemaNode(path: string[]) {
+	return path.reduce<unknown>(
+		(node, key) =>
+			node && typeof node === 'object' ? (node as Record<string, unknown>)[key] : undefined,
+		configSchema
+	);
+}
+
 function sanitizeEmptyEnums(value: unknown): unknown {
 	if (!value || typeof value !== 'object') return value;
 	if (Array.isArray(value)) {

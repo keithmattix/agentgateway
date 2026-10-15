@@ -1,7 +1,7 @@
 import { Save } from 'lucide-react';
 import { useState } from 'react';
 
-import { LostFieldsWarning, useMergedEdits } from '@/components/EditorContracts';
+import { LostFieldsWarning, UnsupportedInForm, useMergedEdits } from '@/components/EditorContracts';
 import { MiniMonacoEditor } from '@/components/MiniMonacoEditor';
 import { FieldGroup } from '@/components/Primitives';
 import type { LocalTransform } from '@/gateway-config';
@@ -9,7 +9,6 @@ import { ListEditor } from '@/policies/ListEditor';
 import { KeyValueEditor } from '@/policies/PolicyFormControls';
 import { CollapsiblePolicySection } from '@/policies/PolicyLayout';
 import { cleanEmpty } from '@/policies/policyUtils';
-import { ResultingYaml } from '@/policies/ResultingYaml';
 import type { TransformationDraft, TransformDraft } from '@/policies/types';
 import type { SchemaHelp } from '@/schemaHelp';
 
@@ -24,6 +23,10 @@ export function TransformationsPolicyEditor(props: {
 	const [response, setResponse] = useState<TransformDraft>(props.transformations?.response ?? {});
 	const preview = cleanEmpty({ request, response }) as TransformationDraft;
 	const merged = useMergedEdits(props.transformations, preview);
+
+	if (props.transformations && 'conditional' in props.transformations) {
+		return <UnsupportedInForm supports="request and response transformations without conditions" />;
+	}
 
 	return (
 		<form
@@ -51,7 +54,6 @@ export function TransformationsPolicyEditor(props: {
 				help={props.help}
 				onChange={setResponse}
 			/>
-			<ResultingYaml value={merged.value} />
 		</form>
 	);
 }

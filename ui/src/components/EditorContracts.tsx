@@ -1,41 +1,48 @@
-import { Fragment, type ReactNode, useState } from 'react';
+import { createContext, Fragment, useContext, useLayoutEffect, useState } from 'react';
 
-import { StatusBanner, YamlBlock } from '@/components/Primitives';
-import { SchemaHelpPanel } from '@/components/SchemaHelpPanel';
+import { PinRawContext, StatusBanner } from '@/components/Primitives';
 import { mergeEdits } from '@/mergeEdits';
-import type { SchemaHelp } from '@/schemaHelp';
 
-export function UnsupportedYamlFallback(props: {
-	title: string;
-	children: ReactNode;
-	value: unknown;
-	schema?: unknown;
-	help?: SchemaHelp;
-}) {
-	return (
-		<div className="policy-editor-stack">
-			<StatusBanner state="warn" title={props.title}>
-				{props.children}
-			</StatusBanner>
-			{props.schema && props.help ? (
-				<SchemaHelpPanel schema={props.schema} help={props.help} />
-			) : null}
-			<YamlBlock value={props.value} />
-		</div>
-	);
+// Rendered by a form that cannot represent its value: the drawer switches to
+// raw mode, with the form disabled and `supports` explaining why.
+export function UnsupportedInForm(props: { supports: string }) {
+	const pin = useContext(PinRawContext);
+	useLayoutEffect(() => {
+		pin?.(`The form editor only supports ${props.supports}, so this is edited as raw YAML.`);
+	}, [pin, props.supports]);
+	return null;
 }
 
-// Every structured editor saves through this: `edited` is the value rebuilt
-// from form state, and the first one seen is the editor's baseline. Returns the
-// edit applied onto `original` (see mergeEdits) and any paths it would replace.
+// Receives an editor's current value, so a drawer can read it without
+// submitting the form (and so without the editor's save validation).
+export const EditorValueContext = createContext<((value: unknown) => void) | null>(null);
+
+export function useReportEditorValue(value: unknown) {
+	useContext(EditorValueContext)?.(value);
+}
+
+// Structured editors save through this: `edited` is the value rebuilt from form
+// state, and the first one seen is the editor's baseline. Returns the edit
+// applied onto `original` (see mergeEdits) and any paths it would replace.
 // Pass `edited` before any cleanup that drops modeled fields (e.g. implied
-// defaults) and apply that cleanup to the result, or a dropped field looks
-// unmodeled and the original's value is kept.
-export function useMergedEdits<T>(original: unknown, edited: T): { value: T; lost: string[] } {
-	const [baseline] = useState(edited);
-	if (original === null || original === undefined) return { value: edited, lost: [] };
-	const merged = mergeEdits(original, baseline, edited);
-	return { value: merged.value as T, lost: merged.lost };
+// defaults) and apply that cleanup to the result. `reset` makes a value loaded
+// into the form (e.g. from raw mode) the new original.
+export function useMergedEdits<T>(original: unknown, edited: T) {
+	const [base, setBase] = useState<{ original: unknown; baseline: { value: T } | null }>(() => ({
+		original,
+		baseline: { value: edited }
+	}));
+	useLayoutEffect(() => {
+		if (!base.baseline) setBase({ original: base.original, baseline: { value: edited } });
+	});
+	const reset = (value: unknown) => setBase({ original: value, baseline: null });
+	const baseline = base.baseline ? base.baseline.value : edited;
+	const merged =
+		base.original === null || base.original === undefined
+			? { value: edited, lost: [] as string[] }
+			: mergeEdits(base.original, baseline, edited);
+	useReportEditorValue(merged.value);
+	return { value: merged.value as T, lost: merged.lost, reset };
 }
 
 export function LostFieldsWarning(props: { lost: string[] }) {
@@ -52,7 +59,7 @@ export function LostFieldsWarning(props: { lost: string[] }) {
 						</Fragment>
 					))
 				: 'parts of it'}
-			. Use Raw Configuration to keep them.
+			. Edit it as raw YAML (the code icon) to keep them.
 		</StatusBanner>
 	);
 }

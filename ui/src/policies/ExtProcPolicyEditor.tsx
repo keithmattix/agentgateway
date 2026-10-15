@@ -1,11 +1,7 @@
 import { SlidersHorizontal } from 'lucide-react';
 import { useState } from 'react';
 
-import {
-	LostFieldsWarning,
-	UnsupportedYamlFallback,
-	useMergedEdits
-} from '@/components/EditorContracts';
+import { LostFieldsWarning, UnsupportedInForm, useMergedEdits } from '@/components/EditorContracts';
 import { EnumSelector, type EnumSelectorOption } from '@/components/EnumSelector';
 import { MiniMonacoEditor } from '@/components/MiniMonacoEditor';
 import { FieldGroup } from '@/components/Primitives';
@@ -14,12 +10,10 @@ import {
 	hasUnsupportedTarget,
 	KeyValueEditor,
 	TargetEditor,
-	targetFrom,
-	unsupportedTargetLabel
+	targetFrom
 } from '@/policies/PolicyFormControls';
 import { PolicySection } from '@/policies/PolicyLayout';
 import { cleanEmpty, parseYamlText, toYamlMappingText } from '@/policies/policyUtils';
-import { ResultingYaml } from '@/policies/ResultingYaml';
 import type { ExtProcDraft } from '@/policies/types';
 import type { SchemaHelp } from '@/schemaHelp';
 
@@ -108,17 +102,7 @@ export function ExtProcPolicyEditor(props: {
 	const merged = useMergedEdits(props.extProc, preview);
 
 	if (unsupportedTarget) {
-		return (
-			<UnsupportedYamlFallback
-				title="Unsupported target type"
-				value={props.extProc ?? {}}
-				schema={props.help.node(['$defs', 'ExtProc'])}
-				help={props.help}
-			>
-				This policy uses a {unsupportedTargetLabel(props.extProc)} target. The visual editor
-				currently supports host targets only.
-			</UnsupportedYamlFallback>
-		);
+		return <UnsupportedInForm supports="host targets" />;
 	}
 
 	function buildExtProc() {
@@ -290,7 +274,6 @@ export function ExtProcPolicyEditor(props: {
 					/>
 				</FieldGroup>
 			</PolicySection>
-			<ResultingYaml value={merged.value} />
 		</form>
 	);
 }

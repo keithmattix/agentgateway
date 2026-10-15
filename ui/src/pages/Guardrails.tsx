@@ -8,7 +8,7 @@ import googleCloudIcon from '@/assets/providers/googlecloud.svg';
 import openAiIcon from '@/assets/providers/openai.svg';
 import { CloudRegionCombobox } from '@/components/CloudRegionCombobox';
 import { ConfigDiffSaveActions } from '@/components/ConfigDiffDrawer';
-import { LostFieldsWarning, useMergedEdits } from '@/components/EditorContracts';
+import { UnsupportedInForm } from '@/components/EditorContracts';
 import { EnumSelector, type EnumSelectorOption } from '@/components/EnumSelector';
 import {
 	ConfirmDialog,
@@ -35,6 +35,7 @@ import type {
 	Webhook
 } from '@/gateway-config';
 import { useDeleteConfigResource, useLlmConfigData, useUpsertPolicyResource } from '@/hooks';
+import { deepEqual, mergeEdits } from '@/mergeEdits';
 import { BackendPoliciesField } from '@/policies/PolicyFormControls';
 import { cleanEmpty } from '@/policies/policyUtils';
 import { type SchemaHelp, useSchemaHelp } from '@/schemaHelp';
@@ -56,6 +57,8 @@ type GuardDraftBase = {
 	rejectionStatus: string;
 	rejectionBody: string;
 	policies?: unknown;
+	// The saved guard this draft edits, so fields the form does not show are kept.
+	source?: GuardObject;
 };
 type RemoteGuardDraftBase = GuardDraftBase & {
 	failureMode: 'failClosed' | 'failOpen';
@@ -294,8 +297,9 @@ function GuardrailsEditor(props: {
 	const initialDraft = useMemo(() => draftFromGuardrails(props.initial), [props.initial]);
 	const [draft, setDraft] = useState<GuardrailDraft>(() => initialDraft);
 	const [error, setError] = useState<string | null>(null);
-	const merged = useMergedEdits(props.initial, buildGuardrails(draft));
-	const dirty = JSON.stringify(draft) !== JSON.stringify(initialDraft);
+	const value = buildGuardrails(draft, props.initial);
+	const [initialValue] = useState(value);
+	const dirty = !deepEqual(value, initialValue);
 	const blocker = useBlocker({
 		shouldBlockFn: ({ current, next }) => dirty && current.pathname !== next.pathname,
 		enableBeforeUnload: dirty,
@@ -315,7 +319,7 @@ function GuardrailsEditor(props: {
 	}
 
 	function save() {
-		if (validate()) props.onSave(merged.value);
+		if (validate()) props.onSave(value);
 	}
 
 	return (
@@ -341,7 +345,6 @@ function GuardrailsEditor(props: {
 					{props.saveError}
 				</StatusBanner>
 			) : null}
-			<LostFieldsWarning lost={merged.lost} />
 			<GuardrailSection
 				phase="request"
 				help={props.help}
@@ -361,7 +364,7 @@ function GuardrailsEditor(props: {
 						props.databaseBacked
 							? () => ({
 									original: props.initial,
-									modified: merged.value
+									modified: value
 								})
 							: undefined
 					}
@@ -370,7 +373,7 @@ function GuardrailsEditor(props: {
 					saving={props.saving}
 					onSave={save}
 					beforeDiff={validate}
-					applyDiff={next => setLlmGuardrails(next, merged.value)}
+					applyDiff={next => setLlmGuardrails(next, value)}
 				/>
 			) : null}
 		</div>
@@ -495,7 +498,7 @@ function AddGuardModal(props: {
 }) {
 	const options = props.phase === 'request' ? requestGuardKinds : responseGuardKinds;
 	const [kind, setKind] = useState<GuardKind | ''>('');
-	const [guard, setGuard] = useState<SupportedGuardDraft | null>(null);
+	const [guard, setGuard] = useState<GuardDraft | null>(null);
 
 	function selectKind(value: string) {
 		const nextKind = value as GuardKind;
@@ -508,6 +511,16 @@ function AddGuardModal(props: {
 			title={`Add ${props.phase} guard`}
 			onClose={props.onClose}
 			dirty={guard != null}
+			raw={{
+				schemaPath: ['$defs', props.phase === 'request' ? 'RequestGuard' : 'ResponseGuard'],
+				value: () => (guard ? buildGuard(guard) : undefined),
+				onChange: value => {
+					const next = draftFromGuard(value as GuardObject);
+					setGuard(next);
+					if (next.kind !== 'unsupported') setKind(next.kind);
+				},
+				empty: buildGuard(emptyGuardDraft())
+			}}
 			footer={requestClose => (
 				<div className="button-row">
 					<button className="button" type="button" onClick={requestClose}>
@@ -535,7 +548,9 @@ function AddGuardModal(props: {
 					onChange={selectKind}
 				/>
 			</FieldGroup>
-			{guard ? (
+			{guard?.kind === 'unsupported' ? (
+				<UnsupportedInForm supports="the guard types and options it lists" />
+			) : guard ? (
 				<section className="guardrail-rule-card compact">
 					<GuardFields phase={props.phase} help={props.help} guard={guard} onChange={setGuard} />
 				</section>
@@ -594,11 +609,18 @@ function EditGuardDrawer(props: {
 	onApply: (guard: GuardDraft) => void;
 }) {
 	const [draft, setDraft] = useState<GuardDraft>(props.guard);
+
 	return (
 		<Drawer
 			title={`Edit ${props.phase} guard`}
 			onClose={props.onClose}
 			dirty={JSON.stringify(draft) !== JSON.stringify(props.guard)}
+			raw={{
+				schemaPath: ['$defs', props.phase === 'request' ? 'RequestGuard' : 'ResponseGuard'],
+				value: () => buildGuard(draft),
+				onChange: value => setDraft(draftFromGuard(value as GuardObject)),
+				empty: buildGuard(emptyGuardDraft())
+			}}
 			footer={requestClose => (
 				<div className="button-row">
 					<button className="button" type="button" onClick={requestClose}>
@@ -612,12 +634,7 @@ function EditGuardDrawer(props: {
 			)}
 		>
 			{draft.kind === 'unsupported' ? (
-				<>
-					<Field label="Guard type">
-						<input value="Unsupported raw YAML" disabled />
-					</Field>
-					<UnsupportedGuardFields guard={draft} />
-				</>
+				<UnsupportedInForm supports="the guard types and options it lists" />
 			) : (
 				<>
 					<FieldGroup label="Guard type" tooltip={guardTypeHelp(props.phase, props.help)}>
@@ -629,28 +646,11 @@ function EditGuardDrawer(props: {
 						/>
 					</FieldGroup>
 					<section className="guardrail-rule-card compact">
-						<GuardFields
-							phase={props.phase}
-							help={props.help}
-							guard={draft}
-							onChange={next => setDraft(next)}
-						/>
+						<GuardFields phase={props.phase} help={props.help} guard={draft} onChange={setDraft} />
 					</section>
 				</>
 			)}
 		</Drawer>
-	);
-}
-
-function UnsupportedGuardFields(props: { guard: UnsupportedGuardDraft }) {
-	return (
-		<div className="policy-editor-stack">
-			<StatusBanner state="warn" title="Unsupported guard shape">
-				This guard uses a shape the visual editor does not support yet. It will be preserved as raw
-				YAML.
-			</StatusBanner>
-			<YamlBlock value={props.guard.raw} />
-		</div>
 	);
 }
 
@@ -1298,12 +1298,17 @@ function PatternList(props: {
 
 function draftFromGuardrails(guardrails: LlmGuardrail): GuardrailDraft {
 	return {
-		request: (guardrails.request ?? []).flatMap(draftsFromGuard),
-		response: ((guardrails.response ?? []) as GuardObject[]).flatMap(draftsFromGuard)
+		request: (guardrails.request ?? []).map(draftFromGuard),
+		response: ((guardrails.response ?? []) as GuardObject[]).map(draftFromGuard)
 	};
 }
 
-function draftsFromGuard(guard: GuardObject): GuardDraft[] {
+function draftFromGuard(guard: GuardObject): GuardDraft {
+	const draft = parseGuard(guard);
+	return draft.kind === 'unsupported' ? draft : { ...draft, source: guard };
+}
+
+function parseGuard(guard: GuardObject): GuardDraft {
 	const base = rejectionDraft(guard);
 	if ('regex' in guard && guard.regex && typeof guard.regex === 'object') {
 		const regex = guard.regex as RegexRulesShape;
@@ -1313,37 +1318,24 @@ function draftsFromGuard(guard: GuardObject): GuardDraft[] {
 			'builtin' in rule ? [rule.builtin as BuiltinRule] : []
 		);
 		const patterns = rules.flatMap(rule => ('pattern' in rule ? [String(rule.pattern)] : []));
-		return [
-			builtins.length
-				? ({
-						...base,
-						kind: 'builtin',
-						action,
-						builtins
-					} satisfies BuiltinGuardDraft)
-				: null,
-			patterns.length
-				? ({
-						...base,
-						kind: 'regex',
-						action,
-						patterns
-					} satisfies RegexGuardDraft)
-				: null
-		].filter(Boolean) as GuardDraft[];
+		// The form edits either built-in detectors or patterns; a guard with both
+		// (or neither) is edited as raw YAML.
+		if (Boolean(builtins.length) === Boolean(patterns.length))
+			return { kind: 'unsupported', raw: guard };
+		return builtins.length
+			? ({ ...base, kind: 'builtin', action, builtins } satisfies BuiltinGuardDraft)
+			: ({ ...base, kind: 'regex', action, patterns } satisfies RegexGuardDraft);
 	}
 	if ('webhook' in guard && guard.webhook && typeof guard.webhook === 'object') {
 		const webhook = guard.webhook as Record<string, unknown>;
-		if ('service' in valueRecord(webhook.target)) return [{ kind: 'unsupported', raw: guard }];
-		return [
-			{
-				...base,
-				kind: 'webhook',
-				target: targetToHost(webhook.target),
-				...remoteDraft(webhook),
-				policies: valueRecord(webhook.target).policies
-			}
-		];
+		if ('service' in valueRecord(webhook.target)) return { kind: 'unsupported', raw: guard };
+		return {
+			...base,
+			kind: 'webhook',
+			target: targetToHost(webhook.target),
+			...remoteDraft(webhook),
+			policies: valueRecord(webhook.target).policies
+		};
 	}
 	if (
 		'openAIModeration' in guard &&
@@ -1351,15 +1343,13 @@ function draftsFromGuard(guard: GuardObject): GuardDraft[] {
 		typeof guard.openAIModeration === 'object'
 	) {
 		const moderation = guard.openAIModeration as Record<string, unknown>;
-		return [
-			{
-				...base,
-				...remoteDraft(moderation),
-				kind: 'openAIModeration',
-				model: String(moderation.model ?? ''),
-				policies: moderation.policies
-			}
-		];
+		return {
+			...base,
+			...remoteDraft(moderation),
+			kind: 'openAIModeration',
+			model: String(moderation.model ?? ''),
+			policies: moderation.policies
+		};
 	}
 	if (
 		'bedrockGuardrails' in guard &&
@@ -1367,17 +1357,15 @@ function draftsFromGuard(guard: GuardObject): GuardDraft[] {
 		typeof guard.bedrockGuardrails === 'object'
 	) {
 		const bedrock = guard.bedrockGuardrails as Record<string, unknown>;
-		return [
-			{
-				...base,
-				...remoteDraft(bedrock),
-				kind: 'bedrockGuardrails',
-				guardrailIdentifier: String(bedrock.guardrailIdentifier ?? ''),
-				guardrailVersion: String(bedrock.guardrailVersion ?? ''),
-				region: String(bedrock.region ?? ''),
-				policies: bedrock.policies
-			}
-		];
+		return {
+			...base,
+			...remoteDraft(bedrock),
+			kind: 'bedrockGuardrails',
+			guardrailIdentifier: String(bedrock.guardrailIdentifier ?? ''),
+			guardrailVersion: String(bedrock.guardrailVersion ?? ''),
+			region: String(bedrock.region ?? ''),
+			policies: bedrock.policies
+		};
 	}
 	if (
 		'googleModelArmor' in guard &&
@@ -1385,17 +1373,15 @@ function draftsFromGuard(guard: GuardObject): GuardDraft[] {
 		typeof guard.googleModelArmor === 'object'
 	) {
 		const google = guard.googleModelArmor as Record<string, unknown>;
-		return [
-			{
-				...base,
-				...remoteDraft(google),
-				kind: 'googleModelArmor',
-				templateId: String(google.templateId ?? ''),
-				projectId: String(google.projectId ?? ''),
-				location: String(google.location ?? ''),
-				policies: google.policies
-			}
-		];
+		return {
+			...base,
+			...remoteDraft(google),
+			kind: 'googleModelArmor',
+			templateId: String(google.templateId ?? ''),
+			projectId: String(google.projectId ?? ''),
+			location: String(google.location ?? ''),
+			policies: google.policies
+		};
 	}
 	if (
 		'azureContentSafety' in guard &&
@@ -1405,26 +1391,23 @@ function draftsFromGuard(guard: GuardObject): GuardDraft[] {
 		const azure = guard.azureContentSafety as Record<string, unknown>;
 		const analyze = valueRecord(azure.analyzeText);
 		const jailbreak = valueRecord(azure.detectJailbreak);
-		return [
-			{
-				...base,
-				...remoteDraft(azure),
-				kind: 'azureContentSafety',
-				endpoint: String(azure.endpoint ?? ''),
-				severityThreshold:
-					analyze.severityThreshold == null ? '' : String(analyze.severityThreshold),
-				analyzeApiVersion: String(analyze.apiVersion ?? ''),
-				blocklistNames: Array.isArray(analyze.blocklistNames)
-					? analyze.blocklistNames.join(', ')
-					: '',
-				haltOnBlocklistHit: Boolean(analyze.haltOnBlocklistHit),
-				detectJailbreak: Boolean(azure.detectJailbreak),
-				jailbreakApiVersion: String(jailbreak.apiVersion ?? ''),
-				policies: azure.policies
-			}
-		];
+		return {
+			...base,
+			...remoteDraft(azure),
+			kind: 'azureContentSafety',
+			endpoint: String(azure.endpoint ?? ''),
+			severityThreshold: analyze.severityThreshold == null ? '' : String(analyze.severityThreshold),
+			analyzeApiVersion: String(analyze.apiVersion ?? ''),
+			blocklistNames: Array.isArray(analyze.blocklistNames)
+				? analyze.blocklistNames.join(', ')
+				: '',
+			haltOnBlocklistHit: Boolean(analyze.haltOnBlocklistHit),
+			detectJailbreak: Boolean(azure.detectJailbreak),
+			jailbreakApiVersion: String(jailbreak.apiVersion ?? ''),
+			policies: azure.policies
+		};
 	}
-	return [{ kind: 'unsupported', raw: guard }];
+	return { kind: 'unsupported', raw: guard };
 }
 
 function remoteDraft(
@@ -1445,16 +1428,28 @@ function rejectionDraft(
 	};
 }
 
-function buildGuardrails(draft: GuardrailDraft): LlmGuardrail {
+// Each guard keeps the fields the form hides through its `source`; other
+// guardrail settings (e.g. `streaming`) come from the original.
+function buildGuardrails(draft: GuardrailDraft, original: LlmGuardrail): LlmGuardrail {
 	const request = draft.request.map(buildGuard);
 	const response = draft.response.map(buildGuard);
 	return cleanEmpty({
+		...original,
 		request: request.length ? request : undefined,
 		response: response.length ? response : undefined
 	}) as LlmGuardrail;
 }
 
+// Applies the form's fields onto the guard's source, keeping fields the form
+// does not show (see mergeEdits).
 function buildGuard(guard: GuardDraft): GuardObject {
+	const built = buildGuardFields(guard);
+	if (guard.kind === 'unsupported' || !guard.source) return built;
+	const baseline = buildGuardFields(parseGuard(guard.source));
+	return mergeEdits(guard.source, baseline, built).value as GuardObject;
+}
+
+function buildGuardFields(guard: GuardDraft): GuardObject {
 	switch (guard.kind) {
 		case 'unsupported':
 			return guard.raw;

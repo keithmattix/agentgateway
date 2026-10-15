@@ -3,6 +3,7 @@ import {
 	AlertTriangle,
 	CheckCircle2,
 	ChevronDown,
+	Code,
 	HelpCircle,
 	Info,
 	Loader2,
@@ -16,9 +17,41 @@ import type {
 	MouseEvent as ReactMouseEvent,
 	ReactNode
 } from 'react';
-import { cloneElement, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+	cloneElement,
+	createContext,
+	useCallback,
+	useEffect,
+	useId,
+	useLayoutEffect,
+	useMemo,
+	useRef,
+	useState
+} from 'react';
+
+import { SchemaHelpPanel } from '@/components/SchemaHelpPanel';
+import { parseSchemaYamlEditorValue, SchemaYamlEditor } from '@/components/SchemaYamlEditor';
+import { configSchemaNode, configValueError } from '@/configValidation';
+import { useSchemaHelp } from '@/schemaHelp';
 
 const drawerStack: symbol[] = [];
+
+// Lets a drawer's form edit its value as raw YAML instead.
+export type DrawerRaw = {
+	// Config schema node for the value, such as ['$defs', 'LocalLLMVirtualModel'].
+	// Only edits valid against it reach the form.
+	schemaPath: string[];
+	// The form's current value, or undefined while the form is invalid.
+	value: () => unknown;
+	// Each valid raw edit. The form reloads from the last one when raw mode closes.
+	onChange: (value: unknown) => void;
+	// The value of a blank form. Clearing the raw text loads it, so the form can
+	// start over.
+	empty?: unknown;
+};
+
+// Provided by a drawer with raw mode; pins it to raw with a reason.
+export const PinRawContext = createContext<((reason: string) => void) | null>(null);
 
 export function PageHeader(props: { title: string; description?: string; actions?: ReactNode }) {
 	return (
@@ -518,6 +551,16 @@ function clamp(value: number, min: number, max: number) {
 	return Math.min(Math.max(value, min), max);
 }
 
+function checkRaw(text: string, raw: DrawerRaw): { value?: unknown; error: string | null } {
+	if (!text.trim() && 'empty' in raw) return { value: raw.empty, error: null };
+	try {
+		const value = parseSchemaYamlEditorValue(text);
+		return { value, error: configValueError(raw.schemaPath, value) || null };
+	} catch (err) {
+		return { error: err instanceof Error ? err.message : 'Invalid YAML' };
+	}
+}
+
 export function Drawer(props: {
 	title: string;
 	children: ReactNode;
@@ -527,12 +570,53 @@ export function Drawer(props: {
 	variant?: 'default' | 'nested';
 	dirty?: boolean;
 	saving?: boolean;
+	raw?: DrawerRaw;
+	// Save errors, shown in form and raw mode alike.
+	error?: string | null;
 }) {
 	const drawerRef = useRef<HTMLElement>(null);
+	const [rawText, setRawText] = useState<string | null>(null);
+	const [rawPinned, setRawPinned] = useState<string | null>(null);
+	// Raw edits can change fields an editor's own `dirty` check does not see.
+	const [rawEdited, setRawEdited] = useState(false);
+	const schemaHelp = useSchemaHelp();
+	const rawRef = useRef(props.raw);
+	rawRef.current = props.raw;
+	const pinRaw = useCallback((reason: string) => {
+		setRawPinned(reason);
+		setRawText(
+			text => text ?? dump(rawRef.current?.value() ?? {}, { noRefs: true, lineWidth: 100 })
+		);
+	}, []);
+
+	function toggleRaw() {
+		// Leaving raw drops any invalid text; the form holds the last valid value.
+		if (rawText !== null) {
+			setRawText(null);
+			return;
+		}
+		const value = props.raw?.value();
+		if (value === undefined) return;
+		setRawText(dump(value ?? {}, { noRefs: true, lineWidth: 100 }));
+	}
+
+	// Derived from the text, so the value raw mode opens with is checked too.
+	const rawError = rawText !== null && props.raw ? checkRaw(rawText, props.raw).error : null;
+
+	function editRaw(text: string) {
+		setRawText(text);
+		setRawEdited(true);
+		if (!props.raw) return;
+		const checked = checkRaw(text, props.raw);
+		if (checked.error) return;
+		// The form may be able to show the new value; if not, it pins raw again.
+		setRawPinned(null);
+		props.raw.onChange(checked.value);
+	}
 	const drawerId = useRef(Symbol('drawer'));
 	const [formChanged, setFormChanged] = useState(false);
 	const [confirmClose, setConfirmClose] = useState(false);
-	const dirty = props.dirty ?? formChanged;
+	const dirty = (props.dirty ?? formChanged) || rawEdited;
 	const closeStateRef = useRef({
 		dirty,
 		saving: props.saving,
@@ -645,6 +729,20 @@ export function Drawer(props: {
 						<h3 id="drawer-title">{props.title}</h3>
 						<div className="drawer-header-actions">
 							{props.headerActions}
+							{props.raw ? (
+								<Tooltip content={rawPinned ?? 'Raw'}>
+									<button
+										className={rawText === null ? 'icon-button' : 'icon-button active'}
+										type="button"
+										aria-label="Raw"
+										aria-pressed={rawText !== null}
+										disabled={Boolean(rawPinned)}
+										onClick={toggleRaw}
+									>
+										<Code size={17} />
+									</button>
+								</Tooltip>
+							) : null}
 							<Tooltip content="Close">
 								<button
 									className="icon-button"
@@ -657,12 +755,47 @@ export function Drawer(props: {
 							</Tooltip>
 						</div>
 					</div>
-					<div className="drawer-body">{props.children}</div>
+					<div className="drawer-body">
+						{props.raw && rawText !== null ? (
+							<div className="policy-yaml-fallback">
+								<SchemaHelpPanel
+									schema={configSchemaNode(props.raw.schemaPath)}
+									help={schemaHelp}
+								/>
+								{rawError ? (
+									<StatusBanner state="bad" title="Invalid configuration">
+										{rawError}
+									</StatusBanner>
+								) : null}
+								<SchemaYamlEditor
+									className="policy-yaml-editor"
+									invalid={Boolean(rawError)}
+									path="agentgateway-drawer-raw.yaml"
+									schema={configSchemaNode(props.raw.schemaPath) ?? {}}
+									showLineNumbers={false}
+									value={rawText}
+									onChange={editRaw}
+								/>
+							</div>
+						) : (
+							<PinRawContext.Provider value={props.raw ? pinRaw : null}>
+								{props.children}
+							</PinRawContext.Provider>
+						)}
+						{props.error ? (
+							<StatusBanner state="bad" title="Save failed">
+								{props.error}
+							</StatusBanner>
+						) : null}
+					</div>
 					{props.footer ? (
 						<div className="drawer-footer">
-							{typeof props.footer === 'function'
-								? props.footer(requestClose, dirty)
-								: props.footer}
+							{/* Invalid raw text has not reached the form, so saving now would save stale values. */}
+							<fieldset className="drawer-footer-actions" disabled={Boolean(rawError)}>
+								{typeof props.footer === 'function'
+									? props.footer(requestClose, dirty)
+									: props.footer}
+							</fieldset>
 						</div>
 					) : null}
 				</aside>

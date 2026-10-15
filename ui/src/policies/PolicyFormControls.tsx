@@ -21,13 +21,6 @@ export function hasUnsupportedTarget(value: unknown) {
 	return targetMode(value) !== 'host';
 }
 
-export function unsupportedTargetLabel(value: unknown) {
-	const mode = targetMode(value);
-	if (mode === 'service') return 'Kubernetes service';
-	if (mode === 'backend') return 'backend reference';
-	return 'target';
-}
-
 export function TargetEditor(props: {
 	value: TargetDraft;
 	help: SchemaHelp;
