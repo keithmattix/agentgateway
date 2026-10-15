@@ -9,23 +9,31 @@
 // Anything the editor never emitted is kept from `original`; anything it
 // emitted and the user changed or cleared is taken from `edited`. `lost` lists
 // paths where the editor reshaped the original (so it could not be mapped
-// back) and the edit replaces content the editor never showed.
+// back) and the edit replaces content the editor never showed. `added` sees
+// each part of `edited` with no counterpart in `baseline` (a new field or list
+// entry) and where it sits, and returns what to keep of it.
 export function mergeEdits(
 	original: unknown,
 	baseline: unknown,
-	edited: unknown
+	edited: unknown,
+	added: (value: unknown, at: string[]) => unknown = value => value
 ): { value: unknown; lost: string[] } {
 	const lost: string[] = [];
-	const value = merge(original, baseline, edited, '', lost);
+	const value = merge(original, baseline, edited, [], { lost, added });
 	return { value, lost };
 }
+
+type MergeContext = {
+	lost: string[];
+	added: (value: unknown, at: string[]) => unknown;
+};
 
 function merge(
 	original: unknown,
 	baseline: unknown,
 	edited: unknown,
-	path: string,
-	lost: string[]
+	at: string[],
+	context: MergeContext
 ): unknown {
 	if (deepEqual(baseline, edited)) return original;
 	if (
@@ -41,7 +49,7 @@ function merge(
 					? baseline[key] === undefined
 						? original[key]
 						: undefined
-					: merge(original[key], baseline[key], edited[key], `${path}.${key}`, lost);
+					: merge(original[key], baseline[key], edited[key], [...at, key], context);
 			if (value !== undefined) merged[key] = value;
 		}
 		return merged;
@@ -52,10 +60,10 @@ function merge(
 		Array.isArray(edited) &&
 		original.length === baseline.length
 	) {
-		return mergeArray(original, baseline, edited, path, lost);
+		return mergeArray(original, baseline, edited, at, context);
 	}
-	if (hasContent(original) && !deepEqual(original, baseline)) lost.push(pathName(path));
-	return edited;
+	if (hasContent(original) && !deepEqual(original, baseline)) context.lost.push(pathName(at));
+	return baseline === undefined ? context.added(edited, at) : edited;
 }
 
 // Baseline items correspond to original items by index. Edited items that are
@@ -72,8 +80,8 @@ function mergeArray(
 	original: unknown[],
 	baseline: unknown[],
 	edited: unknown[],
-	path: string,
-	lost: string[]
+	at: string[],
+	context: MergeContext
 ) {
 	const used = new Set<number>();
 	const matched = edited.map(item => {
@@ -95,21 +103,22 @@ function mergeArray(
 		const free = baseline.flatMap((_, j) => (j > after && j < before && !used.has(j) ? [j] : []));
 		const appended = before === baseline.length && run.length > free.length;
 		if (free.length === run.length || appended) {
-			for (const k of run.slice(free.length)) result[k] = edited[k];
+			for (const k of run.slice(free.length))
+				result[k] = context.added(edited[k], [...at, String(k)]);
 			run.slice(0, free.length).forEach((k, n) => {
 				result[k] = merge(
 					original[free[n]],
 					baseline[free[n]],
 					edited[k],
-					`${path}[${free[n]}]`,
-					lost
+					[...at, String(free[n])],
+					context
 				);
 			});
 		} else {
-			for (const k of run) result[k] = edited[k];
+			for (const k of run) result[k] = context.added(edited[k], [...at, String(k)]);
 			if (run.length)
 				for (const j of free)
-					if (!deepEqual(original[j], baseline[j])) lost.push(pathName(`${path}[${j}]`));
+					if (!deepEqual(original[j], baseline[j])) context.lost.push(pathName([...at, String(j)]));
 		}
 		run = [];
 	};
@@ -126,8 +135,12 @@ function mergeArray(
 	return result;
 }
 
-function pathName(path: string) {
-	return path.replace(/^\./, '') || '.';
+function pathName(at: string[]) {
+	const name = at.reduce(
+		(name, part) => (/^\d+$/.test(part) ? `${name}[${part}]` : name ? `${name}.${part}` : part),
+		''
+	);
+	return name || '.';
 }
 
 export function deepEqual(a: unknown, b: unknown): boolean {

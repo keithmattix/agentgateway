@@ -1,7 +1,7 @@
 import { FileCode2, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 
-import { useReportEditorValue } from '@/components/EditorContracts';
+import { useMergedEdits } from '@/components/EditorContracts';
 import { EnumSelector, type EnumSelectorOption } from '@/components/EnumSelector';
 import { FieldGroup, StatusBanner } from '@/components/Primitives';
 import { parseSchemaYamlEditorValue, SchemaYamlEditor } from '@/components/SchemaYamlEditor';
@@ -60,11 +60,14 @@ export function BackendAuthPolicyEditor(props: {
 	const passthroughPreview = {
 		passthrough: passthroughDraftToValue(passthrough)
 	} as BackendAuth;
-	useReportEditorValue(kind === 'passthrough' ? passthroughPreview : parseOrUndefined(yamlText));
+	const merged = useMergedEdits(
+		props.backendAuth,
+		kind === 'passthrough' ? passthroughPreview : parseOrUndefined(yamlText)
+	);
 
 	function save() {
 		if (kind === 'passthrough') {
-			props.onSave(passthroughPreview);
+			props.onSave(merged.value as BackendAuth);
 			return;
 		}
 		try {
@@ -128,6 +131,9 @@ export function BackendAuthPolicyEditor(props: {
 							onChange={value => {
 								setYamlText(value);
 								if (error) setError(null);
+								// The YAML is the whole value, so it replaces the original.
+								const parsed = parseOrUndefined(value);
+								if (parsed !== undefined) merged.reset(parsed);
 							}}
 							onSave={save}
 						/>

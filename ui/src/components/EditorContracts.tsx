@@ -30,26 +30,33 @@ export function useReportEditorValue(value: unknown) {
 // applied onto `original` (see mergeEdits) and any paths it would replace, so
 // only fields the user changed are written. A new value has no original: its
 // starting form output minus schema defaults (`schemaPath`, or
-// EditorSchemaContext) stands in, so defaults nobody touched are left out.
+// EditorSchemaContext) stands in, so defaults nobody touched are left out; the
+// same goes for fields and list entries the form adds later.
 // Pass `edited` before any cleanup that drops modeled fields (e.g. implied
 // defaults) and apply that cleanup to the result. `reset` makes a value loaded
-// into the form (e.g. from raw mode) the new original.
+// into the form (e.g. from raw mode) the new original, or with no value starts
+// a new one from the form's next output.
 export function useMergedEdits<T>(original: unknown, edited: T, schemaPath?: string[]) {
 	const contextPath = useContext(EditorSchemaContext);
 	const path = schemaPath ?? contextPath;
+	const start = (value: unknown, first: T) =>
+		value ?? (path ? withoutSchemaDefaults(first, path) : undefined);
 	const [base, setBase] = useState<{ original: unknown; baseline: { value: T } | null }>(() => ({
-		original: original ?? (path ? withoutSchemaDefaults(edited, path) : undefined),
+		original: start(original, edited),
 		baseline: { value: edited }
 	}));
 	useLayoutEffect(() => {
-		if (!base.baseline) setBase({ original: base.original, baseline: { value: edited } });
+		if (!base.baseline)
+			setBase({ original: start(base.original, edited), baseline: { value: edited } });
 	});
 	const reset = (value: unknown) => setBase({ original: value, baseline: null });
 	const baseline = base.baseline ? base.baseline.value : edited;
 	const merged =
 		base.original === null || base.original === undefined
 			? { value: edited, lost: [] as string[] }
-			: mergeEdits(base.original, baseline, edited);
+			: mergeEdits(base.original, baseline, edited, (value, at) =>
+					path ? withoutSchemaDefaults(value, path, at) : value
+				);
 	useReportEditorValue(merged.value);
 	return { value: merged.value as T, lost: merged.lost, reset };
 }

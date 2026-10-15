@@ -3,6 +3,7 @@ import { Bot, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 import { ConfigDiffSaveActions } from '@/components/ConfigDiffDrawer';
+import { LostFieldsWarning, useMergedEdits } from '@/components/EditorContracts';
 import {
 	ConfirmDialog,
 	Drawer,
@@ -280,7 +281,12 @@ function ProviderEditor(props: {
 	const [provider, setProvider] = useState<LlmProvider>(props.initial);
 	const [initialDraft] = useState(() => JSON.stringify(props.initial));
 	const [saveAttempted, setSaveAttempted] = useState(false);
-	const preview = cleanEmpty(provider) as LlmProvider | undefined;
+	const merged = useMergedEdits(
+		props.previousName ? props.initial : undefined,
+		cleanEmpty(provider) as LlmProvider | undefined,
+		['$defs', 'LocalLLMProvider']
+	);
+	const preview = merged.value;
 	const invalidApiKey = invalidProviderApiKey(provider.params?.apiKey);
 	const providerApiKeyError =
 		saveAttempted && invalidApiKey ? 'Enter a value, or choose Unset.' : null;
@@ -307,7 +313,10 @@ function ProviderEditor(props: {
 			raw={{
 				schemaPath: ['$defs', 'LocalLLMProvider'],
 				value: () => preview ?? provider,
-				onChange: value => setProvider(value as LlmProvider),
+				onChange: value => {
+					setProvider(value as LlmProvider);
+					merged.reset(value);
+				},
 				empty: makeEmptyLlmProvider()
 			}}
 			footer={requestClose => (
@@ -331,6 +340,7 @@ function ProviderEditor(props: {
 				/>
 			)}
 		>
+			<LostFieldsWarning lost={merged.lost} />
 			<div className="form-grid">
 				<Field
 					label="Provider name"

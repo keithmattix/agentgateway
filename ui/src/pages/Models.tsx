@@ -15,7 +15,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { CatalogModelSelector } from '@/components/CatalogModelSelector';
 import { ConfigDiffSaveActions } from '@/components/ConfigDiffDrawer';
-import { UnsupportedInForm } from '@/components/EditorContracts';
+import { LostFieldsWarning, UnsupportedInForm, useMergedEdits } from '@/components/EditorContracts';
 import { MiniMonacoEditor } from '@/components/MiniMonacoEditor';
 import {
 	ConfirmDialog,
@@ -652,7 +652,7 @@ function ModelEditor(props: {
 	// The gateway applies the transformation to a fixed model, which the form's
 	// single upstream model choice cannot show.
 	const fixedAndTransformed = Boolean(source.params?.model && source.transformation?.model);
-	const preview = fixedAndTransformed
+	const built = fixedAndTransformed
 		? source
 		: (cleanEmpty(
 				applyUpstreamMode(
@@ -666,6 +666,11 @@ function ModelEditor(props: {
 					customModelExpression
 				)
 			) as LlmModel | undefined);
+	const merged = useMergedEdits(props.previousId ? props.initial : undefined, built, [
+		'$defs',
+		'LocalLLMModels'
+	]);
+	const preview = merged.value;
 	const providerSelected = Boolean(model.provider);
 
 	function update(patch: Partial<ModelForm>) {
@@ -706,7 +711,10 @@ function ModelEditor(props: {
 			raw={{
 				schemaPath: ['$defs', 'LocalLLMModels'],
 				value: () => preview ?? model,
-				onChange: value => setForm(modelFormFrom(value as LlmModel)),
+				onChange: value => {
+					setForm(modelFormFrom(value as LlmModel));
+					merged.reset(value);
+				},
 				empty: makeEmptyModel()
 			}}
 			footer={requestClose => (
@@ -733,6 +741,7 @@ function ModelEditor(props: {
 			{fixedAndTransformed ? (
 				<UnsupportedInForm supports="either a fixed upstream model or a model transformation" />
 			) : null}
+			<LostFieldsWarning lost={merged.lost} />
 			<details className="schema-details model-help-details">
 				<summary>Help</summary>
 				<div className="model-help-copy">
@@ -1256,7 +1265,12 @@ function VirtualModelEditor(props: {
 	const failoverTargets = model.routing.failover?.targets ?? [];
 	const conditionalTargets = model.routing.conditional?.targets ?? [];
 	const targetOptions = modelTargetOptions(props.baseModels, props.providers);
-	const preview = cleanEmpty(model) as LlmVirtualModel | undefined;
+	const merged = useMergedEdits(
+		props.previousName ? props.initial : undefined,
+		cleanEmpty(model) as LlmVirtualModel | undefined,
+		['$defs', 'LocalLLMVirtualModel']
+	);
+	const preview = merged.value;
 	const activeTargets =
 		strategy === 'weighted'
 			? weightedTargets
@@ -1372,7 +1386,10 @@ function VirtualModelEditor(props: {
 			raw={{
 				schemaPath: ['$defs', 'LocalLLMVirtualModel'],
 				value: () => preview ?? model,
-				onChange: value => setModel(value as LlmVirtualModel),
+				onChange: value => {
+					setModel(value as LlmVirtualModel);
+					merged.reset(value);
+				},
 				empty: makeEmptyVirtualModel(defaultTarget)
 			}}
 			footer={requestClose => (
@@ -1401,6 +1418,7 @@ function VirtualModelEditor(props: {
 			{strategy ? null : (
 				<UnsupportedInForm supports="weighted, failover, and conditional routing" />
 			)}
+			<LostFieldsWarning lost={merged.lost} />
 			<Field
 				label="Virtual model name"
 				path="name"

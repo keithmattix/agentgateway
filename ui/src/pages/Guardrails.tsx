@@ -8,7 +8,7 @@ import googleCloudIcon from '@/assets/providers/googlecloud.svg';
 import openAiIcon from '@/assets/providers/openai.svg';
 import { CloudRegionCombobox } from '@/components/CloudRegionCombobox';
 import { ConfigDiffSaveActions } from '@/components/ConfigDiffDrawer';
-import { UnsupportedInForm } from '@/components/EditorContracts';
+import { UnsupportedInForm, useMergedEdits } from '@/components/EditorContracts';
 import { EnumSelector, type EnumSelectorOption } from '@/components/EnumSelector';
 import {
 	ConfirmDialog,
@@ -497,13 +497,16 @@ function AddGuardModal(props: {
 	onAdd: (guard: GuardDraft) => void;
 }) {
 	const options = props.phase === 'request' ? requestGuardKinds : responseGuardKinds;
+	const schemaPath = ['$defs', props.phase === 'request' ? 'RequestGuard' : 'ResponseGuard'];
 	const [kind, setKind] = useState<GuardKind | ''>('');
 	const [guard, setGuard] = useState<GuardDraft | null>(null);
+	const merged = useMergedEdits(undefined, guard ? buildGuard(guard) : undefined, schemaPath);
 
 	function selectKind(value: string) {
 		const nextKind = value as GuardKind;
 		setKind(nextKind);
 		setGuard(emptyGuardDraft(nextKind));
+		merged.reset(undefined);
 	}
 
 	return (
@@ -512,11 +515,12 @@ function AddGuardModal(props: {
 			onClose={props.onClose}
 			dirty={guard != null}
 			raw={{
-				schemaPath: ['$defs', props.phase === 'request' ? 'RequestGuard' : 'ResponseGuard'],
-				value: () => (guard ? buildGuard(guard) : undefined),
+				schemaPath,
+				value: () => merged.value,
 				onChange: value => {
 					const next = draftFromGuard(value as GuardObject);
 					setGuard(next);
+					merged.reset(value);
 					if (next.kind !== 'unsupported') setKind(next.kind);
 				},
 				empty: buildGuard(emptyGuardDraft())
@@ -529,8 +533,8 @@ function AddGuardModal(props: {
 					<button
 						className="button primary"
 						type="button"
-						disabled={!guard}
-						onClick={() => guard && props.onAdd(guard)}
+						disabled={!merged.value}
+						onClick={() => guard && merged.value && props.onAdd(withValue(guard, merged.value))}
 					>
 						<Plus size={16} />
 						Add guard
@@ -608,7 +612,9 @@ function EditGuardDrawer(props: {
 	onClose: () => void;
 	onApply: (guard: GuardDraft) => void;
 }) {
+	const schemaPath = ['$defs', props.phase === 'request' ? 'RequestGuard' : 'ResponseGuard'];
 	const [draft, setDraft] = useState<GuardDraft>(props.guard);
+	const merged = useMergedEdits(buildGuard(props.guard), buildGuard(draft), schemaPath);
 
 	return (
 		<Drawer
@@ -616,9 +622,12 @@ function EditGuardDrawer(props: {
 			onClose={props.onClose}
 			dirty={JSON.stringify(draft) !== JSON.stringify(props.guard)}
 			raw={{
-				schemaPath: ['$defs', props.phase === 'request' ? 'RequestGuard' : 'ResponseGuard'],
-				value: () => buildGuard(draft),
-				onChange: value => setDraft(draftFromGuard(value as GuardObject)),
+				schemaPath,
+				value: () => merged.value,
+				onChange: value => {
+					setDraft(draftFromGuard(value as GuardObject));
+					merged.reset(value);
+				},
 				empty: buildGuard(emptyGuardDraft())
 			}}
 			footer={requestClose => (
@@ -626,7 +635,11 @@ function EditGuardDrawer(props: {
 					<button className="button" type="button" onClick={requestClose}>
 						Cancel
 					</button>
-					<button className="button primary" type="button" onClick={() => props.onApply(draft)}>
+					<button
+						className="button primary"
+						type="button"
+						onClick={() => props.onApply(withValue(draft, merged.value))}
+					>
 						<Save size={16} />
 						Apply changes
 					</button>
@@ -642,7 +655,10 @@ function EditGuardDrawer(props: {
 							ariaLabel="Guard type"
 							value={draft.kind}
 							options={props.phase === 'request' ? requestGuardKinds : responseGuardKinds}
-							onChange={value => setDraft(emptyGuardDraft(value))}
+							onChange={value => {
+								setDraft(emptyGuardDraft(value));
+								merged.reset(undefined);
+							}}
 						/>
 					</FieldGroup>
 					<section className="guardrail-rule-card compact">
@@ -1447,6 +1463,13 @@ function buildGuard(guard: GuardDraft): GuardObject {
 	if (guard.kind === 'unsupported' || !guard.source) return built;
 	const baseline = buildGuardFields(parseGuard(guard.source));
 	return mergeEdits(guard.source, baseline, built).value as GuardObject;
+}
+
+// A drawer's draft with the guard it saves. The draft keeps the form's fields
+// (which the guardrails page validates) even where the guard would not parse
+// back into them, e.g. a regex guard with no patterns yet.
+function withValue(guard: GuardDraft, value: GuardObject): GuardDraft {
+	return guard.kind === 'unsupported' ? { ...guard, raw: value } : { ...guard, source: value };
 }
 
 function buildGuardFields(guard: GuardDraft): GuardObject {

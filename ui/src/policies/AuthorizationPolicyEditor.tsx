@@ -5,7 +5,7 @@ import type * as Monaco from 'monaco-editor';
 import { useState } from 'react';
 
 import { celEditorOptions, celLanguage, configureCelMonaco } from '@/celMonaco';
-import { useReportEditorValue } from '@/components/EditorContracts';
+import { LostFieldsWarning, useMergedEdits } from '@/components/EditorContracts';
 import { EnumSelector, type EnumSelectorOption } from '@/components/EnumSelector';
 import { EmptyState, StatusBanner } from '@/components/Primitives';
 import type { AuthorizationDraft } from '@/policies/types';
@@ -39,8 +39,7 @@ export function AuthorizationPolicyEditor(props: {
 	const [editingIndex, setEditingIndex] = useState<number | null>(() => (rules.length ? 0 : null));
 	const [errors, setErrors] = useState<Record<number, string>>({});
 	const [summaryError, setSummaryError] = useState<string | null>(null);
-	const preview = buildAuthorization(rules);
-	useReportEditorValue(preview);
+	const merged = useMergedEdits(props.authorization, buildAuthorization(rules));
 
 	function addRule() {
 		setRules(current => [
@@ -100,7 +99,7 @@ export function AuthorizationPolicyEditor(props: {
 			return;
 		}
 		setSummaryError(null);
-		props.onSave(buildAuthorization(rules));
+		props.onSave(merged.value);
 	}
 
 	return (
@@ -112,6 +111,7 @@ export function AuthorizationPolicyEditor(props: {
 				save();
 			}}
 		>
+			<LostFieldsWarning lost={merged.lost} />
 			<div className="authz-rule-toolbar">
 				<div>
 					<strong>

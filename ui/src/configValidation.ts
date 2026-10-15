@@ -118,8 +118,17 @@ export function configValueError(path: string[], value: unknown): string | null 
 // `schemaPath` is required in any shape the schema allows.
 export function schemaRequires(schemaPath: string[], fieldPath: string) {
 	const parts = fieldPath.split('.');
+	const last = parts.at(-1);
+	return schemaNodesAt(schemaPath, parts.slice(0, -1))
+		.flatMap(schemaVariants)
+		.some(node => Array.isArray(node.required) && node.required.includes(last));
+}
+
+// The schema nodes, in any shape the schema allows, for the value at `at`
+// (property names and list indexes) within the node at `schemaPath`.
+function schemaNodesAt(schemaPath: string[], at: string[]) {
 	let nodes = [configSchemaNode(schemaPath)];
-	for (const part of parts.slice(0, -1)) {
+	for (const part of at) {
 		nodes = nodes.flatMap(schemaVariants).flatMap(node => {
 			const child = /^\d+$/.test(part)
 				? node.items
@@ -127,10 +136,7 @@ export function schemaRequires(schemaPath: string[], fieldPath: string) {
 			return child ? [child] : [];
 		});
 	}
-	const last = parts.at(-1);
-	return nodes
-		.flatMap(schemaVariants)
-		.some(node => Array.isArray(node.required) && node.required.includes(last));
+	return nodes;
 }
 
 // The schema with each anyOf/oneOf replaced by the branch `value` (or else
@@ -250,9 +256,10 @@ export function configSchemaNode(path: string[]) {
 }
 
 // Removes fields that equal their schema default, so a form does not write out
-// values nobody chose. `path` is a config schema node path.
-export function withoutSchemaDefaults<T>(value: T, path: string[]): T {
-	return stripDefaults(value, configSchemaNode(path)) as T;
+// values nobody chose. `path` is a config schema node path, and `at` where
+// `value` sits within a value of that node.
+export function withoutSchemaDefaults<T>(value: T, path: string[], at: string[] = []): T {
+	return stripDefaults(value, { anyOf: schemaNodesAt(path, at) }) as T;
 }
 
 type SchemaNode = Record<string, unknown>;

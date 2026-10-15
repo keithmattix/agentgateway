@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { useReportEditorValue } from '@/components/EditorContracts';
+import { LostFieldsWarning, useMergedEdits } from '@/components/EditorContracts';
 import { Field, FieldGroup } from '@/components/Primitives';
 import { ListEditor } from '@/policies/ListEditor';
 import { appendUnique, cleanEmpty, toggleStringSet } from '@/policies/policyUtils';
@@ -30,18 +30,19 @@ export function CorsPolicyEditor(props: {
 		(props.cors?.allowHeaders ?? []).filter(header => header !== '*')
 	);
 	const [exposeHeaders, setExposeHeaders] = useState(props.cors?.exposeHeaders ?? []);
-	const policy = buildCorsPolicy({
-		original: props.cors,
-		origins,
-		allMethods,
-		methods,
-		allHeaders,
-		headers,
-		exposeHeaders,
-		allowCredentials,
-		maxAge
-	});
-	useReportEditorValue(policy);
+	const merged = useMergedEdits(
+		props.cors,
+		buildCorsPolicy({
+			origins,
+			allMethods,
+			methods,
+			allHeaders,
+			headers,
+			exposeHeaders,
+			allowCredentials,
+			maxAge
+		})
+	);
 
 	return (
 		<form
@@ -49,9 +50,10 @@ export function CorsPolicyEditor(props: {
 			className="policy-editor-stack"
 			onSubmit={event => {
 				event.preventDefault();
-				props.onSave(policy);
+				props.onSave(merged.value);
 			}}
 		>
+			<LostFieldsWarning lost={merged.lost} />
 			<ListEditor
 				label="Allowed origins"
 				tooltip={props.help.field<CorsPolicy>('CorsSerde', 'allowOrigins')}
@@ -156,7 +158,6 @@ export function CorsPolicyEditor(props: {
 }
 
 function buildCorsPolicy(args: {
-	original: CorsPolicy | null | undefined;
 	origins: string[];
 	allMethods: boolean;
 	methods: Set<string>;
@@ -167,7 +168,6 @@ function buildCorsPolicy(args: {
 	maxAge: string;
 }): CorsPolicy {
 	return cleanEmpty({
-		...args.original,
 		allowOrigins: args.origins,
 		allowHeaders: args.allHeaders ? ['*'] : args.headers,
 		allowMethods: args.allMethods ? ['*'] : Array.from(args.methods),

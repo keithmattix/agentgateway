@@ -3,7 +3,7 @@ import { Pencil, Plus, Route as RouteIcon, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 import { ConfigDiffSaveActions } from '@/components/ConfigDiffDrawer';
-import { UnsupportedInForm } from '@/components/EditorContracts';
+import { LostFieldsWarning, UnsupportedInForm, useMergedEdits } from '@/components/EditorContracts';
 import { EnumSelector, type EnumSelectorOption } from '@/components/EnumSelector';
 import {
 	ConfirmDialog,
@@ -696,6 +696,13 @@ function GatewayRouteEditor(props: {
 		} as LocalAttachedGatewayRoute,
 		kind
 	);
+	const merged = useMergedEdits(
+		props.editing.resourceId || typeof props.editing.routeIndex === 'number'
+			? props.editing.route
+			: undefined,
+		preview,
+		['$defs', kind === 'http' ? 'LocalAttachedRoute' : 'LocalAttachedTCPRoute']
+	);
 
 	function save() {
 		if (!route.name?.trim()) {
@@ -710,7 +717,7 @@ function GatewayRouteEditor(props: {
 			kind,
 			routeIndex: props.editing.routeIndex,
 			resourceId: props.editing.resourceId,
-			route: preview
+			route: merged.value
 		});
 	}
 
@@ -724,10 +731,11 @@ function GatewayRouteEditor(props: {
 			onClose={props.onCancel}
 			raw={{
 				schemaPath: ['$defs', kind === 'http' ? 'LocalAttachedRoute' : 'LocalAttachedTCPRoute'],
-				value: () => preview,
+				value: () => merged.value,
 				onChange: value => {
 					const next = value as LocalAttachedGatewayRoute;
 					setRoute(next);
+					merged.reset(next);
 					setGateway(effectiveGatewayRouteRef(next, props.config, kind));
 				},
 				empty: makeRoute(kind)
@@ -739,7 +747,7 @@ function GatewayRouteEditor(props: {
 						props.databaseBacked
 							? {
 									original: props.editing.resourceId ? props.editing.route : {},
-									modified: preview
+									modified: merged.value
 								}
 							: undefined
 					}
@@ -764,16 +772,16 @@ function GatewayRouteEditor(props: {
 						if (kind === 'http') {
 							if (!Array.isArray(next.routes)) next.routes = [];
 							if (typeof props.editing.routeIndex === 'number') {
-								next.routes[props.editing.routeIndex] = preview as LocalAttachedRoute;
+								next.routes[props.editing.routeIndex] = merged.value as LocalAttachedRoute;
 							} else {
-								next.routes.push(preview as LocalAttachedRoute);
+								next.routes.push(merged.value as LocalAttachedRoute);
 							}
 						} else {
 							if (!Array.isArray(next.tcpRoutes)) next.tcpRoutes = [];
 							if (typeof props.editing.routeIndex === 'number') {
-								next.tcpRoutes[props.editing.routeIndex] = preview as LocalAttachedTCPRoute;
+								next.tcpRoutes[props.editing.routeIndex] = merged.value as LocalAttachedTCPRoute;
 							} else {
-								next.tcpRoutes.push(preview as LocalAttachedTCPRoute);
+								next.tcpRoutes.push(merged.value as LocalAttachedTCPRoute);
 							}
 						}
 					}}
@@ -781,6 +789,7 @@ function GatewayRouteEditor(props: {
 			}
 		>
 			{error ? <StatusBanner state="bad" title={error} /> : null}
+			<LostFieldsWarning lost={merged.lost} />
 			{multipleGateways ? <UnsupportedInForm supports="routes attached to one gateway" /> : null}
 			<div className="route-editor-stack">
 				{!props.editing.resourceId && typeof props.editing.routeIndex !== 'number' ? (
@@ -798,6 +807,7 @@ function GatewayRouteEditor(props: {
 								setKind(nextKind);
 								setGateway(nextOptions[0]?.value ?? '');
 								setRoute(makeRoute(nextKind) as LocalAttachedGatewayRoute);
+								merged.reset(undefined);
 								if (error) setError(null);
 							}}
 						/>
@@ -918,7 +928,11 @@ function RouteEditor(props: {
 		item => `${item.bindIndex}:${item.listenerIndex}` === listenerKey
 	);
 	const effectiveKind = selectedListener ? listenerRouteKind(selectedListener.listener) : kind;
-	const preview = cleanRoute(route, effectiveKind);
+	const merged = useMergedEdits(
+		typeof props.editing.routeIndex === 'number' ? props.editing.route : undefined,
+		cleanRoute(route, effectiveKind),
+		['$defs', effectiveKind === 'http' ? 'LocalRoute' : 'LocalTCPRoute']
+	);
 
 	function save() {
 		const [bindIndex, listenerIndex] = listenerKey.split(':').map(Number);
@@ -931,7 +945,7 @@ function RouteEditor(props: {
 			listenerIndex,
 			kind: effectiveKind,
 			routeIndex: props.editing.routeIndex,
-			route: preview
+			route: merged.value
 		});
 	}
 
@@ -941,8 +955,11 @@ function RouteEditor(props: {
 			onClose={props.onCancel}
 			raw={{
 				schemaPath: ['$defs', effectiveKind === 'http' ? 'LocalRoute' : 'LocalTCPRoute'],
-				value: () => preview,
-				onChange: value => setRoute(value as TrafficRoute | TrafficTcpRoute),
+				value: () => merged.value,
+				onChange: value => {
+					setRoute(value as TrafficRoute | TrafficTcpRoute);
+					merged.reset(value);
+				},
 				empty: makeRoute(effectiveKind)
 			}}
 			dirty={draft !== initialDraft}
@@ -968,15 +985,16 @@ function RouteEditor(props: {
 						if (!listener) return;
 						const routes = routeArray(listener, effectiveKind);
 						if (typeof props.editing.routeIndex === 'number') {
-							routes[props.editing.routeIndex] = preview as never;
+							routes[props.editing.routeIndex] = merged.value as never;
 						} else {
-							routes.push(preview as never);
+							routes.push(merged.value as never);
 						}
 					}}
 				/>
 			)}
 		>
 			{error ? <StatusBanner state="bad" title={error} /> : null}
+			<LostFieldsWarning lost={merged.lost} />
 			<div className="route-editor-stack">
 				{typeof props.editing.routeIndex !== 'number' ? (
 					<FieldGroup label="Listener" tooltip="Listener that owns this route.">
@@ -995,6 +1013,7 @@ function RouteEditor(props: {
 								const nextKind = nextListener ? listenerRouteKind(nextListener.listener) : kind;
 								setKind(nextKind);
 								setRoute(makeRoute(nextKind));
+								merged.reset(undefined);
 							}}
 						/>
 					</FieldGroup>

@@ -1,7 +1,7 @@
 import { Gauge, Plus, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
-import { UnsupportedInForm, useReportEditorValue } from '@/components/EditorContracts';
+import { LostFieldsWarning, UnsupportedInForm, useMergedEdits } from '@/components/EditorContracts';
 import { EnumSelector } from '@/components/EnumSelector';
 import { MiniMonacoEditor } from '@/components/MiniMonacoEditor';
 import { Field, FieldGroup } from '@/components/Primitives';
@@ -56,21 +56,17 @@ export function RemoteRateLimitPolicyEditor(props: {
 		[domain, target, descriptors]
 	);
 
-	useReportEditorValue(unsupported ? props.remoteRateLimit : build());
+	const merged = useMergedEdits(
+		props.remoteRateLimit,
+		unsupported ? props.remoteRateLimit : build()
+	);
 
 	if (unsupported) {
 		return <UnsupportedInForm supports="a single remote rate limit with a host target" />;
 	}
 
 	function build() {
-		const preserved: Record<string, unknown> =
-			isRecord(props.remoteRateLimit) && !isConditional(props.remoteRateLimit)
-				? { ...props.remoteRateLimit }
-				: {};
-		delete preserved.service;
-		delete preserved.backend;
-		const next = cleanEmpty({
-			...preserved,
+		return cleanEmpty({
 			...target,
 			domain,
 			descriptors: descriptors.map(descriptor =>
@@ -83,13 +79,12 @@ export function RemoteRateLimitPolicyEditor(props: {
 			),
 			failureMode: failureMode === 'failClosed' ? undefined : failureMode
 		}) as RemoteRateLimitDraft;
-		return next;
 	}
 
 	function save() {
 		setAttemptedSave(true);
 		if (errors.length) return;
-		props.onSave(build());
+		props.onSave(merged.value as RemoteRateLimitDraft);
 	}
 
 	return (
@@ -101,6 +96,7 @@ export function RemoteRateLimitPolicyEditor(props: {
 				save();
 			}}
 		>
+			<LostFieldsWarning lost={merged.lost} />
 			{attemptedSave && errors.length ? (
 				<div className="field-error remote-rate-errors">{errors.join(' ')}</div>
 			) : null}

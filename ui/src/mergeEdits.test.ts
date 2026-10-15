@@ -142,3 +142,25 @@ test('reports content replaced where the editor reshaped the original', () => {
 		lost: ['limits', 'tls']
 	});
 });
+
+test('passes fields and list entries the editor adds to `added`', () => {
+	const seen: string[] = [];
+	const added = (value: unknown, at: string[]) => {
+		seen.push(at.join('.'));
+		return { ...(value as object), stripped: true };
+	};
+	const original = { targets: [{ model: 'a' }] };
+	const baseline = { targets: [{ model: 'a', weight: 1 }] };
+	const edited = {
+		targets: [
+			{ model: 'a', weight: 1 },
+			{ model: 'b', weight: 1 }
+		],
+		extra: {}
+	};
+	assert.deepEqual(mergeEdits(original, baseline, edited, added).value, {
+		targets: [{ model: 'a' }, { model: 'b', weight: 1, stripped: true }],
+		extra: { stripped: true }
+	});
+	assert.deepEqual(seen, ['targets.1', 'extra']);
+});

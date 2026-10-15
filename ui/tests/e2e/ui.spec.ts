@@ -375,8 +375,7 @@ test('attaches traffic routes to gateways', async ({ page }) => {
 	expect(gateway.postedConfigs[0].routes).toMatchObject([
 		{
 			gateways: 'default',
-			name: 'api',
-			matches: [{ path: { pathPrefix: '/' } }]
+			name: 'api'
 		}
 	]);
 });
@@ -507,7 +506,7 @@ test('creates a weighted virtual model with a concrete wildcard target', async (
 		name: 'balanced',
 		routing: {
 			weighted: {
-				targets: [{ model: 'openai/gpt-5.4-nano', weight: 1 }]
+				targets: [{ model: 'openai/gpt-5.4-nano' }]
 			}
 		}
 	});
