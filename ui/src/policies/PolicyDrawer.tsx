@@ -381,12 +381,10 @@ export function usePolicyRaw(props: {
 			schemaPath: props.schemaPath,
 			value() {
 				if (!form() || !reported.current) return value;
-				const next = reported.current.value;
-				// The editor unmounts in raw mode; this is the value it reloads from.
-				// An invalid form stays as it is, since raw mode does not open.
-				if (next !== undefined) setValue(next);
-				return next;
+				return reported.current.value;
 			},
+			// The editor unmounts in raw mode; this is the value it reloads from.
+			onOpen: setValue,
 			onChange: setValue,
 			empty: null
 		} satisfies DrawerRaw

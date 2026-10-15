@@ -115,6 +115,7 @@ export function ProviderConfigEditor(props: {
 		<>
 			<FieldGroup
 				label="Provider"
+				path="provider"
 				tooltip={props.help.field<LlmModel>('LocalLLMModels', 'provider')}
 			>
 				<Dropdown

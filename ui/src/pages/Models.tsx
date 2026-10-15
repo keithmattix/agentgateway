@@ -723,7 +723,6 @@ function ModelEditor(props: {
 					diffTitle={props.databaseBacked ? 'Model resource diff' : 'Model config diff'}
 					saveLabel="Save model"
 					saving={props.saving}
-					saveDisabled={!model.name.trim() || !preview?.provider}
 					onCancel={requestClose}
 					onSave={save}
 					beforeDiff={validateBeforeDiff}
@@ -761,6 +760,7 @@ function ModelEditor(props: {
 			<div className="form-grid">
 				<Field
 					label="Incoming model match"
+					path="name"
 					tooltip={props.help.field<LlmModel>(
 						'LocalLLMModels',
 						'name',
@@ -1403,6 +1403,7 @@ function VirtualModelEditor(props: {
 			)}
 			<Field
 				label="Virtual model name"
+				path="name"
 				tooltip={props.help.field<LlmVirtualModel>('LocalLLMVirtualModel', 'name')}
 			>
 				<input

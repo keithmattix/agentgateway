@@ -962,6 +962,12 @@ h4.field-label {
 	color: var(--bad);
 }
 
+/* Not part of the label's text or accessible name. */
+.field-required::after {
+	content: ' *' / '';
+	color: var(--bad);
+}
+
 .custom-select-trigger {
 	display: flex;
 	align-items: center;

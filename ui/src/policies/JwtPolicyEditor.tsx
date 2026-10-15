@@ -3,7 +3,7 @@ import { useState } from 'react';
 
 import { LostFieldsWarning, UnsupportedInForm, useMergedEdits } from '@/components/EditorContracts';
 import { MiniMonacoEditor } from '@/components/MiniMonacoEditor';
-import { Field, FieldGroup, StatusBanner } from '@/components/Primitives';
+import { Field, FieldGroup } from '@/components/Primitives';
 import type { JWTValidationOptions, LocalJwtConfig } from '@/gateway-config';
 import {
 	authorizationLocationFrom,
@@ -25,8 +25,6 @@ type JwtDraft = Omit<JwtPolicy, 'location' | 'jwtValidationOptions'> & {
 		requiredClaims?: string[];
 	};
 };
-
-type JwtFieldErrors = Partial<Record<'issuer' | 'jwksUrl' | 'jwksFile' | 'jwksInline', string>>;
 
 const commonClaims = ['exp', 'nbf', 'aud', 'iss', 'sub'] as const;
 
@@ -108,8 +106,7 @@ export function JwtPolicyEditor(props: {
 	const [requiredClaims, setRequiredClaims] = useState(
 		() => new Set(props.jwt?.jwtValidationOptions?.requiredClaims ?? ['exp'])
 	);
-	const [fieldErrors, setFieldErrors] = useState<JwtFieldErrors>({});
-	const [error, setError] = useState<string | null>(null);
+	const [inlineError, setInlineError] = useState<string | null>(null);
 
 	const preview = buildJwtPolicy();
 	const merged = useMergedEdits(props.jwt, preview);
@@ -140,37 +137,15 @@ export function JwtPolicyEditor(props: {
 	}
 
 	function save() {
-		try {
-			setError(null);
-			const validationErrors = validateJwtPolicy();
-			setFieldErrors(validationErrors);
-			if (Object.keys(validationErrors).length) {
-				setError('Fix the highlighted fields before saving.');
+		if (jwksMode === 'inline') {
+			try {
+				JSON.parse(jwksInline);
+			} catch {
+				setInlineError('Inline JWKS must be valid JSON.');
 				return;
 			}
-			props.onSave(merged.value);
-		} catch (err) {
-			setError(err instanceof Error ? err.message : 'Invalid JWT policy');
 		}
-	}
-
-	function validateJwtPolicy() {
-		const errors: JwtFieldErrors = {};
-		if (!issuer.trim()) errors.issuer = 'Issuer is required.';
-		if (jwksMode === 'url' && !jwksUrl.trim()) errors.jwksUrl = 'JWKS URL is required.';
-		if (jwksMode === 'file' && !jwksFile.trim()) errors.jwksFile = 'JWKS file is required.';
-		if (jwksMode === 'inline') {
-			if (!jwksInline.trim()) {
-				errors.jwksInline = 'Inline JWKS is required.';
-			} else {
-				try {
-					JSON.parse(jwksInline);
-				} catch {
-					errors.jwksInline = 'Inline JWKS must be valid JSON.';
-				}
-			}
-		}
-		return errors;
+		props.onSave(merged.value);
 	}
 
 	return (
@@ -223,10 +198,7 @@ export function JwtPolicyEditor(props: {
 								className={jwksMode === option.value ? 'option-card active' : 'option-card'}
 								type="button"
 								key={option.value}
-								onClick={() => {
-									setJwksMode(option.value);
-									clearJwksErrors();
-								}}
+								onClick={() => setJwksMode(option.value)}
 							>
 								<strong>{option.label}</strong>
 								<span>{option.description}</span>
@@ -238,16 +210,11 @@ export function JwtPolicyEditor(props: {
 					<Field
 						label="JWKS file"
 						tooltip={props.help.field<LocalJwtConfig>('LocalJwtConfig', 'jwks')}
-						className={fieldErrors.jwksFile ? 'invalid' : undefined}
-						hint={fieldErrors.jwksFile}
+						path="jwks.file"
 					>
 						<input
 							value={jwksFile}
-							aria-invalid={Boolean(fieldErrors.jwksFile)}
-							onChange={event => {
-								setJwksFile(event.target.value);
-								clearFieldError('jwksFile');
-							}}
+							onChange={event => setJwksFile(event.target.value)}
 							placeholder="./manifests/jwt/pub-key"
 						/>
 					</Field>
@@ -255,16 +222,11 @@ export function JwtPolicyEditor(props: {
 					<Field
 						label="JWKS URL"
 						tooltip={props.help.field<LocalJwtConfig>('LocalJwtConfig', 'jwks')}
-						className={fieldErrors.jwksUrl ? 'invalid' : undefined}
-						hint={fieldErrors.jwksUrl}
+						path="jwks.url"
 					>
 						<input
 							value={jwksUrl}
-							aria-invalid={Boolean(fieldErrors.jwksUrl)}
-							onChange={event => {
-								setJwksUrl(event.target.value);
-								clearFieldError('jwksUrl');
-							}}
+							onChange={event => setJwksUrl(event.target.value)}
 							placeholder="https://issuer.example.com/.well-known/jwks.json"
 						/>
 					</Field>
@@ -272,16 +234,17 @@ export function JwtPolicyEditor(props: {
 					<FieldGroup
 						label="Inline JWKS"
 						tooltip={props.help.field<LocalJwtConfig>('LocalJwtConfig', 'jwks')}
-						className={fieldErrors.jwksInline ? 'invalid' : undefined}
-						hint={fieldErrors.jwksInline}
+						className={inlineError ? 'invalid' : undefined}
+						hint={inlineError ?? undefined}
+						path="jwks"
 					>
 						<MiniMonacoEditor
 							language="json"
 							value={jwksInline}
-							invalid={Boolean(fieldErrors.jwksInline)}
+							invalid={Boolean(inlineError)}
 							onChange={value => {
 								setJwksInline(value);
-								clearFieldError('jwksInline');
+								setInlineError(null);
 							}}
 						/>
 					</FieldGroup>
@@ -296,16 +259,11 @@ export function JwtPolicyEditor(props: {
 				<Field
 					label="Issuer"
 					tooltip={props.help.field<LocalJwtConfig>('LocalJwtConfig', 'issuer')}
-					className={fieldErrors.issuer ? 'invalid' : undefined}
-					hint={fieldErrors.issuer}
+					path="issuer"
 				>
 					<input
 						value={issuer}
-						aria-invalid={Boolean(fieldErrors.issuer)}
-						onChange={event => {
-							setIssuer(event.target.value);
-							clearFieldError('issuer');
-						}}
+						onChange={event => setIssuer(event.target.value)}
 						placeholder="https://issuer.example.com"
 					/>
 				</Field>
@@ -345,35 +303,8 @@ export function JwtPolicyEditor(props: {
 				description="Override where this policy reads the JWT from."
 				onChange={setLocation}
 			/>
-
-			{error ? (
-				<StatusBanner state="bad" title="Invalid JWT policy">
-					{error}
-				</StatusBanner>
-			) : null}
 		</form>
 	);
-
-	function clearFieldError(field: keyof JwtFieldErrors) {
-		setFieldErrors(current => {
-			if (!current[field]) return current;
-			const next = { ...current };
-			delete next[field];
-			return next;
-		});
-		setError(null);
-	}
-
-	function clearJwksErrors() {
-		setFieldErrors(current => {
-			const next = { ...current };
-			delete next.jwksUrl;
-			delete next.jwksFile;
-			delete next.jwksInline;
-			return next;
-		});
-		setError(null);
-	}
 }
 
 function toggleClaim(values: Set<string>, value: string) {

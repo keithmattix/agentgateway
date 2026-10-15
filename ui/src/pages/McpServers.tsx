@@ -662,11 +662,7 @@ function McpServerEditor(props: {
 					diffTitle="MCP server config diff"
 					saveLabel="Save server"
 					saving={props.saving}
-					saveDisabled={
-						!name.trim() ||
-						(kind === 'stdio' && !cmd.trim()) ||
-						(kind === 'openapi' && !schemaValue.trim())
-					}
+					saveDisabled={kind === 'openapi' && !schemaValue.trim()}
 					onCancel={requestClose}
 					onSave={save}
 					beforeDiff={() => Boolean(validTargetPreview())}
@@ -686,6 +682,7 @@ function McpServerEditor(props: {
 			<div className="form-grid">
 				<Field
 					label="Server name"
+					path="name"
 					tooltip={props.help.field<McpTarget>(
 						'LocalMcpTarget',
 						'name',
@@ -723,6 +720,7 @@ function McpServerEditor(props: {
 				<>
 					<Field
 						label="Command"
+						path="stdio.cmd"
 						tooltip={props.help.field<McpTarget>(
 							'LocalMcpTarget1',
 							'stdio.cmd',
@@ -776,6 +774,7 @@ function McpServerEditor(props: {
 				<>
 					<Field
 						label="URL"
+						path={`${kind}.host`}
 						tooltip={
 							kind === 'sse'
 								? props.help.field<McpTarget>(

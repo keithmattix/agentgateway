@@ -21,6 +21,7 @@ import {
 	cloneElement,
 	createContext,
 	useCallback,
+	useContext,
 	useEffect,
 	useId,
 	useLayoutEffect,
@@ -31,7 +32,13 @@ import {
 
 import { SchemaHelpPanel } from '@/components/SchemaHelpPanel';
 import { parseSchemaYamlEditorValue, SchemaYamlEditor } from '@/components/SchemaYamlEditor';
-import { configSchemaNode, configValueError } from '@/configValidation';
+import {
+	type ConfigValueError,
+	configSchemaNode,
+	configValueError,
+	configValueErrors,
+	schemaRequires
+} from '@/configValidation';
 import { useSchemaHelp } from '@/schemaHelp';
 
 const drawerStack: symbol[] = [];
@@ -43,6 +50,8 @@ export type DrawerRaw = {
 	schemaPath: string[];
 	// The form's current value, or undefined while the form is invalid.
 	value: () => unknown;
+	// Raw mode opened with `value`.
+	onOpen?: (value: unknown) => void;
 	// Each valid raw edit. The form reloads from the last one when raw mode closes.
 	onChange: (value: unknown) => void;
 	// The value of a blank form. Clearing the raw text loads it, so the form can
@@ -52,6 +61,48 @@ export type DrawerRaw = {
 
 // Provided by a drawer with raw mode; pins it to raw with a reason.
 export const PinRawContext = createContext<((reason: string) => void) | null>(null);
+
+// Checks a drawer's form value against its config schema before saving: false
+// (with the errors shown on the form) when it is invalid.
+export const DrawerCheckContext = createContext<(() => boolean) | null>(null);
+
+// Schema errors for a drawer's form, which Field and FieldGroup show for their
+// `path`.
+const FieldErrorsContext = createContext<{
+	schemaPath: string[];
+	// Errors for the current value once a save was attempted; null before.
+	errors: () => ConfigValueError[] | null;
+	register: (path: string) => () => void;
+} | null>(null);
+
+// Forms hold unset text fields as '' (or whitespace), which the schema would
+// accept as set. Only the check sees this; the saved value is unchanged.
+function withoutEmptyStrings(value: unknown): unknown {
+	if (Array.isArray(value)) return value.map(withoutEmptyStrings);
+	if (!value || typeof value !== 'object') return value;
+	return Object.fromEntries(
+		Object.entries(value).flatMap(([key, item]) =>
+			typeof item === 'string' && !item.trim() ? [] : [[key, withoutEmptyStrings(item)]]
+		)
+	);
+}
+
+function pathsOverlap(error: string, field: string) {
+	return (
+		error !== '' &&
+		(error === field || error.startsWith(`${field}.`) || field.startsWith(`${error}.`))
+	);
+}
+
+function useFieldError(path: string | undefined) {
+	const context = useContext(FieldErrorsContext);
+	useLayoutEffect(() => (path && context ? context.register(path) : undefined), [context, path]);
+	if (!path || !context) return { required: false, error: undefined };
+	return {
+		required: schemaRequires(context.schemaPath, path),
+		error: context.errors()?.find(error => pathsOverlap(error.path, path))?.message
+	};
+}
 
 export function PageHeader(props: { title: string; description?: string; actions?: ReactNode }) {
 	return (
@@ -597,8 +648,64 @@ export function Drawer(props: {
 		}
 		const value = props.raw?.value();
 		if (value === undefined) return;
+		props.raw?.onOpen?.(value);
 		setRawText(dump(value ?? {}, { noRefs: true, lineWidth: 100 }));
 	}
+
+	// Form fields that show errors for a path, which also pick the shape errors
+	// are reported against (see configValueErrors).
+	const fieldPaths = useRef(new Map<string, number>());
+	const lastErrors = useRef<{ value: unknown; errors: ConfigValueError[] } | null>(null);
+	const [checked, setChecked] = useState(false);
+	function formErrors() {
+		const raw = rawRef.current;
+		if (!raw) return [];
+		const value = raw.value();
+		// No value: the editor's own validation reports why.
+		if (value === undefined || value === null) return [];
+		if (lastErrors.current?.value !== value) {
+			lastErrors.current = {
+				value,
+				errors: configValueErrors(raw.schemaPath, withoutEmptyStrings(value), [
+					...fieldPaths.current.keys()
+				])
+			};
+		}
+		return lastErrors.current.errors;
+	}
+	const schemaPathKey = props.raw?.schemaPath.join('/');
+	// biome-ignore lint/correctness/useExhaustiveDependencies: formErrors reads refs; this changes with what it reports.
+	const fieldErrors = useMemo(
+		() =>
+			props.raw
+				? {
+						schemaPath: props.raw.schemaPath,
+						errors: () => (checked ? formErrors() : null),
+						register(path: string) {
+							fieldPaths.current.set(path, (fieldPaths.current.get(path) ?? 0) + 1);
+							return () => {
+								const count = (fieldPaths.current.get(path) ?? 1) - 1;
+								if (count) fieldPaths.current.set(path, count);
+								else fieldPaths.current.delete(path);
+							};
+						}
+					}
+				: null,
+		[checked, schemaPathKey]
+	);
+	function check() {
+		// Raw text is validated as it is edited.
+		if (rawText !== null) return true;
+		lastErrors.current = null;
+		setChecked(true);
+		return !formErrors().length;
+	}
+	const unshownErrors =
+		checked && rawText === null
+			? formErrors().filter(
+					error => ![...fieldPaths.current.keys()].some(path => pathsOverlap(error.path, path))
+				)
+			: [];
 
 	// Derived from the text, so the value raw mode opens with is checked too.
 	const rawError = rawText !== null && props.raw ? checkRaw(rawText, props.raw).error : null;
@@ -779,9 +886,22 @@ export function Drawer(props: {
 							</div>
 						) : (
 							<PinRawContext.Provider value={props.raw ? pinRaw : null}>
-								{props.children}
+								<FieldErrorsContext.Provider value={fieldErrors}>
+									{props.children}
+								</FieldErrorsContext.Provider>
 							</PinRawContext.Provider>
 						)}
+						{unshownErrors.length ? (
+							<StatusBanner state="bad" title="Invalid configuration">
+								{unshownErrors.map(error => (
+									<div key={error.path}>
+										{error.path ? <code>{error.path}</code> : null}
+										{error.path ? ': ' : null}
+										{error.message}
+									</div>
+								))}
+							</StatusBanner>
+						) : null}
 						{props.error ? (
 							<StatusBanner state="bad" title="Save failed">
 								{props.error}
@@ -792,9 +912,11 @@ export function Drawer(props: {
 						<div className="drawer-footer">
 							{/* Invalid raw text has not reached the form, so saving now would save stale values. */}
 							<fieldset className="drawer-footer-actions" disabled={Boolean(rawError)}>
-								{typeof props.footer === 'function'
-									? props.footer(requestClose, dirty)
-									: props.footer}
+								<DrawerCheckContext.Provider value={props.raw ? check : null}>
+									{typeof props.footer === 'function'
+										? props.footer(requestClose, dirty)
+										: props.footer}
+								</DrawerCheckContext.Provider>
 							</fieldset>
 						</div>
 					) : null}
@@ -946,32 +1068,43 @@ export function EmptyState(props: { title: string; description: string; action?:
 export function Field(props: {
 	label: string;
 	children:
-		| ReactElement<{ id?: string; 'aria-describedby'?: string }>
-		| ((id: string, hintId?: string) => ReactNode);
+		| ReactElement<{ id?: string; 'aria-describedby'?: string; 'aria-invalid'?: boolean }>
+		| ((id: string, hintId?: string, invalid?: boolean) => ReactNode);
 	hint?: string;
 	className?: string;
 	tooltip?: string;
+	// The dotted path this field edits within its drawer's value, such as
+	// `jwks.url`: it is marked when the schema requires it, and shows schema
+	// errors for it after a save attempt.
+	path?: string;
 }) {
 	const generatedId = useId();
 	const hintId = useId();
-	const describedBy = props.hint ? hintId : undefined;
+	const field = useFieldError(props.path);
+	const hint = field.error ?? props.hint;
+	const describedBy = hint ? hintId : undefined;
 	const id =
 		typeof props.children === 'function' ? generatedId : (props.children.props.id ?? generatedId);
-	const className = props.className ? `field ${props.className}` : 'field';
+	const className = ['field', props.className, field.error ? 'invalid' : null]
+		.filter(Boolean)
+		.join(' ');
 	const control = (
 		<div className={props.tooltip ? 'field field-control' : className}>
 			<span className="field-label">
-				<label htmlFor={id}>{props.label}</label>
+				<label htmlFor={id} className={field.required ? 'field-required' : undefined}>
+					{props.label}
+				</label>
 			</span>
 			{typeof props.children === 'function'
-				? props.children(id, describedBy)
+				? props.children(id, describedBy, Boolean(field.error))
 				: cloneElement(props.children, {
 						id,
 						'aria-describedby':
 							[props.children.props['aria-describedby'], describedBy].filter(Boolean).join(' ') ||
-							undefined
+							undefined,
+						'aria-invalid': field.error ? true : props.children.props['aria-invalid']
 					})}
-			{props.hint ? <small id={hintId}>{props.hint}</small> : null}
+			{hint ? <small id={hintId}>{hint}</small> : null}
 		</div>
 	);
 	if (!props.tooltip) return control;
@@ -993,11 +1126,19 @@ export function FieldGroup(props: {
 	hint?: string;
 	className?: string;
 	tooltip?: string;
+	// As for Field.
+	path?: string;
 }) {
+	const field = useFieldError(props.path);
+	const hint = field.error ?? props.hint;
 	return (
-		<div className={props.className ? `field ${props.className}` : 'field'}>
+		<div
+			className={['field', props.className, field.error ? 'invalid' : null]
+				.filter(Boolean)
+				.join(' ')}
+		>
 			<span className="field-label">
-				{props.label}
+				{field.required ? <span className="field-required">{props.label}</span> : props.label}
 				{props.tooltip ? (
 					<Tooltip content={props.tooltip} side="right">
 						<button className="help-icon" type="button" aria-label={props.tooltip}>
@@ -1007,7 +1148,7 @@ export function FieldGroup(props: {
 				) : null}
 			</span>
 			{props.children}
-			{props.hint ? <small>{props.hint}</small> : null}
+			{hint ? <small>{hint}</small> : null}
 		</div>
 	);
 }

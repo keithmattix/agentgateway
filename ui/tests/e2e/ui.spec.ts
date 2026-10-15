@@ -721,7 +721,7 @@ test('OIDC empty Issuer validation describes the Issuer input', async ({ page })
 	await page.getByText('OIDC', { exact: true }).click();
 	await page.getByRole('button', { name: 'Save policy' }).click();
 	await expect(page.getByRole('textbox', { name: 'Issuer' })).toHaveAccessibleDescription(
-		'Issuer is required.'
+		'Required'
 	);
 });
 

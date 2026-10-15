@@ -324,7 +324,6 @@ function ProviderEditor(props: {
 					diffTitle={props.databaseBacked ? 'Provider resource diff' : 'Provider config diff'}
 					saveLabel="Save provider"
 					saving={props.saving}
-					saveDisabled={!provider.name.trim()}
 					onCancel={requestClose}
 					onSave={save}
 					beforeDiff={validateBeforeDiff}
@@ -335,6 +334,7 @@ function ProviderEditor(props: {
 			<div className="form-grid">
 				<Field
 					label="Provider name"
+					path="name"
 					tooltip={props.help.field<LlmProvider>(
 						'LocalLLMProvider',
 						'name',

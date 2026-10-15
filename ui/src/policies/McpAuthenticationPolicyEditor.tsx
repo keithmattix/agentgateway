@@ -15,8 +15,6 @@ import type { SchemaHelp } from '@/schemaHelp';
 type AuthMode = 'strict' | 'optional' | 'permissive';
 type JwksMode = 'url' | 'file' | 'inline';
 
-type FieldErrors = Partial<Record<'issuer' | 'jwks' | 'metadata', string>>;
-
 export function McpAuthenticationPolicyEditor(props: {
 	formId?: string;
 	authentication: McpAuthenticationDraft | null | undefined;
@@ -40,7 +38,7 @@ export function McpAuthenticationPolicyEditor(props: {
 	const [resourceMetadata, setResourceMetadata] = useState(() =>
 		toYamlMappingText(props.authentication?.resourceMetadata)
 	);
-	const [errors, setErrors] = useState<FieldErrors>({});
+	const [metadataError, setMetadataError] = useState<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
 	const preview = safeBuild();
 	const merged = useMergedEdits(props.authentication, preview);
@@ -60,28 +58,19 @@ export function McpAuthenticationPolicyEditor(props: {
 		try {
 			return build();
 		} catch {
-			return {
-				error: 'Resource metadata must be YAML and inline JWKS must be valid JSON.'
-			};
+			// Reported on save.
+			return undefined;
 		}
 	}
 
 	function save() {
 		try {
-			const nextErrors: FieldErrors = {};
-			if (!issuer.trim()) nextErrors.issuer = 'Issuer is required.';
-			if (!jwksValue.trim()) nextErrors.jwks = 'JWKS source is required.';
-			if (jwksMode === 'inline') JSON.parse(jwksValue);
-			if (resourceMetadata.trim()) {
-				const parsed = parseYamlText(resourceMetadata);
-				if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
-					nextErrors.metadata = 'Resource metadata must be a YAML mapping.';
-			}
-			setErrors(nextErrors);
-			if (Object.keys(nextErrors).length) {
-				setError('Fix the highlighted fields before saving.');
+			if (jwksMode === 'inline' && jwksValue.trim()) JSON.parse(jwksValue);
+			if (resourceMetadata.trim() && !isRecord(parseYamlText(resourceMetadata))) {
+				setMetadataError('Resource metadata must be a YAML mapping.');
 				return;
 			}
+			setMetadataError(null);
 			setError(null);
 			props.onSave(merged.value as McpAuthenticationDraft);
 		} catch (err) {
@@ -165,23 +154,13 @@ export function McpAuthenticationPolicyEditor(props: {
 					</div>
 				</FieldGroup>
 				{jwksMode === 'inline' ? (
-					<FieldGroup
-						label="Inline JWKS"
-						className={errors.jwks ? 'invalid' : undefined}
-						hint={errors.jwks}
-					>
-						<MiniMonacoEditor
-							language="json"
-							value={jwksValue}
-							invalid={Boolean(errors.jwks)}
-							onChange={setJwksValue}
-						/>
+					<FieldGroup label="Inline JWKS" path="jwks">
+						<MiniMonacoEditor language="json" value={jwksValue} onChange={setJwksValue} />
 					</FieldGroup>
 				) : (
 					<Field
 						label={jwksMode === 'url' ? 'JWKS URL' : 'JWKS file'}
-						className={errors.jwks ? 'invalid' : undefined}
-						hint={errors.jwks}
+						path={jwksMode === 'url' ? 'jwks.url' : 'jwks.file'}
 					>
 						<input
 							value={jwksValue}
@@ -204,12 +183,10 @@ export function McpAuthenticationPolicyEditor(props: {
 				<Field
 					label="Issuer"
 					tooltip={props.help.field<LocalMcpAuthentication>('LocalMcpAuthentication', 'issuer')}
-					className={errors.issuer ? 'invalid' : undefined}
-					hint={errors.issuer}
+					path="issuer"
 				>
 					<input
 						value={issuer}
-						aria-invalid={Boolean(errors.issuer)}
 						onChange={event => setIssuer(event.target.value)}
 						placeholder="https://issuer.example.com"
 					/>
@@ -245,13 +222,14 @@ export function McpAuthenticationPolicyEditor(props: {
 						'LocalMcpAuthentication',
 						'resourceMetadata'
 					)}
-					className={errors.metadata ? 'invalid' : undefined}
-					hint={errors.metadata}
+					className={metadataError ? 'invalid' : undefined}
+					hint={metadataError ?? undefined}
+					path="resourceMetadata"
 				>
 					<MiniMonacoEditor
 						language="yaml"
 						value={resourceMetadata}
-						invalid={Boolean(errors.metadata)}
+						invalid={Boolean(metadataError)}
 						onChange={setResourceMetadata}
 					/>
 				</FieldGroup>

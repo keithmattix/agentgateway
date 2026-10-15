@@ -39,7 +39,7 @@ export function TargetEditor(props: {
 				</div>
 			</div>
 			<div className="policy-form-section-body">
-				<Field label="Host" tooltip={props.tooltip}>
+				<Field label="Host" tooltip={props.tooltip} path="host">
 					<input
 						value={props.value.host}
 						onChange={event => props.onChange({ ...props.value, host: event.target.value })}

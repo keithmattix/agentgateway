@@ -24,10 +24,16 @@ import {
 	Workflow
 } from 'lucide-react';
 import type { ComponentType } from 'react';
-import { useMemo, useState } from 'react';
+import { useContext, useMemo, useState } from 'react';
 
 import { EditorValueContext } from '@/components/EditorContracts';
-import { Drawer, EmptyState, Tooltip, YamlBlock } from '@/components/Primitives';
+import {
+	Drawer,
+	DrawerCheckContext,
+	EmptyState,
+	Tooltip,
+	YamlBlock
+} from '@/components/Primitives';
 import { PolicyEditorBody, type PolicyEditorKind, usePolicyRaw } from '@/policies/PolicyDrawer';
 import { policyEnabled, policySummary, titleFromKey } from '@/policies/policyUtils';
 import { policyUi } from '@/policies/registry';
@@ -346,12 +352,7 @@ function TrafficPolicyEditorDrawer(props: {
 					</Tooltip>
 				</>
 			}
-			footer={
-				<button className="button primary" type="button" onClick={policy.submit}>
-					<Save size={16} />
-					Save
-				</button>
-			}
+			footer={<PolicySaveButton onSave={policy.submit} />}
 		>
 			<EditorValueContext.Provider value={policy.report}>
 				<TrafficPolicyEditor
@@ -364,6 +365,22 @@ function TrafficPolicyEditorDrawer(props: {
 				/>
 			</EditorValueContext.Provider>
 		</Drawer>
+	);
+}
+
+function PolicySaveButton(props: { onSave: () => void }) {
+	const check = useContext(DrawerCheckContext);
+	return (
+		<button
+			className="button primary"
+			type="button"
+			onClick={() => {
+				if (!check || check()) props.onSave();
+			}}
+		>
+			<Save size={16} />
+			Save
+		</button>
 	);
 }
 

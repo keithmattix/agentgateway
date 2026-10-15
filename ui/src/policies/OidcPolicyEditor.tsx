@@ -22,17 +22,7 @@ type SourceDraft = {
 };
 
 type OidcFieldErrors = Partial<
-	Record<
-		| 'issuer'
-		| 'clientId'
-		| 'clientSecret'
-		| 'redirectURI'
-		| 'discovery'
-		| 'authorizationEndpoint'
-		| 'tokenEndpoint'
-		| 'jwks',
-		string
-	>
+	Record<'discovery' | 'authorizationEndpoint' | 'tokenEndpoint' | 'jwks', string>
 >;
 
 const providerModes: Array<{
@@ -150,10 +140,6 @@ export function OidcPolicyEditor(props: {
 
 	function validateOidcPolicy() {
 		const errors: OidcFieldErrors = {};
-		if (!issuer.trim()) errors.issuer = 'Issuer is required.';
-		if (!clientId.trim()) errors.clientId = 'Client ID is required.';
-		if (!clientSecret.trim()) errors.clientSecret = 'Client secret is required.';
-		if (!redirectURI.trim()) errors.redirectURI = 'Redirect URI is required.';
 		if (providerMode === 'discovery') {
 			const discoveryError = validateSource(discovery, false);
 			if (discoveryError) errors.discovery = discoveryError;
@@ -185,20 +171,16 @@ export function OidcPolicyEditor(props: {
 				<Field
 					label="Issuer"
 					tooltip={props.help.field<LocalOidcConfig>('LocalOidcConfig', 'issuer')}
-					className={fieldErrors.issuer ? 'invalid' : undefined}
-					hint={fieldErrors.issuer}
+					path="issuer"
 				>
-					{(id, hintId) => (
+					{(id, hintId, invalid) => (
 						<>
 							<input
 								id={id}
 								aria-describedby={hintId}
+								aria-invalid={invalid}
 								value={issuer}
-								aria-invalid={Boolean(fieldErrors.issuer)}
-								onChange={event => {
-									setIssuer(event.target.value);
-									clearFieldError('issuer');
-								}}
+								onChange={event => setIssuer(event.target.value)}
 								placeholder="https://issuer.example.com"
 							/>
 							<div className="suggestion-row">
@@ -207,10 +189,7 @@ export function OidcPolicyEditor(props: {
 										className="table-action"
 										type="button"
 										key={suggestion.label}
-										onClick={() => {
-											setIssuer(suggestion.value);
-											clearFieldError('issuer');
-										}}
+										onClick={() => setIssuer(suggestion.value)}
 									>
 										{suggestion.label}
 									</button>
@@ -328,24 +307,18 @@ export function OidcPolicyEditor(props: {
 				<Field
 					label="Client ID"
 					tooltip={props.help.field<LocalOidcConfig>('LocalOidcConfig', 'clientId')}
-					className={fieldErrors.clientId ? 'invalid' : undefined}
-					hint={fieldErrors.clientId}
+					path="clientId"
 				>
 					<input
 						value={clientId}
-						aria-invalid={Boolean(fieldErrors.clientId)}
-						onChange={event => {
-							setClientId(event.target.value);
-							clearFieldError('clientId');
-						}}
+						onChange={event => setClientId(event.target.value)}
 						placeholder="agentgateway-browser"
 					/>
 				</Field>
 				<Field
 					label="Client secret"
 					tooltip={props.help.field<LocalOidcConfig>('LocalOidcConfig', 'clientSecret')}
-					className={fieldErrors.clientSecret ? 'invalid' : undefined}
-					hint={fieldErrors.clientSecret}
+					path="clientSecret"
 				>
 					<input
 						type="text"
@@ -359,27 +332,18 @@ export function OidcPolicyEditor(props: {
 						name="agw-oidc-client-secret"
 						spellCheck={false}
 						value={clientSecret}
-						aria-invalid={Boolean(fieldErrors.clientSecret)}
-						onChange={event => {
-							setClientSecret(event.target.value);
-							clearFieldError('clientSecret');
-						}}
+						onChange={event => setClientSecret(event.target.value)}
 						placeholder="OAuth2 client secret"
 					/>
 				</Field>
 				<Field
 					label="Redirect URI"
 					tooltip={props.help.field<LocalOidcConfig>('LocalOidcConfig', 'redirectURI')}
-					className={fieldErrors.redirectURI ? 'invalid' : undefined}
-					hint={fieldErrors.redirectURI}
+					path="redirectURI"
 				>
 					<input
 						value={redirectURI}
-						aria-invalid={Boolean(fieldErrors.redirectURI)}
-						onChange={event => {
-							setRedirectURI(event.target.value);
-							clearFieldError('redirectURI');
-						}}
+						onChange={event => setRedirectURI(event.target.value)}
 						placeholder="http://localhost:4000/oauth/callback"
 					/>
 				</Field>
