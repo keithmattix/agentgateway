@@ -684,12 +684,6 @@ where
 		log: &mut RequestLog,
 		req: &mut Request,
 	) -> Result<T, SnapshottedProxyResponse>;
-	#[allow(clippy::result_large_err)]
-	fn maybe_snapshot_on_err(
-		self,
-		log: &mut RequestLog,
-		req: &mut Option<Request>,
-	) -> Result<T, SnapshottedProxyResponse>;
 	fn explicitly_skip_snapshot(self) -> Result<T, SnapshottedProxyResponse>;
 }
 
@@ -709,23 +703,6 @@ where
 				.cel_context
 				.maybe_snapshot_request(req, true)
 				.map(Arc::new);
-			SnapshottedProxyResponse(e.into())
-		})
-	}
-	#[allow(clippy::result_large_err)]
-	fn maybe_snapshot_on_err(
-		self,
-		log: &mut RequestLog,
-		req: &mut Option<Request>,
-	) -> Result<T, SnapshottedProxyResponse> {
-		self.map_err(|e| {
-			if let Some(req) = req.as_mut() {
-				log.request_snapshot = log
-					.cel
-					.cel_context
-					.maybe_snapshot_request(req, true)
-					.map(Arc::new);
-			}
 			SnapshottedProxyResponse(e.into())
 		})
 	}
@@ -1225,7 +1202,9 @@ impl HTTPProxy {
 						req,
 						&mut substrate_state,
 					)
-					.await;
+					.await
+					// attempt_upstream always snapshots
+					.explicitly_skip_snapshot();
 				// The body cannot be retried, but future requests must not reuse this assignment.
 				let stale_assignment = is_stale_assignment(&response);
 				if stale_assignment && let Some(state) = substrate_state.as_mut() {
@@ -1280,7 +1259,9 @@ impl HTTPProxy {
 					req,
 					&mut substrate_state,
 				)
-				.await;
+				.await
+				// attempt_upstream always snapshots
+				.explicitly_skip_snapshot();
 			let stale_assignment = is_stale_assignment(&res);
 			if stale_assignment && let Some(state) = substrate_state.as_mut() {
 				// Clear the request-local assignment and evict the same generation from the shared cache.
@@ -1324,7 +1305,7 @@ impl HTTPProxy {
 				};
 				fut
 					.map_err(|_| ProxyError::RequestTimeout)
-					// This is safe because we guarantee in attempt_upstream to snapshot
+					// attempt_upstream always snapshots
 					.explicitly_skip_snapshot()?
 			}
 		}
@@ -1596,7 +1577,7 @@ impl HTTPProxy {
 		response_policies: &mut ResponsePolicies,
 		mut req: Request,
 		substrate_state: &mut Option<http::substrate::SubstrateRequestState>,
-	) -> Result<Response, SnapshottedProxyResponse> {
+	) -> Result<Response, ProxyResponse> {
 		if let Some(backend_timeout) = response_policies
 			.timeout
 			.as_ref()
@@ -1635,29 +1616,34 @@ impl HTTPProxy {
 			Ok(call.await)
 		};
 
+		// Any path that sent the request upstream took (and snapshotted) it. If it is still here,
+		// the response was generated locally (error, timeout, or direct response); snapshot it now.
+		if let Some(mut req) = req_opt.take() {
+			log.request_snapshot = log
+				.cel
+				.cel_context
+				.maybe_snapshot_request(&mut req, true)
+				.map(Arc::new);
+		}
+
 		// If ext_proc returned an ImmediateResponse during the request body phase, it stored
 		// the response and dropped the body channel.  Return it regardless of whether the
 		// upstream call succeeded (with empty body) or failed (body parse error).
 		if let Some(resp) = response_policies.take_ext_proc_body_immediate_response() {
-			return Err(ProxyResponse::DirectResponse(Box::new(resp)))
-				.maybe_snapshot_on_err(log, &mut req_opt);
+			return Err(ProxyResponse::DirectResponse(Box::new(resp)));
 		}
 
 		// Run the actual call
 		let mut resp = match call_result {
 			Ok(Ok(resp)) => resp,
-			Ok(Err(e)) => {
-				return Err(e).maybe_snapshot_on_err(log, &mut req_opt)?;
-			},
+			Ok(Err(e)) => return Err(e),
 			Err(_) => {
-				return Err(ProxyResponse::Error(ProxyError::RequestTimeout))
-					.maybe_snapshot_on_err(log, &mut req_opt)?;
+				return Err(ProxyResponse::Error(ProxyError::RequestTimeout));
 			},
 		};
 		if resp.status() == StatusCode::SWITCHING_PROTOCOLS {
 			let Some(upgrade) = req_upgrade.take() else {
-				return Err(ProxyResponse::Error(ProxyError::UpgradeFailed(None, None)))
-					.maybe_snapshot_on_err(log, &mut req_opt)?;
+				return Err(ProxyResponse::Error(ProxyError::UpgradeFailed(None, None)));
 			};
 			resp.extensions_mut().insert(upgrade);
 			// Store prompt guard + policy client for the WebSocket upgrade path.
@@ -2445,7 +2431,9 @@ async fn make_backend_call(
 			log.add(|log| log.original_model = Some(original_model.0));
 		}
 		let resolved = match resolved {
-			model_router::ResolveResult::DirectResponse(resp) => return Ok(resp),
+			model_router::ResolveResult::DirectResponse(resp) => {
+				return Err(ProxyResponse::DirectResponse(Box::new(resp)));
+			},
 			model_router::ResolveResult::Backend(resolved) => resolved,
 		};
 		model_route_type = Some(resolved.route_type);
@@ -2727,8 +2715,7 @@ async fn make_backend_call(
 					.serve(inputs, name, backend, policies.as_ref().clone(), req, log)
 					.assert_size::<{ 4 * 1024 }>(),
 			)
-			.await
-			.map_err(ProxyResponse::from)?;
+			.await?;
 			return Ok(http::timeout::apply_response_idle_timeout(
 				response,
 				response_policies.timeout.as_ref(),
