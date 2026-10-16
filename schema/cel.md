@@ -55,7 +55,7 @@
 |`basicAuth.username`|string||
 |`llm`|object|`llm` contains attributes about an LLM request or response. This is only present when using an `ai` backend.|
 |`llm.streaming`|boolean|Whether the LLM response is streamed. If it is streamed some fields may be inconsistent based on when accessed during the response flow.|
-|`llm.requestModel`|string|The model requested for the LLM request. This may differ from the actual model used.|
+|`llm.requestModel`|string|The model requested for the LLM request. Before LLM processing, this is extracted from<br>the incoming URL or body, before provider overrides. This may differ from the actual model used.|
 |`llm.responseModel`|string|The model that actually served the LLM response.|
 |`llm.provider`|string|The provider of the LLM.|
 |`llm.inputTokens`|integer|The total number of tokens in the input/prompt, including tokens read from or written to<br>cache. This has consistent semantics across providers.|
@@ -138,7 +138,7 @@
 |`llm.model.reasoning.budgetTokens`|object|Accepted reasoning token budget range.|
 |`llm.model.reasoning.budgetTokens.min`|integer|Minimum reasoning token budget.|
 |`llm.model.reasoning.budgetTokens.max`|integer|Maximum reasoning token budget.|
-|`llmRequest`|any|`llmRequest` contains the raw LLM request before processing. This is only present *during* LLM policies;<br>policies occurring after the LLM policy, such as logs, will not have this field present even for LLM requests.|
+|`llmRequest`|any|`llmRequest` contains the raw JSON LLM request during route and LLM policies.<br>Policies occurring after LLM processing, such as logs, will not have this field present.|
 |`source`|object|`source` contains attributes about the source of the request.|
 |`source.address`|string|The IP address of the downstream connection.|
 |`source.port`|integer|The port of the downstream connection.|

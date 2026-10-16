@@ -97,6 +97,27 @@ fn classify_request_protocol(req: &Request, backend: &Backend) -> RequestProtoco
 	}
 }
 
+/// Exposes protocol-specific request details (MCP or LLM) to CEL, if any registered expression needs them.
+async fn set_protocol_cel_context(
+	req: &mut Request,
+	protocol: RequestProtocol,
+	backend: &Backend,
+	ctx: &cel::ContextBuilder,
+) -> Result<(), ProxyResponse> {
+	match (protocol, backend) {
+		(RequestProtocol::Mcp, Backend::MCP(_, backend)) if ctx.needs_mcp() => {
+			set_mcp_cel_context(req, backend).await;
+		},
+		(RequestProtocol::AI, _) if ctx.needs_llm_request_context() => {
+			model_router::set_llm_cel_context(req, ctx.needs_llm_request())
+				.await
+				.map_err(ProxyResponse::DirectResponse)?;
+		},
+		_ => {},
+	}
+	Ok(())
+}
+
 async fn set_mcp_cel_context(req: &mut Request, backend: &McpBackend) {
 	// Clear first so a failed parse below leaves no MCP context rather than a stale one.
 	req.extensions_mut().remove::<mcp::MCPInfo>();
@@ -612,7 +633,7 @@ async fn apply_llm_request_policies(
 		});
 		let mut exec = cel::Executor::new_request(req);
 		if let Some(llm_ctx) = llm_ctx.as_ref() {
-			exec.llm = cel::ExtensionOrDirect::Direct(Some(llm_ctx));
+			exec.llm = cel::LLMView::Context(llm_ctx);
 		}
 		let admitted = limits.iter().try_for_each(|lrl| {
 			if let Some((status, charged)) = lrl.charge_tokens(llm_req.input_tokens, &exec)? {
@@ -1055,12 +1076,9 @@ impl HTTPProxy {
 					.backend_protocol()
 					.unwrap_or(cel::BackendProtocol::http),
 			});
-			if request_protocol == RequestProtocol::Mcp
-				&& log.cel.ctx().needs_mcp()
-				&& let Backend::MCP(_, backend) = backend
-			{
-				set_mcp_cel_context(&mut req, backend).await;
-			}
+			set_protocol_cel_context(&mut req, request_protocol, backend, log.cel.ctx())
+				.await
+				.snapshot_on_err(log, &mut req)?;
 		}
 
 		let policy_client = self.policy_client().with_parent(&req);
@@ -1094,14 +1112,16 @@ impl HTTPProxy {
 			Some(route_path.clone()),
 		));
 		backend_policies.register_cel_expressions(log.cel.ctx());
-		// Backend-policy expressions are registered only after route policies run. Refresh MCPInfo
-		// from the current headers and body; an unchanged body reuses its cached parsed message.
-		if request_protocol == RequestProtocol::Mcp
-			&& log.cel.ctx().needs_mcp()
-			&& let Backend::MCP(_, backend) = &selected_backend.backend.backend
-		{
-			set_mcp_cel_context(&mut req, backend).await;
-		}
+		// Backend-policy expressions are registered only after route policies run, which may also
+		// have changed the request, so refresh the protocol context.
+		set_protocol_cel_context(
+			&mut req,
+			request_protocol,
+			&selected_backend.backend.backend,
+			log.cel.ctx(),
+		)
+		.await
+		.snapshot_on_err(log, &mut req)?;
 		log.cel.ctx().maybe_buffer_request_body(&mut req).await;
 		log.health_policy = backend_policies.health.clone();
 		log.backend_info = Some(selected_backend.backend.backend.backend_info());
@@ -2729,6 +2749,16 @@ async fn make_backend_call(
 		backend_call
 			.backend_policies
 			.register_cel_expressions(log.cel.ctx());
+		// Provider policies are only known once a provider is selected.
+		if let Backend::AI(..) = backend {
+			Box::pin(set_protocol_cel_context(
+				&mut req,
+				RequestProtocol::AI,
+				backend,
+				log.cel.ctx(),
+			))
+			.await?;
+		}
 	}
 	set_backend_cel_context(
 		&mut req,

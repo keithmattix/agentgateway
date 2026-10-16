@@ -93,37 +93,37 @@ impl VirtualModelCallout {
 		&self,
 		client: &PolicyClient,
 		req: &mut Request,
-		llm_request: Option<&JsonValue>,
 	) -> anyhow::Result<CalloutSelection> {
-		let cache_key = self.cache_key(req, llm_request);
+		let cache_key = self.cache_key(req);
 		let response = match cache_key.as_ref().and_then(|key| self.cached(key)) {
 			Some(response) => response,
 			None => {
 				// Without a parsed JSON body (path or multipart requests), forward the raw body.
-				let raw_body = match (&self.body, llm_request) {
-					(None, None) => match http::inspect_body(req).await? {
+				let parsed_body = req.body().extension::<crate::json::ParsedJson>().is_some();
+				let raw_body = match (&self.body, parsed_body) {
+					(None, false) => match http::inspect_body(req).await? {
 						http::BodyInspection::Complete(body) => Some(body),
 						http::BodyInspection::Partial(_) => bail!("request body exceeds the buffer limit"),
 					},
 					_ => None,
 				};
-				let callout_req = self.build_request(req, llm_request, raw_body)?;
+				let callout_req = self.build_request(req, raw_body)?;
 				let response = Arc::new(self.call(client, callout_req).await?);
 				if let Some(key) = cache_key {
-					self.insert_cache(key, req, llm_request, &response);
+					self.insert_cache(key, req, &response);
 				}
 				response
 			},
 		};
-		self.transform(req, llm_request, &response)
+		self.transform(req, &response)
 	}
 
-	fn cache_key(&self, req: &Request, llm_request: Option<&JsonValue>) -> Option<CacheKey> {
+	fn cache_key(&self, req: &Request) -> Option<CacheKey> {
 		let cache = self.cache.as_ref()?;
 		if cache.key.is_empty() {
 			return None;
 		}
-		CacheKey::evaluate(&executor(req, llm_request), &cache.key)
+		CacheKey::evaluate(&cel::Executor::new_request(req), &cache.key)
 			.inspect_err(|index| tracing::debug!(index, "callout cache key evaluation failed"))
 			.ok()
 	}
@@ -139,17 +139,11 @@ impl VirtualModelCallout {
 		Some(cached.response)
 	}
 
-	fn insert_cache(
-		&self,
-		key: CacheKey,
-		req: &Request,
-		llm_request: Option<&JsonValue>,
-		response: &Arc<JsonValue>,
-	) {
+	fn insert_cache(&self, key: CacheKey, req: &Request, response: &Arc<JsonValue>) {
 		let (Some(cache), Some(store)) = (&self.cache, &self.cache_store) else {
 			return;
 		};
-		let mut exec = executor(req, llm_request);
+		let mut exec = cel::Executor::new_request(req);
 		exec.callout = Some(response);
 		let Some(expires_at) = cache
 			.evaluate_ttl(&exec)
@@ -184,13 +178,8 @@ impl VirtualModelCallout {
 		Ok(serde_json::json!({ "headers": headers, "body": body }))
 	}
 
-	fn build_request(
-		&self,
-		req: &Request,
-		llm_request: Option<&JsonValue>,
-		raw_body: Option<Bytes>,
-	) -> anyhow::Result<Request> {
-		let exec = executor(req, llm_request);
+	fn build_request(&self, req: &Request, raw_body: Option<Bytes>) -> anyhow::Result<Request> {
+		let exec = cel::Executor::new_request(req);
 		let json = HeaderValue::from_static("application/json");
 		let (body, content_type) = match (&self.body, raw_body) {
 			(Some(expr), _) => (cel::value_as_byte_or_json(exec.eval(expr)?)?, json),
@@ -199,7 +188,8 @@ impl VirtualModelCallout {
 				req.headers().get(CONTENT_TYPE).cloned().unwrap_or(json),
 			),
 			(None, None) => (
-				llm_request
+				exec
+					.llm_request
 					.map(serde_json::to_vec)
 					.transpose()?
 					.map(Bytes::from)
@@ -228,13 +218,8 @@ impl VirtualModelCallout {
 		Ok(callout_req)
 	}
 
-	fn transform(
-		&self,
-		req: &Request,
-		llm_request: Option<&JsonValue>,
-		response: &JsonValue,
-	) -> anyhow::Result<CalloutSelection> {
-		let mut exec = executor(req, llm_request);
+	fn transform(&self, req: &Request, response: &JsonValue) -> anyhow::Result<CalloutSelection> {
+		let mut exec = cel::Executor::new_request(req);
 		exec.callout = Some(response);
 		let mut model = None;
 		let mut fields = Vec::with_capacity(self.transformation.len());
@@ -252,13 +237,6 @@ impl VirtualModelCallout {
 			model: model.context("callout transformation must set model")?,
 			fields,
 		})
-	}
-}
-
-fn executor<'a>(req: &'a Request, llm_request: Option<&'a JsonValue>) -> cel::Executor<'a> {
-	match llm_request {
-		Some(llm_request) => cel::Executor::new_llm_request(req, llm_request),
-		None => cel::Executor::new_request(req),
 	}
 }
 

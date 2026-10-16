@@ -377,7 +377,7 @@
           "type": "boolean"
         },
         "requestModel": {
-          "description": "The model requested for the LLM request. This may differ from the actual model used.",
+          "description": "The model requested for the LLM request. Before LLM processing, this is extracted from\nthe incoming URL or body, before provider overrides. This may differ from the actual model used.",
           "type": "string"
         },
         "responseModel": {
@@ -1012,7 +1012,7 @@
       ]
     },
     "llmRequest": {
-      "description": "`llmRequest` contains the raw LLM request before processing. This is only present *during* LLM policies;\npolicies occurring after the LLM policy, such as logs, will not have this field present even for LLM requests."
+      "description": "`llmRequest` contains the raw JSON LLM request during route and LLM policies.\nPolicies occurring after LLM processing, such as logs, will not have this field present."
     },
     "source": {
       "description": "`source` contains attributes about the source of the request.",

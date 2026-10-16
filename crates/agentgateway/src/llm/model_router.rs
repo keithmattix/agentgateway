@@ -240,18 +240,10 @@ struct RequestedModel {
 }
 
 enum RequestedModelLocation {
-	Body(Value),
+	/// The parsed body is cached on the request as `ParsedJson`.
+	Body,
 	Multipart,
 	Path,
-}
-
-impl RequestedModelLocation {
-	fn llm_request(&self) -> Option<&Value> {
-		match self {
-			Self::Body(body) => Some(body),
-			Self::Multipart | Self::Path => None,
-		}
-	}
 }
 
 impl ModelRouter {
@@ -372,11 +364,6 @@ impl ModelRouter {
 			"unable to find declared virtual model; trying concrete model routes",
 		);
 
-		if let RequestedModelLocation::Body(body) = requested_model.location {
-			req
-				.body_mut()
-				.insert_extension(crate::json::ParsedJson(body));
-		}
 		match self.resolve_concrete_model(&requested_model.model, false, req) {
 			Ok(Some(route)) => ResolveResult::Backend(route),
 			Ok(None) => ResolveResult::DirectResponse(model_not_found_response()),
@@ -500,9 +487,10 @@ impl ModelRouter {
 		&self,
 		virtual_model: &VirtualModelRoute,
 		req: &mut Request,
-		mut location: RequestedModelLocation,
+		location: RequestedModelLocation,
 		client: &PolicyClient,
 	) -> ResolveResult {
+		let mut fields = Vec::new();
 		let (target, invalid) = match &virtual_model.routing {
 			VirtualModelRouting::Weighted(targets) => {
 				match targets.choose_weighted(&mut rand::rng(), |target| target.weight) {
@@ -518,11 +506,6 @@ impl ModelRouter {
 				}
 			},
 			VirtualModelRouting::Failover { backend } => {
-				if let RequestedModelLocation::Body(body) = location {
-					req
-						.body_mut()
-						.insert_extension(crate::json::ParsedJson(body));
-				}
 				return ResolveResult::Backend(ResolvedBackend {
 					backend: backend.clone(),
 					route_type: classify_route(req.uri().path()).unwrap_or(llm::RouteType::Passthrough),
@@ -530,10 +513,7 @@ impl ModelRouter {
 				});
 			},
 			VirtualModelRouting::Conditional(targets) => {
-				let exec = match location.llm_request() {
-					Some(llm_request) => cel::Executor::new_llm_request(req, llm_request),
-					None => cel::Executor::new_request(req),
-				};
+				let exec = cel::Executor::new_request(req);
 				match targets.iter().find(|target| {
 					target
 						.when
@@ -555,7 +535,7 @@ impl ModelRouter {
 				}
 			},
 			VirtualModelRouting::Callout(callout) => {
-				let selection = match callout.select(client, req, location.llm_request()).await {
+				let selection = match callout.select(client, req).await {
 					Ok(selection) if self.has_model(&selection.model) => Some(selection),
 					Ok(selection) => {
 						tracing::debug!(
@@ -572,14 +552,7 @@ impl ModelRouter {
 				};
 				match (selection, &callout.failure_mode) {
 					(Some(selection), _) => {
-						if let RequestedModelLocation::Body(Value::Object(body)) = &mut location {
-							for (k, v) in selection.fields {
-								match v {
-									Some(v) => body.insert(k, v),
-									None => body.remove(&k),
-								};
-							}
-						}
+						fields = selection.fields;
 						(selection.model, false)
 					},
 					(None, VirtualModelCalloutFailureMode::Fallback(model)) => (model.clone(), false),
@@ -609,7 +582,7 @@ impl ModelRouter {
 			));
 		}
 
-		if let Err(resp) = Box::pin(rewrite_request_model(req, location, &target)).await {
+		if let Err(resp) = Box::pin(rewrite_request_model(req, location, &target, fields)).await {
 			return ResolveResult::DirectResponse(*resp);
 		}
 		match self.resolve_concrete_model(&target, true, req) {
@@ -851,6 +824,53 @@ fn model_name_matches(pattern: &str, model: &str) -> bool {
 	pattern == model
 }
 
+/// Exposes the request model as `llm.requestModel` and, if requested, the parsed JSON body as
+/// `llmRequest` to policy CEL.
+pub(crate) async fn set_llm_cel_context(req: &mut Request, include_body: bool) -> RouterResult<()> {
+	// Clear first so a failed parse below leaves no model rather than a stale one.
+	req.extensions_mut().remove::<cel::RequestModel>();
+	let path_model = llm::types::detect::extract_model_from_path(req.uri().path()).is_some();
+	if include_body || !path_model {
+		// Reject unreadable bodies (too large, or failing to decode) rather than evaluating policies
+		// without the model. A failed decode also leaves the body unusable.
+		body_bytes(req).await?;
+	}
+	if include_body {
+		let _ = json_body(req).await;
+	}
+	if let Ok(requested) = requested_model(req).await {
+		req.extensions_mut().insert(cel::RequestModel {
+			request_model: requested.model.into(),
+		});
+	}
+	Ok(())
+}
+
+/// The request body parsed as JSON. It is parsed once and cached on the body for later readers.
+async fn json_body(req: &mut Request) -> RouterResult<&Value> {
+	if req.body().extension::<crate::json::ParsedJson>().is_none() {
+		let body = body_bytes(req).await?;
+		let body = serde_json::from_slice(&body).map_err(|err| {
+			tracing::debug!(%err, "failed to parse LLM request body");
+			Box::new(llm_error_response(
+				::http::StatusCode::BAD_REQUEST,
+				"LLM request body must be valid JSON",
+				"invalid_request_body",
+			))
+		})?;
+		req
+			.body_mut()
+			.insert_extension(crate::json::ParsedJson(body));
+	}
+	Ok(
+		&req
+			.body()
+			.extension::<crate::json::ParsedJson>()
+			.expect("parsed body was cached above")
+			.0,
+	)
+}
+
 async fn requested_model(req: &mut Request) -> RouterResult<RequestedModel> {
 	let path = req.uri().path();
 	if let Some(model) = crate::llm::types::detect::extract_model_from_path(path) {
@@ -860,23 +880,16 @@ async fn requested_model(req: &mut Request) -> RouterResult<RequestedModel> {
 		});
 	}
 
-	let body = body_bytes(req).await?;
 	if let Some(boundary) = multipart_boundary(req) {
+		let body = body_bytes(req).await?;
 		let model = multipart_model(&body, &boundary).await?;
 		return Ok(RequestedModel {
 			model,
 			location: RequestedModelLocation::Multipart,
 		});
 	}
-	let body: Value = serde_json::from_slice(&body).map_err(|err| {
-		tracing::debug!(%err, "failed to parse LLM request body");
-		Box::new(llm_error_response(
-			::http::StatusCode::BAD_REQUEST,
-			"LLM request body must be valid JSON",
-			"invalid_request_body",
-		))
-	})?;
-	let model = body
+	let model = json_body(req)
+		.await?
 		.get("model")
 		.and_then(Value::as_str)
 		.map(ToString::to_string)
@@ -889,7 +902,7 @@ async fn requested_model(req: &mut Request) -> RouterResult<RequestedModel> {
 		})?;
 	Ok(RequestedModel {
 		model,
-		location: RequestedModelLocation::Body(body),
+		location: RequestedModelLocation::Body,
 	})
 }
 
@@ -897,28 +910,42 @@ async fn rewrite_request_model(
 	req: &mut Request,
 	location: RequestedModelLocation,
 	target: &str,
+	fields: Vec<(String, Option<Value>)>,
 ) -> RouterResult<()> {
 	match location {
-		RequestedModelLocation::Body(body) => rewrite_body_model(req, body, target),
+		RequestedModelLocation::Body => rewrite_body_model(req, target, fields),
 		RequestedModelLocation::Path => rewrite_uri_model(req, target),
 		RequestedModelLocation::Multipart => rewrite_multipart_request_model(req, target).await,
 	}
 }
 
-fn rewrite_body_model(req: &mut Request, mut body: Value, target: &str) -> RouterResult<()> {
-	let Some(obj) = body.as_object_mut() else {
+/// Sets `model` and any callout-selected `fields` on the cached JSON body, and re-serializes it.
+fn rewrite_body_model(
+	req: &mut Request,
+	target: &str,
+	fields: Vec<(String, Option<Value>)>,
+) -> RouterResult<()> {
+	let Some(crate::json::ParsedJson(mut body)) = req.body_mut().remove_extension() else {
 		return Ok(());
 	};
-	obj.insert("model".to_string(), Value::String(target.to_string()));
-	let bytes = serde_json::to_vec(&body).map_err(|err| {
-		tracing::debug!(%err, "failed to serialize rewritten LLM request body");
-		Box::new(llm_error_response(
-			::http::StatusCode::BAD_REQUEST,
-			"Failed to rewrite LLM request body model",
-			"request_body_rewrite_failed",
-		))
-	})?;
-	req.replace_body_bytes(bytes.into());
+	if let Some(obj) = body.as_object_mut() {
+		for (k, v) in fields {
+			match v {
+				Some(v) => obj.insert(k, v),
+				None => obj.remove(&k),
+			};
+		}
+		obj.insert("model".to_string(), Value::String(target.to_string()));
+		let bytes = serde_json::to_vec(&body).map_err(|err| {
+			tracing::debug!(%err, "failed to serialize rewritten LLM request body");
+			Box::new(llm_error_response(
+				::http::StatusCode::BAD_REQUEST,
+				"Failed to rewrite LLM request body model",
+				"request_body_rewrite_failed",
+			))
+		})?;
+		req.replace_body_bytes(bytes.into());
+	}
 	req
 		.body_mut()
 		.insert_extension(crate::json::ParsedJson(body));
