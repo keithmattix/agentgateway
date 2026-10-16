@@ -120,7 +120,7 @@ type modelsDevTierKind struct {
 }
 
 func modelsDevFetchAPI(ctx context.Context) (map[string]modelsDevProvider, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://models.dev/api.json", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://models.dev/api.json?type=all", nil)
 	if err != nil {
 		return nil, fmt.Errorf("build request for models.dev api.json: %w", err)
 	}
