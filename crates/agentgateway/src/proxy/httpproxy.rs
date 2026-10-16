@@ -2423,6 +2423,126 @@ fn resolve_llm_route_type(
 	model_route_type.unwrap_or(RouteType::Completions)
 }
 
+/// Translates the incoming LLM request for the provider.
+///
+/// Kept out of `make_backend_call`: in debug builds each boxed provider future here takes several
+/// KB of the poll frame, and `make_backend_call` stays on the stack through nested backend calls
+/// (e.g. OAuth token exchange).
+async fn process_llm_request(
+	llm: &llm::NamedAIProvider,
+	route_type: RouteType,
+	backend_info: &auth::BackendInfo,
+	policies: Option<&llm::Policy>,
+	req: Request,
+	log: &mut Option<&mut RequestLog>,
+	catalog: agent_llm::model_catalog::Catalog<'_>,
+) -> Result<RequestResult, ProxyError> {
+	Ok(match route_type {
+		RouteType::Completions => Box::pin(llm.provider.process_completions_request(
+			backend_info,
+			policies,
+			req,
+			llm.tokenize,
+			log,
+			catalog,
+		))
+		.await
+		.map_err(ProxyError::AIRequest)?,
+		RouteType::Messages => Box::pin(llm.provider.process_messages_request(
+			backend_info,
+			policies,
+			req,
+			llm.tokenize,
+			log,
+			catalog,
+		))
+		.await
+		.map_err(ProxyError::AIRequest)?,
+		RouteType::Responses => Box::pin(llm.provider.process_responses_request(
+			backend_info,
+			policies,
+			req,
+			llm.tokenize,
+			log,
+			catalog,
+		))
+		.await
+		.map_err(ProxyError::AIRequest)?,
+		RouteType::Embeddings => Box::pin(llm.provider.process_embeddings_request(
+			backend_info,
+			policies,
+			req,
+			llm.tokenize,
+			log,
+		))
+		.await
+		.map_err(ProxyError::AIRequest)?,
+		RouteType::Rerank => {
+			Box::pin(
+				llm
+					.provider
+					.process_rerank_request(backend_info, policies, req, llm.tokenize, log),
+			)
+			.await
+			.map_err(ProxyError::AIRequest)?
+		},
+		RouteType::Decisions => Box::pin(llm.provider.process_decisions_request(
+			backend_info,
+			policies,
+			req,
+			llm.tokenize,
+			log,
+		))
+		.await
+		.map_err(ProxyError::AIRequest)?,
+		RouteType::SystemOne => Box::pin(llm.provider.process_systemone_request(
+			backend_info,
+			policies,
+			req,
+			llm.tokenize,
+			log,
+		))
+		.await
+		.map_err(ProxyError::AIRequest)?,
+		RouteType::AnthropicTokenCount => {
+			Box::pin(
+				llm
+					.provider
+					.process_count_tokens_request(backend_info, req, policies, log, catalog),
+			)
+			.await
+			.map_err(ProxyError::AIRequest)?
+		},
+		RouteType::GenerateContent => Box::pin(llm.provider.process_gemini_request(
+			backend_info,
+			policies,
+			req,
+			llm.tokenize,
+			log,
+			catalog,
+		))
+		.await
+		.map_err(ProxyError::AIRequest)?,
+		RouteType::GeminiCountTokens => Box::pin(llm.provider.process_gemini_count_tokens_request(
+			backend_info,
+			policies,
+			req,
+			log,
+		))
+		.await
+		.map_err(ProxyError::AIRequest)?,
+		RouteType::Detect => Box::pin(llm.provider.process_detect_request(
+			backend_info,
+			policies,
+			req,
+			log,
+		))
+		.await
+		.map_err(ProxyError::AIRequest)?,
+		_ => unreachable!(),
+	})
+}
+
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::result_large_err)]
 async fn make_backend_call(
@@ -2853,112 +2973,16 @@ async fn make_backend_call(
 					let req = req.map(|b| {
 						dtrace::TracingBody::maybe_wrap("llm request before translation", b, request_body_limit)
 					});
-					let r = match route_type {
-						RouteType::Completions => Box::pin(llm.provider.process_completions_request(
-							&backend_info,
-							llm_request_policies.llm.as_deref(),
-							req,
-							llm.tokenize,
-							&mut log,
-							Some(inputs.model_catalog.as_handle()),
-						))
-						.await
-						.map_err(ProxyError::AIRequest)?,
-						RouteType::Messages => Box::pin(llm.provider.process_messages_request(
-							&backend_info,
-							llm_request_policies.llm.as_deref(),
-							req,
-							llm.tokenize,
-							&mut log,
-							Some(inputs.model_catalog.as_handle()),
-						))
-						.await
-						.map_err(ProxyError::AIRequest)?,
-						RouteType::Responses => Box::pin(llm.provider.process_responses_request(
-							&backend_info,
-							llm_request_policies.llm.as_deref(),
-							req,
-							llm.tokenize,
-							&mut log,
-							Some(inputs.model_catalog.as_handle()),
-						))
-						.await
-						.map_err(ProxyError::AIRequest)?,
-						RouteType::Embeddings => Box::pin(llm.provider.process_embeddings_request(
-							&backend_info,
-							llm_request_policies.llm.as_deref(),
-							req,
-							llm.tokenize,
-							&mut log,
-						))
-						.await
-						.map_err(ProxyError::AIRequest)?,
-						RouteType::Rerank => Box::pin(llm.provider.process_rerank_request(
-							&backend_info,
-							llm_request_policies.llm.as_deref(),
-							req,
-							llm.tokenize,
-							&mut log,
-						))
-						.await
-						.map_err(ProxyError::AIRequest)?,
-						RouteType::Decisions => Box::pin(llm.provider.process_decisions_request(
-							&backend_info,
-							llm_request_policies.llm.as_deref(),
-							req,
-							llm.tokenize,
-							&mut log,
-						))
-						.await
-						.map_err(ProxyError::AIRequest)?,
-						RouteType::SystemOne => Box::pin(llm.provider.process_systemone_request(
-							&backend_info,
-							llm_request_policies.llm.as_deref(),
-							req,
-							llm.tokenize,
-							&mut log,
-						))
-						.await
-						.map_err(ProxyError::AIRequest)?,
-						RouteType::AnthropicTokenCount => Box::pin(llm.provider.process_count_tokens_request(
-							&backend_info,
-							req,
-							llm_request_policies.llm.as_deref(),
-							&mut log,
-							Some(inputs.model_catalog.as_handle()),
-						))
-						.await
-						.map_err(ProxyError::AIRequest)?,
-						RouteType::GenerateContent => Box::pin(llm.provider.process_gemini_request(
-							&backend_info,
-							llm_request_policies.llm.as_deref(),
-							req,
-							llm.tokenize,
-							&mut log,
-							Some(inputs.model_catalog.as_handle()),
-						))
-						.await
-						.map_err(ProxyError::AIRequest)?,
-						RouteType::GeminiCountTokens => {
-							Box::pin(llm.provider.process_gemini_count_tokens_request(
-								&backend_info,
-								llm_request_policies.llm.as_deref(),
-								req,
-								&mut log,
-							))
-							.await
-							.map_err(ProxyError::AIRequest)?
-						},
-						RouteType::Detect => Box::pin(llm.provider.process_detect_request(
-							&backend_info,
-							llm_request_policies.llm.as_deref(),
-							req,
-							&mut log,
-						))
-						.await
-						.map_err(ProxyError::AIRequest)?,
-						_ => unreachable!(),
-					};
+					let r = process_llm_request(
+						llm,
+						route_type,
+						&backend_info,
+						llm_request_policies.llm.as_deref(),
+						req,
+						&mut log,
+						Some(inputs.model_catalog.as_handle()),
+					)
+					.await?;
 					let (mut req, llm_request, upstream_route_type) = match r {
 						RequestResult::Success {
 							request,
