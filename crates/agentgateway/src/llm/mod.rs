@@ -2570,6 +2570,8 @@ impl AIProvider {
 			},
 			InputFormat::Embeddings => self.process_non_chat_buffered_response(
 				req,
+				rate_limit,
+				req_snapshot.as_deref(),
 				buffered,
 				model_catalog,
 				&logging.response,
@@ -2577,6 +2579,8 @@ impl AIProvider {
 			),
 			InputFormat::Rerank => self.process_non_chat_buffered_response(
 				req,
+				rate_limit,
+				req_snapshot.as_deref(),
 				buffered,
 				model_catalog,
 				&logging.response,
@@ -2584,6 +2588,8 @@ impl AIProvider {
 			),
 			InputFormat::Decisions => self.process_non_chat_buffered_response(
 				req,
+				rate_limit,
+				req_snapshot.as_deref(),
 				buffered,
 				model_catalog,
 				&logging.response,
@@ -2591,6 +2597,8 @@ impl AIProvider {
 			),
 			InputFormat::SystemOne => self.process_non_chat_buffered_response(
 				req,
+				rate_limit,
+				req_snapshot.as_deref(),
 				buffered,
 				model_catalog,
 				&logging.response,
@@ -2867,9 +2875,12 @@ impl AIProvider {
 		))
 	}
 
+	#[allow(clippy::too_many_arguments)]
 	fn process_non_chat_buffered_response(
 		&self,
 		req: LLMRequest,
+		rate_limit: LLMResponsePolicies,
+		req_snapshot: Option<&RequestSnapshot>,
 		buffered: BufferedResponse,
 		model_catalog: Option<&catalog::ModelCatalog>,
 		log: &AsyncLog<llm::LLMInfo>,
@@ -2885,25 +2896,18 @@ impl AIProvider {
 			managed_body,
 		} = buffered;
 		parts.headers.remove(header::CONTENT_LENGTH);
-		if !parts.status.is_success() {
+		let (llm_resp, bytes) = if !parts.status.is_success() {
 			let body = self.process_error(
 				&req,
 				parts.status,
 				&bytes,
 				model_catalog.map(|c| c.as_handle()),
 			)?;
-			return Ok(Self::finalize_response(
-				parts,
-				body,
-				managed_body,
-				req,
-				LLMResponse::default(),
-				model_catalog,
-				log,
-			));
-		}
-		let (llm_resp, bytes) = process(&req, &parts.headers, bytes)?;
-		Ok(Self::finalize_response(
+			(LLMResponse::default(), body)
+		} else {
+			process(&req, &parts.headers, bytes)?
+		};
+		let resp = Self::finalize_response(
 			parts,
 			bytes,
 			managed_body,
@@ -2911,7 +2915,14 @@ impl AIProvider {
 			llm_resp,
 			model_catalog,
 			log,
-		))
+		);
+		if (!rate_limit.local_rate_limit.is_empty() || rate_limit.remote_rate_limit.is_some())
+			&& let Some(llm_info) = log.load_clone()
+		{
+			let exec = cel::Executor::new_response(req_snapshot, &resp);
+			amend_tokens(rate_limit, &llm_info, exec);
+		}
+		Ok(resp)
 	}
 
 	fn process_embeddings_response(
