@@ -318,6 +318,11 @@ pub struct BackendConfig {
 	#[serde(default = "defaults::h2_keepalive_timeout", with = "serde_dur")]
 	#[cfg_attr(feature = "schema", schemars(with = "String"))]
 	h2_keepalive_timeout: Duration,
+	/// Allow dynamic backends to connect to loopback and link-local addresses (such as cloud
+	/// metadata servers). Disabled by default, as this lets requests reach services local to the
+	/// gateway.
+	#[serde(default)]
+	allow_dynamic_loopback: bool,
 }
 
 #[apply(schema!)]
@@ -369,6 +374,7 @@ impl Default for BackendConfig {
 			pool_max_size: None,
 			h2_keepalive_interval: Duration::ZERO,
 			h2_keepalive_timeout: defaults::h2_keepalive_timeout(),
+			allow_dynamic_loopback: false,
 		}
 	}
 }
