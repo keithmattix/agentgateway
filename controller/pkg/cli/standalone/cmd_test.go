@@ -18,6 +18,10 @@ func TestKindsMatchServer(t *testing.T) {
 	}
 	var want []string
 	for _, m := range regexp.MustCompile(`#\[serde\(rename = "([^"]+)"\)\]`).FindAllSubmatch(enum[1], -1) {
+		// session.key is internal to the server and never exposed through the API.
+		if string(m[1]) == "session.key" {
+			continue
+		}
 		want = append(want, string(m[1]))
 	}
 	got := slices.Clone(kinds)

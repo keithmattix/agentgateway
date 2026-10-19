@@ -324,6 +324,8 @@ impl ConfigResourceStore {
 		Ok(self.snapshot(kind).await?.resources)
 	}
 
+	/// Unfiltered snapshots exclude the internal `session.key` resource; it is only read through
+	/// `session_key`.
 	pub async fn snapshot(&self, kind: Option<ConfigResourceKind>) -> anyhow::Result<Snapshot> {
 		match &self.pool {
 			DatabasePool::Sqlite(pool) => list_sqlite(pool, kind).await,
@@ -1775,7 +1777,7 @@ async fn list_sqlite(
 		sqlx::query(
 			"SELECT kind, id, value_json, revision, created_at, updated_at \
 			 FROM agw_config_resources \
-			 WHERE deleted_at IS NULL \
+			 WHERE deleted_at IS NULL AND kind <> 'session.key' \
 			 ORDER BY kind, id",
 		)
 		.fetch_all(&mut *tx)
@@ -1816,7 +1818,7 @@ async fn list_postgres(
 		sqlx::query(
 			"SELECT kind, id, value_json, revision, created_at, updated_at \
 			 FROM agw_config_resources \
-			 WHERE deleted_at IS NULL \
+			 WHERE deleted_at IS NULL AND kind <> 'session.key' \
 			 ORDER BY kind, id",
 		)
 		.fetch_all(&mut *tx)
