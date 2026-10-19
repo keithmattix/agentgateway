@@ -181,7 +181,7 @@ impl Session {
 	}
 
 	pub fn with_inputs(mut self, inputs: RelayInputs) -> Self {
-		self.relay = Arc::new(self.relay.with_policies(inputs.policies));
+		self.relay = Arc::new(self.relay.with_inputs(inputs));
 		self
 	}
 
