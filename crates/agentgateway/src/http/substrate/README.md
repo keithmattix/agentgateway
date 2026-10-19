@@ -44,10 +44,12 @@ evaluation, regardless of the listener's CONNECT mode. The authenticated outer
 CONNECT remains supported.
 
 Configure an access-log field
-`substrate.connect.authority: source.connectHeaders["host"]` to record the
+`substrate.connect.authority: 'destination.address + ":" + string(destination.port)'` to record the
 original CONNECT destination alongside `ate.actor.name`, `ate.atespace`, and
-`http.status`. When CONNECT has no Host header (as with HTTP/2), the captured
-headers expose its URI authority as `host`; an existing Host is preserved.
+`http.status`. For Substrate's numeric CONNECT targets, these destination fields
+come from the outer CONNECT URI and survive tunnel re-entry and TLS interception.
+Do not read the target from `source.connectHeaders`: HTTP/2 carries it in
+`:authority`, not a Host header.
 A successful outer CONNECT is not evidence of an inner HTTP
 request's success; intercepted HTTPS must emit its own HTTP access record.
 

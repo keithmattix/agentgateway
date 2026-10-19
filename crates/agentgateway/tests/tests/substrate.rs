@@ -2008,7 +2008,7 @@ async fn substrate_egress_replaces_only_requested_credentials(
 			"substrateEgressActorResolution": { "host": api.address.to_string() },
 			"accessLog": {
 				"add": {
-					"substrate.connect.authority": "source.connectHeaders[\"host\"]"
+					"substrate.connect.authority": "destination.address + \":\" + string(destination.port)"
 				}
 			}
 		}))
@@ -2349,6 +2349,8 @@ async fn substrate_egress_selects_tls_from_policy_and_rechecks_http(
 #[case(true, "websocket")]
 #[case(false, "WebSocket")]
 #[case(true, "WebSocket")]
+#[case(false, "h2c\r\nUpgrade: websocket")]
+#[case(true, "h2c\r\nUpgrade: websocket")]
 #[case(false, "CONNECT")]
 #[case(true, "CONNECT")]
 #[case(false, "custom-protocol")]
@@ -2419,7 +2421,7 @@ async fn substrate_egress_denies_http_upgrades_without_dialing(
 			.attach_route(json!({
 				"name": "reject-upgrades",
 				"matches": if upgrade == "CONNECT" { json!([{ "method": "CONNECT" }]) } else { json!([{
-					"path": { "exact": "/upgrade" },
+					"path": { "exact": format!("/upgrade-{port}-true") },
 					"headers": [{ "name": "upgrade", "value": { "regex": ".+" } }]
 				}]) },
 				"policies": {
@@ -2465,6 +2467,8 @@ async fn substrate_egress_denies_http_upgrades_without_dialing(
 	}
 
 	for upgrading in [false, true] {
+		let path = format!("/upgrade-{port}-{upgrading}");
+		let connect_host = format!("connect-{port}.example");
 		let io = open_actor_egress_tunnel(&gateway, port).await;
 		let headers = if upgrading {
 			format!(
@@ -2474,10 +2478,11 @@ async fn substrate_egress_denies_http_upgrades_without_dialing(
 			"Connection: close\r\n".to_owned()
 		};
 		let request = if upgrading && upgrade == "CONNECT" {
-			"CONNECT localhost:443 HTTP/1.1\r\nHost: localhost:443\r\nConnection: close\r\n\r\n"
-				.to_owned()
+			format!(
+				"CONNECT {connect_host}:443 HTTP/1.1\r\nHost: {connect_host}:443\r\nConnection: close\r\n\r\n"
+			)
 		} else {
-			format!("GET /upgrade HTTP/1.1\r\nHost: localhost\r\n{headers}\r\n")
+			format!("GET {path} HTTP/1.1\r\nHost: localhost\r\n{headers}\r\n")
 		};
 		let response = tokio::time::timeout(Duration::from_secs(3), async {
 			if https {
@@ -2517,7 +2522,7 @@ async fn substrate_egress_denies_http_upgrades_without_dialing(
 			let body = response
 				.split_at(response.windows(4).position(|b| b == b"\r\n\r\n").unwrap() + 4)
 				.1;
-			if upgrade.eq_ignore_ascii_case("websocket") {
+			if upgrade.to_ascii_lowercase().contains("websocket") {
 				assert_eq!(body, b"WebSocket egress is not supported");
 			} else if upgrade == "CONNECT" {
 				assert_eq!(body, b"CONNECT egress is not supported");
@@ -2537,6 +2542,42 @@ async fn substrate_egress_denies_http_upgrades_without_dialing(
 			upstream.received_requests().await.unwrap().len(),
 			usize::from(policy_allowed)
 		);
+		if https && !policy_allowed {
+			let connect = upgrading && upgrade == "CONNECT";
+			let log = if connect {
+				agent_core::telemetry::testing::eventually_find(&[
+					("scope", "request"),
+					("http.host", &connect_host),
+					("http.method", "CONNECT"),
+				])
+				.await
+				.unwrap()
+			} else {
+				find_request_log(&path).await
+			};
+			assert_eq!(
+				log["http.host"].as_str(),
+				Some(if connect {
+					connect_host.as_str()
+				} else {
+					"localhost"
+				}),
+				"{log:#?}"
+			);
+			assert_eq!(
+				log["http.method"].as_str(),
+				Some(if connect { "CONNECT" } else { "GET" }),
+				"{log:#?}"
+			);
+			assert_eq!(
+				log["http.path"].as_str(),
+				Some(if connect { "/" } else { path.as_str() }),
+				"{log:#?}"
+			);
+			assert_eq!(log["http.version"].as_str(), Some("HTTP/1.1"), "{log:#?}");
+			assert_eq!(log["gateway"].as_str(), Some("default/default"), "{log:#?}");
+			assert_eq!(log["listener"].as_str(), Some("default"), "{log:#?}");
+		}
 	}
 	forwarder.abort();
 }
