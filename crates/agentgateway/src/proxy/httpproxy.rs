@@ -842,20 +842,34 @@ impl HTTPProxy {
 	) -> Result<Response, SnapshottedProxyResponse> {
 		log.tls_info = req.extensions().get::<TLSConnectionInfo>().cloned();
 		log.backend_protocol = Some(cel::BackendProtocol::http);
+		if let Some(actor) = req.extensions().get::<ActorIdentity>() {
+			log.ate_actor_name = Some(actor.actor_name.clone());
+			log.ate_actor_uid = actor.actor_uid.clone();
+			log.ate_atespace = Some(actor.atespace.clone());
+		}
 		if req.extensions().get::<EgressTlsMode>() == Some(&EgressTlsMode::InterceptDenied) {
-			if let Some(actor) = req.extensions().get::<ActorIdentity>() {
-				log.ate_actor_name = Some(actor.actor_name.clone());
-				log.ate_actor_uid = actor.actor_uid.clone();
-				log.ate_atespace = Some(actor.atespace.clone());
-			}
+			normalize_uri(log.tls_info.as_ref(), &mut req)
+				.map_err(ProxyError::Processing)
+				.snapshot_on_err(log, &mut req)?;
 			log.bind_name = Some(self.bind_name.clone());
 			log.listener_name = self.selected_listener.as_ref().map(|l| l.name.clone());
 			log.host = http::get_host(&req).ok().map(str::to_owned);
 			log.scheme = Some(Scheme::HTTPS);
 			log.server_port = req.uri().port_u16();
 			log.method = Some(req.method().clone());
-			log.path = req.uri().path_and_query().map(ToString::to_string);
+			log.path = Some(
+				if req.method() == ::http::Method::CONNECT && req.uri().path().is_empty() {
+					"/".to_string()
+				} else {
+					req
+						.uri()
+						.path_and_query()
+						.map(ToString::to_string)
+						.unwrap_or_else(|| req.uri().path().to_string())
+				},
+			);
 			log.version = Some(req.version());
+			crate::http::substrate::reject_upgrade(&req).snapshot_on_err(log, &mut req)?;
 			return Err(ProxyError::SubstrateEgressDenied(
 				"actor egress policy denied TLS destination".to_owned(),
 			))
@@ -885,6 +899,10 @@ impl HTTPProxy {
 		} else {
 			None
 		};
+		let substrate_upgrade = req
+			.extensions()
+			.get::<ActorIdentity>()
+			.map(|_| crate::http::substrate::reject_upgrade(&req));
 		let mut req_upgrade = hop_by_hop_headers(&mut req);
 
 		let host = http::get_host(&req)
@@ -938,6 +956,9 @@ impl HTTPProxy {
 				self
 					.handle_frontend_policies(&frontend_policies, log, &mut req)
 					.await;
+				if let Some(result) = substrate_upgrade {
+					result.snapshot_on_err(log, &mut req)?;
+				}
 				if req.method() == ::http::Method::CONNECT {
 					let mode = frontend_policies
 						.connect
