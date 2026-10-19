@@ -741,11 +741,18 @@ impl Gateway {
 					// (SourceContext derives Debug and is printed via DebugExtensions) and by
 					// the CEL `source.connectHeaders.redacted()` accessor.
 					crate::http::mark_sensitive_headers(&mut req, &inputs.cfg.sensitive_headers);
-					let connect_headers = req.headers().clone();
+					let mut connect_headers = req.headers().clone();
 					let authority = match req.uri().authority() {
 						Some(authority) => authority.as_str(),
 						None => return Ok(ProxyError::InvalidRequest.into_response_with_grpc(false)),
 					};
+					// HTTP/2 carries the CONNECT target in :authority, not a Host header.
+					if !connect_headers.contains_key(::http::header::HOST) {
+						let Ok(host) = ::http::HeaderValue::from_str(authority) else {
+							return Ok(ProxyError::InvalidRequest.into_response_with_grpc(false));
+						};
+						connect_headers.insert(::http::header::HOST, host);
+					}
 					let (target_address, bind) = {
 						let binds = inputs.stores.read_binds();
 						if let Ok(addr) = authority.parse::<SocketAddr>() {

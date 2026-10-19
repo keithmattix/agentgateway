@@ -842,12 +842,13 @@ impl HTTPProxy {
 	) -> Result<Response, SnapshottedProxyResponse> {
 		log.tls_info = req.extensions().get::<TLSConnectionInfo>().cloned();
 		log.backend_protocol = Some(cel::BackendProtocol::http);
+		if let Some(actor) = req.extensions().get::<ActorIdentity>() {
+			log.ate_actor_name = Some(actor.actor_name.clone());
+			log.ate_actor_uid = actor.actor_uid.clone();
+			log.ate_atespace = Some(actor.atespace.clone());
+		}
 		if req.extensions().get::<EgressTlsMode>() == Some(&EgressTlsMode::InterceptDenied) {
-			if let Some(actor) = req.extensions().get::<ActorIdentity>() {
-				log.ate_actor_name = Some(actor.actor_name.clone());
-				log.ate_actor_uid = actor.actor_uid.clone();
-				log.ate_atespace = Some(actor.atespace.clone());
-			}
+			crate::http::substrate::reject_upgrade(&req).snapshot_on_err(log, &mut req)?;
 			log.bind_name = Some(self.bind_name.clone());
 			log.listener_name = self.selected_listener.as_ref().map(|l| l.name.clone());
 			log.host = http::get_host(&req).ok().map(str::to_owned);
@@ -938,6 +939,9 @@ impl HTTPProxy {
 				self
 					.handle_frontend_policies(&frontend_policies, log, &mut req)
 					.await;
+				if req.extensions().get::<ActorIdentity>().is_some() {
+					crate::http::substrate::reject_upgrade(&req).snapshot_on_err(log, &mut req)?;
+				}
 				if req.method() == ::http::Method::CONNECT {
 					let mode = frontend_policies
 						.connect
