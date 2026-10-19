@@ -5472,7 +5472,8 @@
           "minItems": 1,
           "default": [
             "systemPrompt",
-            "messages"
+            "messages",
+            "toolOutput"
           ]
         }
       },
