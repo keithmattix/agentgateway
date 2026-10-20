@@ -3419,7 +3419,7 @@ fn external_auth_from_proto(
 		};
 	let cache_store = cache
 		.as_ref()
-		.map(|cache| crate::http::ext_authz::cache_store(cache.max_entries))
+		.map(|cache| crate::http::expiring_cache::ExpiringCache::new(cache.max_entries))
 		.unwrap_or_else(crate::http::ext_authz::default_cache_store);
 	let policies = backend_policies_from_proto(&ea.inline_policies, diagnostics)?;
 	Ok(http::ext_authz::ExtAuthz {
