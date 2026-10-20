@@ -3859,8 +3859,6 @@ pub mod from_anthropic_token_count {
 	}
 }
 
-pub use helpers::filter_native_beta_header;
-
 mod helpers {
 	use std::collections::HashMap;
 	use std::sync::LazyLock;
@@ -3870,35 +3868,19 @@ mod helpers {
 	use crate::types::messages::typed::{CacheControlEphemeral, CacheCreation};
 	use crate::types::responses::typed::PromptCacheBreakpointConfig;
 
-	// Betas Bedrock accepts on its Anthropic Messages APIs (Runtime, Mantle, and InvokeModel); it
-	// rejects any other value. Checked against Bedrock 2026-10-07.
+	// From https://docs.aws.amazon.com/bedrock/latest/userguide/model-parameters-anthropic-claude-messages-request-response.html
 	const DEFAULT_ALLOWED_BETA_HEADERS: &[&str] = &[
-		"claude-code-20250219",
-		"compact-2026-01-12",
 		"computer-use-2025-01-24",
-		"computer-use-2025-11-24",
+		"token-efficient-tools-2025-02-19",
+		"interleaved-thinking-2025-05-14",
+		"output-128k-2025-02-19",
+		"dev-full-thinking-2025-05-14",
 		"context-1m-2025-08-07",
 		"context-management-2025-06-27",
-		"dev-full-thinking-2025-05-14",
 		"effort-2025-11-24",
-		"fallback-credit-2026-06-01",
-		"fine-grained-tool-streaming-2025-05-14",
-		"interleaved-thinking-2025-05-14",
-		"mid-conversation-tool-changes-2026-07-01",
-		"output-128k-2025-02-19",
-		"pdfs-2024-09-25",
-		"server-side-fallback-2026-06-01",
-		"structured-outputs-2025-11-13",
-		"task-budgets-2026-03-13",
-		"token-counting-2024-11-01",
-		"token-efficient-tools-2025-02-19",
-		"tool-examples-2025-10-29",
 		"tool-search-tool-2025-10-19",
-		"web-search-2025-03-05",
+		"tool-examples-2025-10-29",
 	];
-	// Accepted on the Anthropic Messages APIs, but rejected by Converse.
-	const CONVERSE_UNSUPPORTED_BETA_HEADERS: &[&str] =
-		&["compact-2026-01-12", "tool-search-tool-2025-10-19"];
 	const ALLOWED_BETA_HEADERS_ENV: &str = "AGENTGATEWAY_BEDROCK_ANTHROPIC_BETA_HEADERS";
 	const DEFAULT_SENTINEL: &str = "default";
 
@@ -4215,52 +4197,42 @@ mod helpers {
 		Some(bedrock::ServiceTier { tier_type })
 	}
 
-	/// Allowed betas for Converse's `additionalModelRequestFields.anthropic_beta`.
 	pub fn extract_beta_headers(
 		headers: &http::HeaderMap,
 	) -> Result<Option<Vec<serde_json::Value>>, AIError> {
-		let features = allowed_beta_headers(headers, |feature| {
-			!CONVERSE_UNSUPPORTED_BETA_HEADERS.contains(&feature)
-		})?;
-		if features.is_empty() {
-			return Ok(None);
-		}
-		Ok(Some(
-			features.into_iter().map(serde_json::Value::from).collect(),
-		))
+		extract_beta_headers_with_allowed(headers, &ALLOWED_BETA_HEADERS)
 	}
 
-	/// Drops `anthropic-beta` values Bedrock would reject from a native Anthropic Messages request.
-	pub fn filter_native_beta_header(headers: &mut http::HeaderMap) -> Result<(), AIError> {
-		let joined = allowed_beta_headers(headers, |_| true)?.join(",");
-		headers.remove("anthropic-beta");
-		if !joined.is_empty() {
-			let value = http::HeaderValue::from_str(&joined)
-				.map_err(|_| AIError::MissingField("Invalid anthropic-beta header value".into()))?;
-			headers.insert("anthropic-beta", value);
-		}
-		Ok(())
-	}
-
-	/// Comma-separated `anthropic-beta` values, across all headers, that are in the allowlist and
-	/// pass `filter`.
-	fn allowed_beta_headers(
+	pub fn extract_beta_headers_with_allowed(
 		headers: &http::HeaderMap,
-		filter: impl Fn(&str) -> bool,
-	) -> Result<Vec<&str>, AIError> {
-		let mut features = Vec::new();
+		allowed_beta_headers: &[String],
+	) -> Result<Option<Vec<serde_json::Value>>, AIError> {
+		let mut beta_features = Vec::new();
+
+		// Collect all anthropic-beta header values
 		for value in headers.get_all("anthropic-beta") {
 			let header_str = value
 				.to_str()
 				.map_err(|_| AIError::MissingField("Invalid anthropic-beta header value".into()))?;
-			features.extend(
-				header_str
-					.split(',')
-					.map(str::trim)
-					.filter(|feature| ALLOWED_BETA_HEADERS.iter().any(|f| f == feature) && filter(feature)),
-			);
+
+			// Handle comma-separated values within a single header
+			for feature in header_str.split(',') {
+				let trimmed = feature.trim();
+				if allowed_beta_headers
+					.iter()
+					.any(|feature| feature == trimmed)
+				{
+					// Add each beta feature as a string value in the array
+					beta_features.push(serde_json::Value::String(trimmed.to_string()));
+				}
+			}
 		}
-		Ok(features)
+
+		if beta_features.is_empty() {
+			Ok(None)
+		} else {
+			Ok(Some(beta_features))
+		}
 	}
 
 	pub fn generate_anthropic_message_id() -> String {
