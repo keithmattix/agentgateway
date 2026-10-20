@@ -839,7 +839,7 @@ async fn stateless_multiplex_never_prefix_tool_call_resolves_target() {
 }
 
 #[tokio::test]
-async fn multiplex_advertises_tool_and_resource_subscribe_capabilities() {
+async fn multiplex_advertises_upstream_change_capabilities() {
 	let mock_a = mock_streamable_http_server(true).await;
 	let mock_b = mock_streamable_http_server(true).await;
 	let t = setup_proxy_test("{}")
@@ -854,14 +854,15 @@ async fn multiplex_advertises_tool_and_resource_subscribe_capabilities() {
 	let io = t.serve_real_listener(strng::new("bind")).await;
 	let client = mcp_streamable_client(io).await;
 	let caps = &client.peer_info().unwrap().capabilities;
-	assert_eq!(caps.tools.as_ref().unwrap().list_changed, Some(true));
-	assert_eq!(caps.prompts.as_ref().unwrap().list_changed, Some(true));
-	assert_eq!(caps.resources.as_ref().unwrap().list_changed, Some(true));
+	// The mock upstreams offer resource subscribe but no list_changed notifications.
+	assert_eq!(caps.tools.as_ref().unwrap().list_changed, None);
+	assert_eq!(caps.prompts.as_ref().unwrap().list_changed, None);
+	assert_eq!(caps.resources.as_ref().unwrap().list_changed, None);
 	assert_eq!(caps.resources.as_ref().unwrap().subscribe, Some(true));
 }
 
 #[tokio::test]
-async fn stateless_multiplex_does_not_advertise_resource_subscribe() {
+async fn stateless_multiplex_does_not_advertise_change_notifications() {
 	let mock_a = mock_streamable_http_server(true).await;
 	let mock_b = mock_streamable_http_server(true).await;
 	let t = setup_proxy_test("{}")
@@ -876,7 +877,10 @@ async fn stateless_multiplex_does_not_advertise_resource_subscribe() {
 	let io = t.serve_real_listener(strng::new("bind")).await;
 	let client = mcp_streamable_client(io).await;
 	let caps = &client.peer_info().unwrap().capabilities;
-	assert_ne!(caps.resources.as_ref().unwrap().subscribe, Some(true));
+	assert_eq!(caps.tools.as_ref().unwrap().list_changed, None);
+	assert_eq!(caps.prompts.as_ref().unwrap().list_changed, None);
+	assert_eq!(caps.resources.as_ref().unwrap().list_changed, None);
+	assert_eq!(caps.resources.as_ref().unwrap().subscribe, None);
 }
 
 #[tokio::test]
