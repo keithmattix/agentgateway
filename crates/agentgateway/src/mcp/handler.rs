@@ -331,6 +331,7 @@ pub struct Relay {
 	pub policies: McpAuthorizationSet,
 	pub(crate) mcp_guardrails: Option<Arc<crate::mcp::guardrails::McpGuardrails>>,
 	pub(crate) policy_client: PolicyClient,
+	pub(crate) backend_id: Option<ResourceName>,
 }
 
 pub struct RelayInputs {
@@ -349,6 +350,7 @@ impl RelayInputs {
 		let r = Relay::new_for_request(self.backend, self.policies, self.client, ctx)?;
 		Ok(Relay {
 			mcp_guardrails: self.mcp_guardrails,
+			backend_id: Some(self.backend_id),
 			..r
 		})
 	}
@@ -371,6 +373,7 @@ impl Relay {
 			policies,
 			mcp_guardrails: None,
 			policy_client: client,
+			backend_id: None,
 		})
 	}
 	/// Rebind a reused session to the current route's policies; the session may have been
@@ -381,6 +384,7 @@ impl Relay {
 			policies: inputs.policies,
 			mcp_guardrails: inputs.mcp_guardrails,
 			policy_client: PolicyClient::new(inputs.client.inputs.clone()),
+			backend_id: Some(inputs.backend_id),
 		}
 	}
 

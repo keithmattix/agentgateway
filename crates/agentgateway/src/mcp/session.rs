@@ -126,7 +126,15 @@ impl Session {
 						.await;
 					if let Some(sessions) = self.relay.get_sessions() {
 						let s = http::sessionpersistence::SessionState::MCP(
-							http::sessionpersistence::MCPSessionState::new(sessions),
+							http::sessionpersistence::MCPSessionState::new(
+								sessions,
+								self
+									.relay
+									.backend_id
+									.as_ref()
+									.filter(|_| matches!(self.encoder, http::sessionpersistence::Encoder::Aes(_)))
+									.map(ToString::to_string),
+							),
 						);
 						if let Ok(id) = s.encode(&self.encoder) {
 							self.id = id.into();
@@ -519,7 +527,15 @@ impl Session {
 						.await;
 						if let Some(sessions) = self.relay.get_sessions() {
 							let s = http::sessionpersistence::SessionState::MCP(
-								http::sessionpersistence::MCPSessionState::new(sessions),
+								http::sessionpersistence::MCPSessionState::new(
+									sessions,
+									self
+										.relay
+										.backend_id
+										.as_ref()
+										.filter(|_| matches!(self.encoder, http::sessionpersistence::Encoder::Aes(_)))
+										.map(ToString::to_string),
+								),
 							);
 							if let Ok(id) = s.encode(&self.encoder) {
 								self.id = id.into();
@@ -933,6 +949,13 @@ impl SessionManager {
 		let http::sessionpersistence::SessionState::MCP(state) = d else {
 			return Ok(None);
 		};
+		if state
+			.backend
+			.as_ref()
+			.is_some_and(|b| *b != backend_id.to_string())
+		{
+			return Ok(None);
+		}
 		let relay = builder.build_new_connections(ctx)?;
 		if let Err(err) = relay.set_sessions(state.sessions) {
 			warn!("failed to resume session: {err}");

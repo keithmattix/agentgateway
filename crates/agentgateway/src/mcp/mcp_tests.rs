@@ -1099,7 +1099,7 @@ async fn stale_session_key_returns_not_found() {
 	let client = reqwest::Client::new();
 	let old_encoder = http::sessionpersistence::Encoder::aes(OLD_KEY).unwrap();
 	let session_id = http::sessionpersistence::SessionState::MCP(
-		http::sessionpersistence::MCPSessionState::new(vec![]),
+		http::sessionpersistence::MCPSessionState::new(vec![], None),
 	)
 	.encode(&old_encoder)
 	.unwrap();
@@ -1131,15 +1131,17 @@ async fn delete_reports_success_when_upstream_delete_fails() {
 		.with_bind(simple_bind())
 		.with_route(basic_route(unreachable));
 	let io = t.serve_real_listener(BIND_KEY).await;
-	let session_id = http::sessionpersistence::SessionState::MCP(
-		http::sessionpersistence::MCPSessionState::new(vec![http::sessionpersistence::MCPSession {
-			target_name: Some("mcp".to_string()),
-			session: Some("upstream-session".to_string()),
-			backend: None,
-		}]),
-	)
-	.encode(&http::sessionpersistence::Encoder::base64())
-	.unwrap();
+	let session_id =
+		http::sessionpersistence::SessionState::MCP(http::sessionpersistence::MCPSessionState::new(
+			vec![http::sessionpersistence::MCPSession {
+				target_name: Some("mcp".to_string()),
+				session: Some("upstream-session".to_string()),
+				backend: None,
+			}],
+			None,
+		))
+		.encode(&http::sessionpersistence::Encoder::base64())
+		.unwrap();
 
 	let delete = reqwest::Client::new()
 		.delete(format!("http://{io}/mcp"))
@@ -3446,6 +3448,78 @@ async fn stateful_session_reuse_applies_route_guardrails() {
 	let msg = read_response_message(reused).await;
 	assert_eq!(msg["result"]["isError"], true, "{msg}");
 	assert_eq!(msg["result"]["content"][0]["text"], "denied by route b");
+}
+
+#[tokio::test]
+async fn persisted_stateful_session_cannot_cross_mcp_backends() {
+	let a = mock_streamable_http_server(true).await;
+	let (b, b_requests) = mock_streamable_http_server_with_capture(true).await;
+	let make_gateway = || {
+		let mut route_a = basic_named_route(strng::format!("/{}", a.addr));
+		route_a.key = "route-a".into();
+		route_a.name.name = "route-a".into();
+		route_a.matches[0].path = crate::types::agent::PathMatch::Exact("/a".into());
+		let mut route_b = basic_named_route(strng::format!("/{}", b.addr));
+		route_b.key = "route-b".into();
+		route_b.name.name = "route-b".into();
+		route_b.matches[0].path = crate::types::agent::PathMatch::Exact("/b".into());
+		let mut config = crate::config::parse_config("{}".to_string(), None).unwrap();
+		config.session_encoder = http::sessionpersistence::Encoder::aes(
+			"00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff",
+		)
+		.unwrap();
+		setup_proxy_test_with_config(config)
+			.with_mcp_backend(a.addr, true, false)
+			.with_mcp_backend(b.addr, true, false)
+			.with_bind(simple_bind())
+			.with_route(route_a)
+			.with_route(route_b)
+	};
+	let client = reqwest::Client::new();
+
+	let first = make_gateway();
+	let first_io = first.serve_real_listener(BIND_KEY).await;
+	let initialize = serde_json::json!({
+		"jsonrpc": "2.0",
+		"id": 1,
+		"method": "initialize",
+		"params": {
+			"protocolVersion": "2025-06-18",
+			"capabilities": {},
+			"clientInfo": {"name": "scope-test", "version": "0"}
+		}
+	});
+	let response = mcp_json_post(&client, &format!("http://{first_io}/a"), &initialize)
+		.header("mcp-protocol-version", "2025-06-18")
+		.send()
+		.await
+		.unwrap();
+	assert_eq!(response.status(), reqwest::StatusCode::OK);
+	let sid = response.headers()["mcp-session-id"]
+		.to_str()
+		.unwrap()
+		.to_owned();
+
+	// A fresh gateway has no in-memory session, so it resumes from the token.
+	let restarted = make_gateway();
+	let restarted_io = restarted.serve_real_listener(BIND_KEY).await;
+	let list = serde_json::json!({"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}});
+	let crossed = mcp_json_post(&client, &format!("http://{restarted_io}/b"), &list)
+		.header("mcp-protocol-version", "2025-06-18")
+		.header("mcp-session-id", sid.clone())
+		.send()
+		.await
+		.unwrap();
+	assert_eq!(crossed.status(), reqwest::StatusCode::NOT_FOUND);
+	assert!(b_requests.lock().unwrap().is_empty());
+
+	let own = mcp_json_post(&client, &format!("http://{restarted_io}/a"), &list)
+		.header("mcp-protocol-version", "2025-06-18")
+		.header("mcp-session-id", sid)
+		.send()
+		.await
+		.unwrap();
+	assert_eq!(own.status(), reqwest::StatusCode::OK);
 }
 
 /// Test that getting a prompt denied by MCP authorization policy returns proper JSON-RPC error
