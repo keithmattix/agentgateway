@@ -8629,7 +8629,7 @@
       "type": "object",
       "properties": {
         "attempts": {
-          "description": "Total number of attempts, including the original request.",
+          "description": "Maximum number of retries after the original request.",
           "type": "integer",
           "format": "uint8",
           "minimum": 1,
