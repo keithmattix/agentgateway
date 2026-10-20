@@ -592,7 +592,13 @@ impl ChatTranslation {
 			ChatFormat::AnthropicMessages if matches!(ctx.provider, AIProvider::Vertex(_)) => {
 				vertex::prepare_anthropic_message_body(render_anthropic_messages(req, ctx.catalog)?)
 			},
-			ChatFormat::AnthropicMessages => render_anthropic_messages(req, ctx.catalog),
+			ChatFormat::AnthropicMessages => {
+				let mut req = req;
+				if let AIProvider::Bedrock(p) = ctx.provider {
+					p.sanitize_messages_user_id(&mut req, ctx.catalog);
+				}
+				render_anthropic_messages(req, ctx.catalog)
+			},
 			ChatFormat::BedrockConverse => return render_bedrock_converse(req, ctx),
 			ChatFormat::VertexGemini => {
 				return Ok(RenderedChatRequest {
@@ -1364,10 +1370,12 @@ impl AIProvider {
 
 		// The client's query belongs to the inbound API format (e.g. Anthropic's `?beta=true`), so
 		// drop it once the request is translated to another format; strict upstreams like Google
-		// reject unknown parameters. Bedrock Runtime always speaks its own APIs (Converse, etc), even
-		// though its route type mirrors the input format; Mantle serves the native formats.
+		// reject unknown parameters. Bedrock Converse is always a translation, even though its route
+		// type mirrors the input format.
 		let translated = llm_request.is_some_and(|l| {
-			if matches!(bedrock_endpoint, Some(bedrock::BedrockEndpoint::Runtime)) {
+			if let (AIProvider::Bedrock(p), Some(endpoint)) = (self, bedrock_endpoint)
+				&& !p.native_chat(endpoint)
+			{
 				return true;
 			}
 			let same_format = match l.input_format {
@@ -1710,13 +1718,17 @@ impl AIProvider {
 							service.to_string(),
 						));
 				}
-				// Mantle serves the Messages and count-tokens routes via the Anthropic-native API
-				if matches!(
-					route_type,
-					RouteType::Messages | RouteType::AnthropicTokenCount
-				) && matches!(bedrock_endpoint, Some(bedrock::BedrockEndpoint::Mantle))
-				{
+				// Native chat serves Messages via the Anthropic-native API; Mantle also serves count-tokens.
+				let anthropic_native = match (route_type, bedrock_endpoint) {
+					(RouteType::Messages, Some(endpoint)) => provider.native_chat(endpoint),
+					(RouteType::AnthropicTokenCount, endpoint) => {
+						endpoint == Some(bedrock::BedrockEndpoint::Mantle)
+					},
+					_ => false,
+				};
+				if anthropic_native {
 					set_default_anthropic_version(&mut req.headers);
+					conversion::bedrock::filter_native_beta_header(&mut req.headers)?;
 				}
 				Ok(())
 			}),
