@@ -259,7 +259,3 @@ unexpected_cfgs = { level = "warn", check-cfg = ['cfg(ossl350)'] }
 [[bench]]
 name = "bench_tests"
 harness = false
-
-[lints.cargo]
-# jemalloc_pprof is only used when the `jemalloc` feature is enabled
-unused_dependencies = "allow"
