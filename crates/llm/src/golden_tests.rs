@@ -1022,7 +1022,14 @@ mod responses {
 				RESPONSES_TO_MESSAGES,
 			],
 		),
-		("tool", &[RESPONSES_TO_MESSAGES]),
+		(
+			"tool",
+			&[
+				RESPONSES_TO_MESSAGES,
+				RESPONSES_TO_RESPONSES,
+				RESPONSES_TO_DETECT,
+			],
+		),
 		("reasoning", &[RESPONSES_TO_MESSAGES]),
 		("custom-tool", &[RESPONSES_TO_RESPONSES]),
 		(

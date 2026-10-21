@@ -630,6 +630,7 @@ pub mod to_responses {
 					.and_then(|d| d.cache_write_tokens)
 					.or(u.cache_creation_input_tokens)
 					.map(|tokens| tokens as i64),
+				cache_write_tokens_details: None,
 			},
 			output_tokens_details: responses::OutputTokenDetails {
 				reasoning_tokens: u
@@ -1258,6 +1259,7 @@ pub mod to_responses {
 					.and_then(|d| d.cache_write_tokens)
 					.or(u.cache_creation_input_tokens)
 					.map(|tokens| tokens as i64),
+				cache_write_tokens_details: None,
 			},
 			output_tokens_details: OutputTokenDetails {
 				reasoning_tokens: u

@@ -69,6 +69,12 @@ pub fn passthrough_stream(
 							.input_tokens_details
 							.cache_write_tokens
 							.map(|tokens| tokens as u64);
+						r.response.cache_creation_12h_input_tokens = usage
+							.input_tokens_details
+							.cache_write_tokens_details
+							.as_ref()
+							.and_then(|d| d.ttl_12h_tokens)
+							.map(|t| t as u64);
 						r.response.reasoning_tokens = Some(usage.output_tokens_details.reasoning_tokens as u64);
 					}
 				});
@@ -114,6 +120,12 @@ pub fn passthrough_stream(
 							.input_tokens_details
 							.cache_write_tokens
 							.map(|tokens| tokens as u64);
+						r.response.cache_creation_12h_input_tokens = usage
+							.input_tokens_details
+							.cache_write_tokens_details
+							.as_ref()
+							.and_then(|d| d.ttl_12h_tokens)
+							.map(|t| t as u64);
 						r.response.reasoning_tokens = Some(usage.output_tokens_details.reasoning_tokens as u64);
 					}
 					if let Some(c) = completion.take() {
@@ -738,6 +750,12 @@ pub mod from_messages {
 			input_tokens: u.input_tokens as u64,
 			total_tokens: u.total_tokens as u64,
 			reasoning_tokens: Some(u.output_tokens_details.reasoning_tokens as u64),
+			cache_creation_12h_input_tokens: u
+				.input_tokens_details
+				.cache_write_tokens_details
+				.as_ref()
+				.and_then(|d| d.ttl_12h_tokens)
+				.map(|t| t as u64),
 			..Default::default()
 		});
 		let anthropic = translate_response_internal(resp)?;
@@ -1133,6 +1151,12 @@ pub mod from_messages {
 					.input_tokens_details
 					.cache_write_tokens
 					.map(|tokens| tokens as u64);
+				r.response.cache_creation_12h_input_tokens = usage
+					.input_tokens_details
+					.cache_write_tokens_details
+					.as_ref()
+					.and_then(|d| d.ttl_12h_tokens)
+					.map(|t| t as u64);
 				r.response.reasoning_tokens = Some(usage.output_tokens_details.reasoning_tokens as u64);
 				if let Some(service_tier) = &service_tier {
 					r.response.service_tier = Some(strng::new(service_tier));

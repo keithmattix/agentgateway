@@ -3699,6 +3699,7 @@ pub mod from_responses {
 							input_tokens_details: InputTokenDetails {
 								cached_tokens: u.cache_read_input_tokens.unwrap_or(0) as u32,
 								cache_write_tokens: u.cache_write_input_tokens.map(|tokens| tokens as i64),
+								cache_write_tokens_details: None,
 							},
 							output_tokens_details: OutputTokenDetails {
 								reasoning_tokens: 0,
@@ -4560,6 +4561,7 @@ impl ConverseResponseAdapter {
 				input_tokens_details: responsest::InputTokenDetails {
 					cached_tokens: u.cache_read_input_tokens.unwrap_or(0) as u32,
 					cache_write_tokens: u.cache_write_input_tokens.map(|tokens| tokens as i64),
+					cache_write_tokens_details: None,
 				},
 				output_tokens_details: responsest::OutputTokenDetails {
 					reasoning_tokens: 0,

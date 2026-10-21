@@ -711,16 +711,12 @@
             }
           ]
         },
-        "cacheWrite1h": {
-          "description": "Cost per 1M tokens written to cache with a 1h TTL (Anthropic). Falls back to cacheWrite if unset.",
-          "anyOf": [
-            {
-              "$ref": "#/$defs/Money"
-            },
-            {
-              "type": "null"
-            }
-          ]
+        "cacheWriteDetails": {
+          "description": "Cost per 1M tokens written to cache, keyed by non-default TTL (`1h`, `12h`). TTLs not set fall back to cacheWrite.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/Money"
+          }
         },
         "reasoning": {
           "description": "Cost per 1M reasoning tokens. Falls back to the output rate if unset.",
