@@ -492,7 +492,7 @@ async fn connect_tunnel_terminates_outer_tls() {
 	// SNI must match the `*.example.com` static cert at examples/mcp-tls/certs.
 	const SNI: &str = "gw.example.com";
 
-	async fn tls_connect_inner(custom_header: Option<&str>) -> String {
+	async fn tls_connect_inner(custom_header: Option<&str>, network_allowed: bool) -> String {
 		let mock = simple_mock().await;
 
 		// OUTER bind: HTTPS Static cert + tunnelProtocol Connect. The fix terminates
@@ -523,6 +523,10 @@ async fn connect_tunnel_terminates_outer_tls() {
 			.with_bind(outer)
 			.with_bind(inner)
 			.with_route(basic_route(*mock.address()));
+		t.attach_frontend_policy(json!({
+			"networkAuthorization": { "rules": [if network_allowed { "true" } else { "false" }] }
+		}))
+		.await;
 		// Authorize the inner request only when the custom header carried on the
 		// (TLS-encrypted) CONNECT survived termination + re-entry.
 		t.attach_route_policy(json!({
@@ -558,6 +562,22 @@ async fn connect_tunnel_terminates_outer_tls() {
 		};
 		io.write_all(connect.as_bytes()).await.unwrap();
 
+		if !network_allowed {
+			let mut response = Vec::new();
+			let result = tokio::time::timeout(Duration::from_secs(5), io.read_to_end(&mut response))
+				.await
+				.expect("denied outer connection must close");
+			if let Err(err) = result {
+				assert_eq!(err.kind(), std::io::ErrorKind::UnexpectedEof);
+			}
+			assert!(
+				response.is_empty(),
+				"denied CONNECT received a response: {response:?}"
+			);
+			assert!(mock.received_requests().await.unwrap().is_empty());
+			return String::new();
+		}
+
 		let mut response = Vec::new();
 		loop {
 			let mut chunk = [0; 1024];
@@ -588,22 +608,23 @@ async fn connect_tunnel_terminates_outer_tls() {
 
 	// Header present + matching: authorized (200) — proves the outer TLS was
 	// terminated, the CONNECT was read inside it, and the header reached CEL.
-	let allowed = tls_connect_inner(Some("custom-value")).await;
+	let allowed = tls_connect_inner(Some("custom-value"), true).await;
 	assert!(
 		allowed.starts_with("HTTP/1.1 200 OK\r\n"),
 		"expected authorized inner request, got: {allowed}",
 	);
 	// Wrong / absent header: denied (403).
-	let wrong = tls_connect_inner(Some("other-value")).await;
+	let wrong = tls_connect_inner(Some("other-value"), true).await;
 	assert!(
 		wrong.starts_with("HTTP/1.1 403 Forbidden\r\n"),
 		"expected denied inner request for wrong header, got: {wrong}",
 	);
-	let absent = tls_connect_inner(None).await;
+	let absent = tls_connect_inner(None, true).await;
 	assert!(
 		absent.starts_with("HTTP/1.1 403 Forbidden\r\n"),
 		"expected denied inner request without the header, got: {absent}",
 	);
+	tls_connect_inner(Some("custom-value"), false).await;
 }
 
 /// End-to-end on-behalf-of (OBO) token exchange over a CONNECT tunnel.
