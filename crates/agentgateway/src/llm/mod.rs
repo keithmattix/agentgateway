@@ -588,6 +588,10 @@ impl ChatTranslation {
 		req: types::ChatRequest,
 		ctx: &ChatRequestContext<'_>,
 	) -> Result<RenderedChatRequest, AIError> {
+		let mut req = req;
+		if let AIProvider::Bedrock(p) = ctx.provider {
+			p.sanitize_runtime_request(&mut req, ctx.catalog);
+		}
 		let body = match self.output {
 			ChatFormat::OpenAICompletions => return render_openai_completions(req, ctx),
 			ChatFormat::OpenAIResponses => render_openai_responses(req, ctx),
@@ -1366,10 +1370,12 @@ impl AIProvider {
 
 		// The client's query belongs to the inbound API format (e.g. Anthropic's `?beta=true`), so
 		// drop it once the request is translated to another format; strict upstreams like Google
-		// reject unknown parameters. Bedrock Runtime always speaks its own APIs (Converse, etc), even
-		// though its route type mirrors the input format; Mantle serves the native formats.
+		// reject unknown parameters. Bedrock Converse is always a translation, even though its route
+		// type mirrors the input format.
 		let translated = llm_request.is_some_and(|l| {
-			if matches!(bedrock_endpoint, Some(bedrock::BedrockEndpoint::Runtime)) {
+			if let (AIProvider::Bedrock(p), Some(endpoint)) = (self, bedrock_endpoint)
+				&& !p.native_chat(endpoint)
+			{
 				return true;
 			}
 			let same_format = match l.input_format {
@@ -1712,13 +1718,35 @@ impl AIProvider {
 							service.to_string(),
 						));
 				}
-				// Mantle serves the Messages and count-tokens routes via the Anthropic-native API
+				// Native chat serves Messages via the Anthropic-native API; Mantle also serves count-tokens.
+				let anthropic_native = match (route_type, bedrock_endpoint) {
+					(RouteType::Messages, Some(endpoint)) => provider.native_chat(endpoint),
+					(RouteType::AnthropicTokenCount, endpoint) => {
+						endpoint == Some(bedrock::BedrockEndpoint::Mantle)
+					},
+					_ => false,
+				};
+				if anthropic_native {
+					set_default_anthropic_version(&mut req.headers);
+					conversion::bedrock::filter_native_beta_header(&mut req.headers)?;
+				}
+				// Converse carries the guardrail in the body; the native APIs take it as headers.
 				if matches!(
 					route_type,
-					RouteType::Messages | RouteType::AnthropicTokenCount
-				) && matches!(bedrock_endpoint, Some(bedrock::BedrockEndpoint::Mantle))
+					RouteType::Messages | RouteType::Responses | RouteType::Completions
+				) && bedrock_endpoint == Some(bedrock::BedrockEndpoint::Runtime)
+					&& provider.native_chat(bedrock::BedrockEndpoint::Runtime)
+					&& let (Some(identifier), Some(version)) =
+						(&provider.guardrail_identifier, &provider.guardrail_version)
 				{
-					set_default_anthropic_version(&mut req.headers);
+					req.headers.insert(
+						"x-amzn-bedrock-guardrailidentifier",
+						HeaderValue::from_str(identifier)?,
+					);
+					req.headers.insert(
+						"x-amzn-bedrock-guardrailversion",
+						HeaderValue::from_str(version)?,
+					);
 				}
 				Ok(())
 			}),
