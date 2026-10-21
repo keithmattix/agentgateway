@@ -195,6 +195,18 @@ fn redirection_test() {
 				code: StatusCode::FOUND,
 			}),
 		),
+		(
+			"scheme_redirect_drops_port",
+			Input {
+				path: &match_any,
+				redirect: &https_scheme,
+				uri: "http://test.com:8080/hello/world",
+			},
+			Some(Want {
+				location: "https://test.com/hello/world".to_string(),
+				code: StatusCode::FOUND,
+			}),
+		),
 		// Test host redirect
 		(
 			"host_redirect",
@@ -889,6 +901,17 @@ fn rewrite_test() {
 			},
 			Some(Want {
 				uri: "http://newhost.com/hello/world".to_string(),
+			}),
+		),
+		(
+			"path_rewrite_keeps_port",
+			Input {
+				path: &match_any,
+				rewrite: &full_path_rewrite,
+				uri: "http://test.com:8080/hello/world",
+			},
+			Some(Want {
+				uri: "http://test.com:8080/new/path".to_string(),
 			}),
 		),
 		// Test full path rewrite with query parameters - should preserve query params

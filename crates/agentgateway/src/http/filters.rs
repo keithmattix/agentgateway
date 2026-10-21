@@ -179,7 +179,15 @@ impl RequestRedirect {
 			.or_else(|| req.uri().scheme())
 			.cloned()
 			.unwrap_or(Scheme::HTTP);
-		let authority = rewrite_host(authority, req.uri(), scheme.as_ref(), &new_scheme)?;
+		let authority = match authority {
+			// An explicit scheme without a port uses the scheme's well-known port.
+			None | Some(HostRedirect::None)
+				if scheme == &Some(Scheme::HTTP) || scheme == &Some(Scheme::HTTPS) =>
+			{
+				req.uri().host().ok_or(Error::InvalidURI)?.parse()?
+			},
+			_ => rewrite_host(authority, req.uri(), scheme.as_ref(), &new_scheme)?,
+		};
 		let path_and_query = rewrite_path(path, path_match, req.uri())?;
 		let new = Uri::builder()
 			.scheme(new_scheme)
