@@ -4103,7 +4103,7 @@ async fn authorization_deny_with_request_header_filters_per_agent() {
 
 	use ::http::{HeaderName, HeaderValue};
 	use rmcp::ServiceExt;
-	use rmcp::model::{ClientCapabilities, ClientConfig, Implementation};
+	use rmcp::model::{ClientCapabilities, ClientConfig, Implementation, ProtocolVersion};
 	use rmcp::transport::StreamableHttpClientTransport;
 	use rmcp::transport::streamable_http_client::StreamableHttpClientTransportConfig;
 
@@ -4142,7 +4142,8 @@ async fn authorization_deny_with_request_header_filters_per_agent() {
 		let client_info = ClientConfig::new(
 			ClientCapabilities::default(),
 			Implementation::new(format!("test-{agent_name}"), "0.0.1"),
-		);
+		)
+		.with_protocol_version(ProtocolVersion::LATEST_WITH_INITIALIZE);
 		client_info
 			.serve(transport)
 			.await
@@ -4818,14 +4819,15 @@ pub async fn mcp_streamable_client(
 	s: SocketAddr,
 ) -> RunningService<RoleClient, InitializeRequestParams> {
 	use rmcp::ServiceExt;
-	use rmcp::model::{ClientCapabilities, ClientConfig, Implementation};
+	use rmcp::model::{ClientCapabilities, ClientConfig, Implementation, ProtocolVersion};
 	use rmcp::transport::StreamableHttpClientTransport;
 	let transport =
 		StreamableHttpClientTransport::<reqwest::Client>::from_uri(format!("http://{s}/mcp"));
 	let client_info = ClientConfig::new(
 		ClientCapabilities::default(),
 		Implementation::new("test client".to_string(), "0.0.1".to_string()),
-	);
+	)
+	.with_protocol_version(ProtocolVersion::LATEST_WITH_INITIALIZE);
 
 	Box::pin(client_info.serve(transport))
 		.await
@@ -4842,6 +4844,16 @@ struct ResourceUpdateClient {
 }
 
 impl rmcp::ClientHandler for ResourceUpdateClient {
+	fn get_info(&self) -> rmcp::model::ClientConfig {
+		use rmcp::model::{ClientCapabilities, ClientConfig, Implementation, ProtocolVersion};
+
+		ClientConfig::new(
+			ClientCapabilities::default(),
+			Implementation::new("test client".to_string(), "0.0.1".to_string()),
+		)
+		.with_protocol_version(ProtocolVersion::LATEST_WITH_INITIALIZE)
+	}
+
 	async fn on_resource_updated(
 		&self,
 		params: rmcp::model::ResourceUpdatedNotificationParam,
@@ -5461,7 +5473,9 @@ pub async fn mcp_streamable_client_with_ui(
 	s: SocketAddr,
 ) -> RunningService<RoleClient, InitializeRequestParams> {
 	use rmcp::ServiceExt;
-	use rmcp::model::{ClientCapabilities, ClientConfig, ExtensionCapabilities, Implementation};
+	use rmcp::model::{
+		ClientCapabilities, ClientConfig, ExtensionCapabilities, Implementation, ProtocolVersion,
+	};
 	use rmcp::transport::StreamableHttpClientTransport;
 	let transport =
 		StreamableHttpClientTransport::<reqwest::Client>::from_uri(format!("http://{s}/mcp"));
@@ -5478,7 +5492,8 @@ pub async fn mcp_streamable_client_with_ui(
 			.enable_extensions_with(extensions)
 			.build(),
 		Implementation::new("test client".to_string(), "0.0.1".to_string()),
-	);
+	)
+	.with_protocol_version(ProtocolVersion::LATEST_WITH_INITIALIZE);
 
 	Box::pin(client_info.serve(transport))
 		.await
@@ -7547,14 +7562,15 @@ async fn try_mcp_streamable_client(
 ) -> Result<RunningService<RoleClient, InitializeRequestParams>, rmcp::service::ClientInitializeError>
 {
 	use rmcp::ServiceExt;
-	use rmcp::model::{ClientCapabilities, ClientConfig, Implementation};
+	use rmcp::model::{ClientCapabilities, ClientConfig, Implementation, ProtocolVersion};
 	use rmcp::transport::StreamableHttpClientTransport;
 	let transport =
 		StreamableHttpClientTransport::<reqwest::Client>::from_uri(format!("http://{s}/mcp"));
 	let client_info = ClientConfig::new(
 		ClientCapabilities::default(),
 		Implementation::new("test client".to_string(), "0.0.1".to_string()),
-	);
+	)
+	.with_protocol_version(ProtocolVersion::LATEST_WITH_INITIALIZE);
 
 	Box::pin(client_info.serve(transport)).await
 }
