@@ -2517,13 +2517,17 @@ async fn substrate_egress_denies_http_upgrades_without_dialing(
 					}
 					.try_into()
 					.unwrap();
-				let io = tokio_rustls::TlsConnector::from(tls.base_config().config)
+				let handshake = tokio_rustls::TlsConnector::from(tls.base_config().config)
 					.connect(
 						rustls_pki_types::ServerName::try_from("localhost").unwrap(),
 						io,
 					)
-					.await
-					.unwrap();
+					.await;
+				if !policy_allowed {
+					assert!(handshake.is_err(), "denied TLS handshake completed");
+					return Vec::new();
+				}
+				let io = handshake.unwrap();
 				exchange(io, &request).await
 			} else {
 				exchange(io, &request).await
@@ -2531,6 +2535,17 @@ async fn substrate_egress_denies_http_upgrades_without_dialing(
 		})
 		.await
 		.expect("timed out waiting for HTTP response");
+		if https && !policy_allowed {
+			assert!(response.is_empty());
+			assert!(
+				tokio::time::timeout(Duration::from_millis(50), connections.recv())
+					.await
+					.is_err(),
+				"denied TLS opened an upstream connection"
+			);
+			assert!(upstream.received_requests().await.unwrap().is_empty());
+			continue;
+		}
 		let expected = if upgrading || !policy_allowed {
 			"HTTP/1.1 403 Forbidden\r\n"
 		} else {
@@ -2561,42 +2576,6 @@ async fn substrate_egress_denies_http_upgrades_without_dialing(
 			upstream.received_requests().await.unwrap().len(),
 			usize::from(policy_allowed)
 		);
-		if https && !policy_allowed {
-			let connect = upgrading && upgrade == "CONNECT";
-			let log = if connect {
-				agent_core::telemetry::testing::eventually_find(&[
-					("scope", "request"),
-					("http.host", &connect_host),
-					("http.method", "CONNECT"),
-				])
-				.await
-				.unwrap()
-			} else {
-				find_request_log(&path).await
-			};
-			assert_eq!(
-				log["http.host"].as_str(),
-				Some(if connect {
-					connect_host.as_str()
-				} else {
-					"localhost"
-				}),
-				"{log:#?}"
-			);
-			assert_eq!(
-				log["http.method"].as_str(),
-				Some(if connect { "CONNECT" } else { "GET" }),
-				"{log:#?}"
-			);
-			assert_eq!(
-				log["http.path"].as_str(),
-				Some(if connect { "/" } else { path.as_str() }),
-				"{log:#?}"
-			);
-			assert_eq!(log["http.version"].as_str(), Some("HTTP/1.1"), "{log:#?}");
-			assert_eq!(log["gateway"].as_str(), Some("default/default"), "{log:#?}");
-			assert_eq!(log["listener"].as_str(), Some("default"), "{log:#?}");
-		}
 	}
 	forwarder.abort();
 }
@@ -2705,14 +2684,17 @@ async fn substrate_egress_tls_denial_closes_at_client_hello_without_dialing(
 		match kind {
 			"before-network-authorization" => {
 				gateway
-					.attach_frontend_policy(json!({
-						"networkAuthorization": { "rules": [if allowed { "true" } else { "false" }] }
-					}))
+					.attach_frontend_policy_with_port(
+						json!({
+							"networkAuthorization": { "rules": [if allowed { "true" } else { "false" }] }
+						}),
+						Some(port),
+					)
 					.await;
 			},
 			"before-network-ext-authz" => {
 				gateway
-					.attach_frontend_policy(json!({ "networkExtAuthz": authz_policy }))
+					.attach_frontend_policy_with_port(json!({ "networkExtAuthz": authz_policy }), Some(port))
 					.await;
 			},
 			"before-gateway-ext-authz" => {
