@@ -655,7 +655,7 @@ impl Gateway {
 					)
 					.await
 					{
-						Ok((listener, mut tls_stream)) => {
+						Ok((listener, tls_stream)) => {
 							// A TLS-passthrough listener (`ListenerProtocol::TLS(None)`) does not
 							// terminate TLS, so `tls_stream` is still encrypted. Serving CONNECT
 							// would parse HTTP from ciphertext and fail opaquely. CONNECT requires
@@ -668,12 +668,6 @@ impl Gateway {
 									 configure TLS termination on this listener to use tunnelProtocol: Connect",
 									listener.name.listener_name,
 								);
-								return;
-							}
-							if let Err(e) =
-								Self::authorize_network_connection(&inputs, &policies, &mut tls_stream).await
-							{
-								warn!(src.addr = %peer_addr, "connect tunnel authorization error: {e}");
 								return;
 							}
 							tls_stream
@@ -726,6 +720,7 @@ impl Gateway {
 			hyper::service::service_fn(move |req: ::http::Request<hyper::body::Incoming>| {
 				let inputs = inputs.clone();
 				let connection = connection.clone();
+				let policies = policies.clone();
 				let drain = drain.clone();
 				let substrate_egress_actor_resolution =
 					Self::frontend_policies_for_bind(&bind_name, &inputs).substrate_egress_actor_resolution;
@@ -790,6 +785,22 @@ impl Gateway {
 							(SocketAddr::new(target_ip, port), bind)
 						}
 					};
+					let mut tunnel_connection = Extension::wrap(connection.clone());
+					let tcp = connection
+						.get::<TCPConnectionInfo>()
+						.expect("tcp info must be set");
+					tunnel_connection.insert(TCPConnectionInfo {
+						local_addr: target_address,
+						..tcp.clone()
+					});
+					tunnel_connection.insert(ConnectHeaders(connect_headers.clone()));
+					if let Err(e) =
+						Self::authorize_network_connection(&inputs, &policies, &mut tunnel_connection).await
+					{
+						warn!("connect tunnel authorization error: {e}");
+						return Ok(ProxyError::AuthorizationFailed.into_response_with_grpc(false));
+					}
+					let connection = Arc::new(tunnel_connection);
 					let actor_identity = if let Some(policy) = substrate_egress_actor_resolution.as_ref() {
 						match policy
 							.authorize_connect(&inputs, connection.as_ref(), &mut req)
@@ -858,12 +869,12 @@ impl Gateway {
 	async fn authorize_network_connection(
 		inputs: &Arc<ProxyInputs>,
 		policies: &FrontendPolices,
-		stream: &mut Socket,
+		connection: &mut Extension,
 	) -> anyhow::Result<()> {
-		let tcp = stream
-			.ext::<TCPConnectionInfo>()
+		let tcp = connection
+			.get::<TCPConnectionInfo>()
 			.expect("tcp info must be set");
-		let tls = stream.ext::<TLSConnectionInfo>();
+		let tls = connection.get::<TLSConnectionInfo>();
 		let unverified_workload = crate::cel::WorkloadContext::from_stores(
 			&inputs.stores,
 			&inputs.cfg.network,
@@ -875,7 +886,7 @@ impl Gateway {
 			unverified_workload,
 		);
 		let dst = crate::cel::DestinationContext::from_tcp_connection(tcp);
-		if let Some(ch) = stream.ext_mut().remove::<ConnectHeaders>() {
+		if let Some(ch) = connection.remove::<ConnectHeaders>() {
 			src.connect_headers = ch.0;
 		}
 		if let Some(network_authorization) = policies.network_authorization.as_ref()
@@ -893,8 +904,8 @@ impl Gateway {
 				.await
 				.map_err(|e| anyhow::anyhow!("network external authorization denied: {e}"))?;
 		}
-		stream.ext_mut().insert(src);
-		stream.ext_mut().insert(dst);
+		connection.insert(src);
+		connection.insert(dst);
 		Ok(())
 	}
 
@@ -937,7 +948,7 @@ impl Gateway {
 			.get_or_create(&transport_labels)
 			.inc();
 
-		Self::authorize_network_connection(&inputs, &policies, &mut stream).await?;
+		Self::authorize_network_connection(&inputs, &policies, stream.ext_mut()).await?;
 
 		let transport_metrics = inputs.metrics.clone();
 		let proxy = super::httpproxy::HTTPProxy {
