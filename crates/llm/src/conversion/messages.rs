@@ -357,7 +357,7 @@ pub mod from_completions {
 
 	fn user_content_to_messages(
 		content: &completions::RequestUserMessageContent,
-	) -> Vec<messages::ContentBlock> {
+	) -> Result<Vec<messages::ContentBlock>, AIError> {
 		let mut out = Vec::new();
 		match content {
 			completions::RequestUserMessageContent::Text(text) => {
@@ -395,13 +395,38 @@ pub mod from_completions {
 								cache_control: cache_control(&image.prompt_cache_breakpoint),
 							}));
 						},
-						completions::RequestUserMessageContentPart::InputAudio(_)
-						| completions::RequestUserMessageContentPart::File(_) => {},
+						completions::RequestUserMessageContentPart::File(file) => {
+							let file_data = file.file.file_data.as_deref().unwrap_or_default();
+							let Some((media_type, data)) = parse_data_url(file_data) else {
+								if let Some(file_id) = file.file.file_id.as_deref() {
+									return Err(AIError::UnsupportedConversion(strng::new(format!(
+										"anthropic path cannot resolve OpenAI file_id ({file_id}); send file.file_data as an inline data: URI"
+									))));
+								}
+								return Err(AIError::UnsupportedConversion(strng::literal!(
+									"file content part requires file.file_data as an inline base64 data: URI"
+								)));
+							};
+							out.push(messages::ContentBlock::Document(
+								messages::ContentDocumentBlock {
+									source: serde_json::json!({
+										"type": "base64",
+										"media_type": media_type,
+										"data": data
+									}),
+									cache_control: cache_control(&file.prompt_cache_breakpoint),
+									citations: None,
+									context: None,
+									title: file.file.filename.clone(),
+								},
+							));
+						},
+						completions::RequestUserMessageContentPart::InputAudio(_) => {},
 					}
 				}
 			},
 		}
-		out
+		Ok(out)
 	}
 
 	fn assistant_content_to_messages(
@@ -512,7 +537,7 @@ pub mod from_completions {
 		let typed = json::convert::<_, completions::Request>(req)
 			.map_err(|err| AIError::RequestParsing(crate::InputFormat::Completions, err))?;
 		let model_id = typed.model.clone().unwrap_or_default();
-		let mut xlated = translate_internal(typed, model_id, catalog);
+		let mut xlated = translate_internal(typed, model_id, catalog)?;
 		if let Some(caching) = prompt_caching {
 			apply_prompt_caching(&mut xlated, caching);
 		}
@@ -612,7 +637,7 @@ pub mod from_completions {
 		req: completions::Request,
 		model_id: String,
 		catalog: crate::model_catalog::Catalog<'_>,
-	) -> messages::Request {
+	) -> Result<messages::Request, AIError> {
 		let max_tokens = req.max_tokens();
 		let stop_sequences = req.stop_sequence();
 		let mut system_blocks = Vec::new();
@@ -690,10 +715,12 @@ pub mod from_completions {
 					completions::RequestMessage::System(_) | completions::RequestMessage::Developer(_) => {
 						return None;
 					},
-					completions::RequestMessage::User(user) => (
-						messages::Role::User,
-						user_content_to_messages(&user.content),
-					),
+					completions::RequestMessage::User(user) => {
+						match user_content_to_messages(&user.content) {
+							Ok(content) => (messages::Role::User, content),
+							Err(err) => return Some(Err(err)),
+						}
+					},
 					completions::RequestMessage::Assistant(assistant) => (
 						messages::Role::Assistant,
 						assistant_content_to_messages(assistant),
@@ -720,10 +747,10 @@ pub mod from_completions {
 				if content.is_empty() {
 					None
 				} else {
-					Some(messages::Message { role, content })
+					Some(Ok(messages::Message { role, content }))
 				}
 			})
-			.collect();
+			.collect::<Result<Vec<_>, _>>()?;
 
 		let tools = if let Some(tools) = req.tools {
 			let mapped_tools: Vec<_> = tools
@@ -836,7 +863,7 @@ pub mod from_completions {
 		} else {
 			None
 		};
-		messages::Request {
+		Ok(messages::Request {
 			messages,
 			system,
 			model: model_id,
@@ -852,7 +879,7 @@ pub mod from_completions {
 			thinking,
 			output_config,
 			cache_control: None,
-		}
+		})
 	}
 
 	pub fn translate_response(bytes: &Bytes) -> Result<Box<dyn ResponseType>, AIError> {
