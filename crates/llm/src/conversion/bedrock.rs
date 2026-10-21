@@ -926,7 +926,7 @@ pub mod from_completions {
 		}
 		let mut cache_points_used = 0;
 		let has_explicit_system_cache = system_parts.iter().any(|(_, marked)| marked.is_some());
-		let mut system_content = if system_parts.is_empty() {
+		let system_content = if system_parts.is_empty() {
 			None
 		} else if has_explicit_system_cache {
 			let mut blocks = Vec::new();
@@ -1082,34 +1082,6 @@ pub mod from_completions {
 			.as_ref()
 			.and_then(completions_response_format_to_bedrock_output_config);
 
-		let supports_caching = helpers::supports_prompt_caching(&model_id);
-		if let Some(system_blocks) = &mut system_content {
-			tracing::debug!(
-				"Prompt caching policy: {:?}, model: {}, supports caching: {}",
-				prompt_caching.map(|c| (c.cache_system, c.cache_messages, c.cache_tools)),
-				model_id,
-				supports_caching
-			);
-			if let Some(caching) = prompt_caching
-				&& caching.cache_system
-				&& supports_caching
-				&& cache_points_used < 4
-				&& !has_explicit_system_cache
-			{
-				let meets_minimum = if let Some(min_tokens) = caching.min_tokens {
-					helpers::estimate_system_tokens(system_blocks) >= min_tokens
-				} else {
-					true
-				};
-				if meets_minimum {
-					system_blocks.push(bedrock::SystemContentBlock::CachePoint {
-						cache_point: helpers::create_cache_point(),
-					});
-					cache_points_used += 1;
-				}
-			}
-		}
-
 		let mut bedrock_request = bedrock::ConverseRequest {
 			model_id,
 			messages,
@@ -1129,25 +1101,7 @@ pub mod from_completions {
 				.and_then(helpers::service_tier_from_openai),
 		};
 		if let Some(caching) = prompt_caching {
-			if caching.cache_messages
-				&& supports_caching
-				&& cache_points_used < 4
-				&& helpers::insert_message_cache_point(
-					&mut bedrock_request.messages,
-					caching.cache_message_offset,
-				) {
-				cache_points_used += 1;
-			}
-			if caching.cache_tools
-				&& supports_caching
-				&& cache_points_used < 4
-				&& let Some(ref mut tool_config) = bedrock_request.tool_config
-				&& !tool_config.tools.is_empty()
-			{
-				tool_config
-					.tools
-					.push(bedrock::Tool::CachePoint(helpers::create_cache_point()));
-			}
+			helpers::apply_prompt_caching(&mut bedrock_request, caching);
 		}
 		helpers::ensure_tool_config_for_history(&mut bedrock_request);
 
@@ -1501,11 +1455,15 @@ pub mod from_messages {
 		req: &types::messages::Request,
 		provider: &Provider,
 		headers: Option<&http::HeaderMap>,
+		prompt_caching: Option<&crate::PromptCachingConfig>,
 		catalog: crate::model_catalog::Catalog<'_>,
 	) -> Result<super::BedrockRequest, AIError> {
 		let typed = json::convert::<_, messages::Request>(req)
 			.map_err(|err| AIError::RequestParsing(crate::InputFormat::Messages, err))?;
-		let (xlated, tool_name_map) = translate_internal(typed, provider, headers, catalog)?;
+		let (mut xlated, tool_name_map) = translate_internal(typed, provider, headers, catalog)?;
+		if let Some(caching) = prompt_caching {
+			helpers::apply_prompt_caching(&mut xlated, caching);
+		}
 		let body = serde_json::to_vec(&xlated).map_err(AIError::RequestMarshal)?;
 		Ok(super::BedrockRequest {
 			body,
@@ -2021,6 +1979,16 @@ pub mod from_messages {
 		} else {
 			Some(metadata)
 		};
+
+		if let Some((last, earlier)) = messages.split_last_mut() {
+			helpers::insert_cache_point_on_retained_prefix(
+				&mut last.content,
+				earlier,
+				system_content.as_mut(),
+				req.cache_control.as_ref(),
+				&mut cache_points_used,
+			);
+		}
 
 		let mut bedrock_request = bedrock::ConverseRequest {
 			model_id: req.model,
@@ -2568,6 +2536,51 @@ pub mod from_responses {
 		})
 	}
 
+	/// Joins a tool output's text parts, returning the first cache breakpoint among them.
+	fn tool_output_text(
+		parts: &[responses::InputContent],
+	) -> (String, Option<responses::PromptCacheBreakpointConfig>) {
+		// TODO: cache non-text tool output parts if/when we support proxying them to Bedrock.
+		let texts = parts.iter().filter_map(|part| match part {
+			responses::InputContent::InputText(text) => Some(text),
+			_ => None,
+		});
+		let marked = texts
+			.clone()
+			.find_map(|text| text.prompt_cache_breakpoint.clone());
+		let text = texts
+			.map(|text| text.text.as_str())
+			.collect::<Vec<_>>()
+			.join("\n");
+		(text, marked)
+	}
+
+	fn push_tool_result(
+		messages: &mut Vec<bedrock::Message>,
+		call_id: String,
+		output_text: String,
+		marked: Option<&responses::PromptCacheBreakpointConfig>,
+		cache_points_used: &mut usize,
+	) {
+		let mut content = vec![bedrock::ContentBlock::ToolResult(
+			bedrock::ToolResultBlock {
+				tool_use_id: call_id,
+				content: vec![bedrock::ToolResultContentBlock::Text(output_text)],
+				// Responses tool outputs do not carry explicit success/error metadata.
+				// Leave Bedrock status unset instead of assuming success.
+				status: None,
+			},
+		)];
+		maybe_insert_cache_point(&mut content, marked, cache_points_used);
+		push_or_merge_message(
+			messages,
+			bedrock::Message {
+				role: bedrock::Role::User,
+				content,
+			},
+		);
+	}
+
 	pub(super) fn translate_internal(
 		req: responses::CreateResponse,
 		explicit_thinking_budget: Option<u64>,
@@ -2663,7 +2676,6 @@ pub mod from_responses {
 			(vec![], None)
 		};
 
-		let supports_caching = req.model.as_deref().is_some_and(supports_prompt_caching);
 		let mut cache_points_used = 0;
 
 		// Convert input to Bedrock messages and system content
@@ -2972,32 +2984,16 @@ pub mod from_responses {
 					let Some(call_id) = output.call_id.filter(|call_id| !call_id.is_empty()) else {
 						continue;
 					};
-					let output_text = match output.output {
-						FunctionCallOutput::Text(text) => text,
-						FunctionCallOutput::Content(parts) => parts
-							.iter()
-							.filter_map(|part| match part {
-								InputContent::InputText(input_text) => Some(input_text.text.clone()),
-								_ => None,
-							})
-							.collect::<Vec<_>>()
-							.join("\n"),
+					let (output_text, marked) = match output.output {
+						FunctionCallOutput::Text(text) => (text, None),
+						FunctionCallOutput::Content(parts) => tool_output_text(&parts),
 					};
-
-					helpers::push_or_merge_message(
+					push_tool_result(
 						&mut messages,
-						bedrock::Message {
-							role: bedrock::Role::User,
-							content: vec![bedrock::ContentBlock::ToolResult(
-								bedrock::ToolResultBlock {
-									tool_use_id: call_id,
-									content: vec![bedrock::ToolResultContentBlock::Text(output_text)],
-									// Responses tool outputs do not carry explicit success/error metadata.
-									// Leave Bedrock status unset instead of assuming success.
-									status: None,
-								},
-							)],
-						},
+						call_id,
+						output_text,
+						marked.as_ref(),
+						&mut cache_points_used,
 					);
 				},
 				InputItem::Item(Item::CustomToolCall(call)) => {
@@ -3018,32 +3014,16 @@ pub mod from_responses {
 					output,
 					..
 				})) => {
-					let output_text = match output {
-						CustomToolCallOutputOutput::Text(text) => text,
-						CustomToolCallOutputOutput::List(parts) => parts
-							.iter()
-							.filter_map(|part| match part {
-								InputContent::InputText(input_text) => Some(input_text.text.clone()),
-								_ => None,
-							})
-							.collect::<Vec<_>>()
-							.join("\n"),
+					let (output_text, marked) = match output {
+						CustomToolCallOutputOutput::Text(text) => (text, None),
+						CustomToolCallOutputOutput::List(parts) => tool_output_text(&parts),
 					};
-
-					helpers::push_or_merge_message(
+					push_tool_result(
 						&mut messages,
-						bedrock::Message {
-							role: bedrock::Role::User,
-							content: vec![bedrock::ContentBlock::ToolResult(
-								bedrock::ToolResultBlock {
-									tool_use_id: call_id,
-									content: vec![bedrock::ToolResultContentBlock::Text(output_text)],
-									// Responses tool outputs do not carry explicit success/error metadata.
-									// Leave Bedrock status unset instead of assuming success.
-									status: None,
-								},
-							)],
-						},
+						call_id,
+						output_text,
+						marked.as_ref(),
+						&mut cache_points_used,
 					);
 				},
 				_ => {
@@ -3067,29 +3047,6 @@ pub mod from_responses {
 				system.insert(0, instructions_block);
 			} else {
 				system_content = Some(vec![instructions_block]);
-			}
-		}
-
-		// Apply system prompt caching if configured
-		if let Some(caching) = prompt_caching
-			&& caching.cache_system
-			&& supports_caching
-			&& cache_points_used < 4
-			&& let Some(ref mut system) = system_content
-			&& !matches!(
-				system.last(),
-				Some(bedrock::SystemContentBlock::CachePoint { .. })
-			) {
-			let meets_minimum = if let Some(min_tokens) = caching.min_tokens {
-				estimate_system_tokens(system) >= min_tokens
-			} else {
-				true
-			};
-			if meets_minimum {
-				system.push(bedrock::SystemContentBlock::CachePoint {
-					cache_point: create_cache_point(),
-				});
-				cache_points_used += 1;
 			}
 		}
 
@@ -3179,25 +3136,8 @@ pub mod from_responses {
 			}),
 		};
 
-		// Apply user message and tool caching
 		if let Some(caching) = prompt_caching {
-			if caching.cache_messages
-				&& supports_caching
-				&& cache_points_used < 4
-				&& insert_message_cache_point(&mut bedrock_request.messages, caching.cache_message_offset)
-			{
-				cache_points_used += 1;
-			}
-			if caching.cache_tools
-				&& supports_caching
-				&& cache_points_used < 4
-				&& let Some(ref mut tool_config) = bedrock_request.tool_config
-				&& !tool_config.tools.is_empty()
-			{
-				tool_config
-					.tools
-					.push(bedrock::Tool::CachePoint(create_cache_point()));
-			}
+			helpers::apply_prompt_caching(&mut bedrock_request, caching);
 		}
 		ensure_tool_config_for_history(&mut bedrock_request);
 
@@ -3976,6 +3916,12 @@ mod helpers {
 		fn cache_point(self) -> Option<bedrock::CachePointBlock>;
 	}
 
+	impl CachePoint for bedrock::CachePointBlock {
+		fn cache_point(self) -> Option<bedrock::CachePointBlock> {
+			Some(self)
+		}
+	}
+
 	impl CachePoint for Option<&PromptCacheBreakpointParam> {
 		fn cache_point(self) -> Option<bedrock::CachePointBlock> {
 			self.map(|_| create_cache_point())
@@ -4065,79 +4011,100 @@ mod helpers {
 		}
 	}
 
-	pub fn supports_prompt_caching(model_id: &str) -> bool {
+	fn has_cache_point(req: &bedrock::ConverseRequest) -> bool {
+		let mut system = req.system.iter().flatten();
+		let mut messages = req.messages.iter().flat_map(|m| &m.content);
+		let mut tools = req.tool_config.iter().flat_map(|t| &t.tools);
+		system.any(|b| matches!(b, bedrock::SystemContentBlock::CachePoint { .. }))
+			|| messages.any(|b| matches!(b, bedrock::ContentBlock::CachePoint(_)))
+			|| tools.any(|t| matches!(t, bedrock::Tool::CachePoint(_)))
+	}
+
+	pub fn apply_prompt_caching(
+		req: &mut bedrock::ConverseRequest,
+		caching: &crate::PromptCachingConfig,
+	) {
+		let support = prompt_caching_support(&req.model_id);
+		tracing::debug!(
+			?caching,
+			model = req.model_id,
+			?support,
+			"prompt caching policy"
+		);
+		// Client cache points take precedence over the policy.
+		if support == CachingSupport::None || has_cache_point(req) {
+			return;
+		}
+		let mut cache_points_used = 0;
+		if caching.cache_system
+			&& let Some(system) = &mut req.system
+			&& caching
+				.min_tokens
+				.is_none_or(|min| estimate_system_tokens(system) >= min)
+		{
+			maybe_insert_cache_point(system, create_cache_point(), &mut cache_points_used);
+		}
+		// Cache the conversation history, not the current turn; the offset moves the point further
+		// back, clamped to the first message.
+		if caching.cache_messages
+			&& let Some(idx) = req.messages.len().checked_sub(2)
+		{
+			let idx = idx.saturating_sub(caching.cache_message_offset);
+			insert_cache_point_on_prefix(
+				&mut req.messages[idx].content,
+				create_cache_point(),
+				&mut cache_points_used,
+			);
+		}
+		if caching.cache_tools
+			&& support == CachingSupport::Full
+			&& let Some(tool_config) = &mut req.tool_config
+			&& !tool_config.tools.is_empty()
+		{
+			maybe_insert_cache_point(
+				&mut tool_config.tools,
+				create_cache_point(),
+				&mut cache_points_used,
+			);
+		}
+	}
+
+	/// Where a model accepts cache points.
+	/// https://docs.aws.amazon.com/bedrock/latest/userguide/prompt-caching.html#prompt-caching-models
+	#[derive(Debug, PartialEq)]
+	enum CachingSupport {
+		None,
+		/// System and messages only; Nova models do not support cache points in tool definitions.
+		NoTools,
+		Full,
+	}
+
+	fn prompt_caching_support(model_id: &str) -> CachingSupport {
 		let model_lower = model_id.to_lowercase();
 		if model_lower.contains("anthropic.claude") {
 			let excluded = ["claude-instant", "claude-v1", "claude-v2"];
 			if excluded.iter().any(|pattern| model_lower.contains(pattern)) {
-				return false;
+				return CachingSupport::None;
 			}
-			return true;
+			return CachingSupport::Full;
 		}
 		if model_lower.contains("amazon.nova") {
-			return true;
+			return CachingSupport::NoTools;
 		}
 		if model_lower.contains(":application-inference-profile/") {
 			// If they are using inference profiles, the model name is obscured; we have no clue whether
 			// It's supported or not.
 			// Instead, we assume true; if users want to use models without support they can turn off caching manually.
-			return true;
+			return CachingSupport::Full;
 		}
-		false
+		CachingSupport::None
 	}
 
-	pub fn estimate_system_tokens(system: &[bedrock::SystemContentBlock]) -> usize {
-		let word_count: usize = system
-			.iter()
-			.filter_map(|block| match block {
-				bedrock::SystemContentBlock::Text { text } => Some(text.split_whitespace().count()),
-				bedrock::SystemContentBlock::CachePoint { .. } => None,
-			})
-			.sum();
-		(word_count * 13) / 10
-	}
-
-	pub fn insert_message_cache_point(messages: &mut [bedrock::Message], offset: usize) -> bool {
-		// Strategy: Cache everything BEFORE the last message (not including it)
-		// This caches the conversation history but not the current turn's input
-		//
-		// Example:
-		//   [User: "Hello", Assistant: "Hi", User: "How are you?"]
-		//   Cache point goes after "Hi" (before current "How are you?")
-		//
-		// This way:
-		//   - Conversation history: cached (cheap reads on subsequent turns)
-		//   - Current input: full price (it's new each turn anyway)
-		//
-		// The `offset` parameter shifts the cache point further back:
-		//   offset 0 → second-to-last message (default)
-		//   offset N → N additional messages back from default, clamped to bounds
-
-		let len = messages.len();
-
-		// If we have 0-1 messages, no point caching (nothing to reuse yet)
-		if len < 2 {
-			return false;
-		}
-
-		// Clamp so the index never goes below 0
-		let target_idx = (len - 2).saturating_sub(offset);
-		if matches!(
-			messages[target_idx].content.last(),
-			Some(bedrock::ContentBlock::CachePoint(_))
-		) {
-			return false;
-		}
-		messages[target_idx]
-			.content
-			.push(bedrock::ContentBlock::CachePoint(create_cache_point()));
-
-		tracing::debug!(
-			"Inserted cachePoint in message at index {} (offset={})",
-			target_idx,
-			offset
-		);
-		true
+	fn estimate_system_tokens(system: &[bedrock::SystemContentBlock]) -> usize {
+		crate::conversion::estimate_tokens(system.iter().filter_map(|block| match block {
+			bedrock::SystemContentBlock::Text { text } => Some(text.as_str()),
+			bedrock::SystemContentBlock::CachePoint { .. } => None,
+		}))
 	}
 
 	/// Extract metadata from x-bedrock-metadata header.
