@@ -1991,6 +1991,7 @@ fn into_sse_stream(
 						Some(rpc)
 					},
 					Err(e) => {
+						warn!(error = %e, "upstream MCP stream failed");
 						*errored = true;
 						if *terminal_seen {
 							None
@@ -2000,7 +2001,10 @@ fn into_sse_stream(
 								Some(request_id.clone()),
 							);
 							*terminal_seen = capture_terminal_mcp_payload(mcp_log.as_ref(), &request_id, &msg);
-							Some(msg)
+							Some(ServerJsonRpcMessage::error(
+								ErrorData::internal_error("upstream stream failed", None),
+								Some(request_id.clone()),
+							))
 						}
 					},
 				};
@@ -2517,7 +2521,9 @@ mod tests {
 		assert_eq!(messages.len(), 1, "the transport error must end the stream");
 		assert!(matches!(
 			messages[0].message.as_ref(),
-			ServerJsonRpcMessage::Error(error) if error.id == Some(RequestId::Number(7))
+			ServerJsonRpcMessage::Error(error)
+				if error.id == Some(RequestId::Number(7))
+					&& error.error.message == "upstream stream failed"
 		));
 
 		let info = log.take().unwrap();
