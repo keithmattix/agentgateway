@@ -91,6 +91,7 @@ impl ProxyError {
 			ProxyError::APIKeyAuthenticationFailure(_) => ProxyResponseReason::APIKeyAuth,
 			ProxyError::ExternalAuthorizationFailed(_) => ProxyResponseReason::ExtAuth,
 			ProxyError::MCP(mcp::Error::RateLimited { .. }) => ProxyResponseReason::RateLimit,
+			ProxyError::MCP(mcp::Error::Authorization(..)) => ProxyResponseReason::Authorization,
 			ProxyError::MCP(_) => ProxyResponseReason::MCP,
 			ProxyError::AuthorizationFailed
 			| ProxyError::SubstrateEgressDenied(_)
