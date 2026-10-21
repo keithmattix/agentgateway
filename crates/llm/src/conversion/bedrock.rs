@@ -2949,13 +2949,11 @@ pub mod from_responses {
 					}
 				},
 				InputItem::Item(Item::FunctionCall(call)) => {
-					let Ok(input) = serde_json::from_str::<serde_json::Value>(&call.arguments) else {
-						tracing::warn!(
-							"Skipping function_call with invalid JSON arguments for tool '{}': {}",
-							call.name,
-							call.arguments
-						);
-						continue;
+					// Converse rejects non-object toolUse.input values, despite input being a document.
+					// Keep the call (rather than dropping it) so its function_call_output still pairs.
+					let input = match serde_json::from_str::<serde_json::Value>(&call.arguments) {
+						Ok(serde_json::Value::Object(input)) => serde_json::Value::Object(input),
+						_ => serde_json::json!({}),
 					};
 
 					helpers::push_or_merge_message(
