@@ -431,11 +431,18 @@ fn test_rejection_with_json_headers() {
 		status: StatusCode::BAD_REQUEST,
 		headers: Some(HeaderModifier {
 			set: vec![
-				(strng::new("content-type"), strng::new("application/json")),
-				(strng::new("x-custom-header"), strng::new("custom-value")),
+				(
+					::http::HeaderName::from_static("content-type"),
+					::http::HeaderValue::from_static("application/json"),
+				),
+				(
+					::http::HeaderName::from_static("x-custom-header"),
+					::http::HeaderValue::from_static("custom-value"),
+				),
 			],
 			add: vec![],
 			remove: vec![],
+			invalid: None,
 		}),
 	};
 
@@ -459,10 +466,17 @@ fn test_rejection_add_multiple_header_values() {
 		headers: Some(HeaderModifier {
 			set: vec![],
 			add: vec![
-				(strng::new("x-blocked-category"), strng::new("violence")),
-				(strng::new("x-blocked-category"), strng::new("hate")),
+				(
+					::http::HeaderName::from_static("x-blocked-category"),
+					::http::HeaderValue::from_static("violence"),
+				),
+				(
+					::http::HeaderName::from_static("x-blocked-category"),
+					::http::HeaderValue::from_static("hate"),
+				),
 			],
 			remove: vec![],
+			invalid: None,
 		}),
 	};
 
@@ -505,9 +519,13 @@ fn test_rejection_set_and_remove_headers() {
 		body: Bytes::from("test"),
 		status: StatusCode::BAD_REQUEST,
 		headers: Some(HeaderModifier {
-			set: vec![(strng::new("content-type"), strng::new("application/json"))],
+			set: vec![(
+				::http::HeaderName::from_static("content-type"),
+				::http::HeaderValue::from_static("application/json"),
+			)],
 			add: vec![],
-			remove: vec![strng::new("server")],
+			remove: vec![::http::header::SERVER],
+			invalid: None,
 		}),
 	};
 

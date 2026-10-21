@@ -42,14 +42,14 @@ fn redirection_test() {
 
 	let host_redirect = RequestRedirect {
 		scheme: None,
-		authority: Some(HostRedirect::Host("newhost.com".into())),
+		authority: Some(HostRedirect::Host("newhost.com".parse().unwrap())),
 		path: None,
 		status: None,
 	};
 
 	let full_authority = RequestRedirect {
 		scheme: None,
-		authority: Some(HostRedirect::Full("newhost.com:8080".into())),
+		authority: Some(HostRedirect::Full("newhost.com:8080".parse().unwrap())),
 		path: None,
 		status: None,
 	};
@@ -112,7 +112,7 @@ fn redirection_test() {
 
 	let combined_redirect = RequestRedirect {
 		scheme: Some(http::uri::Scheme::HTTPS),
-		authority: Some(HostRedirect::Host("newhost.com".into())),
+		authority: Some(HostRedirect::Host("newhost.com".parse().unwrap())),
 		path: Some(PathRedirect::Prefix("/new".into())),
 		status: Some(StatusCode::PERMANENT_REDIRECT),
 	};
@@ -531,7 +531,7 @@ fn rewrite_test() {
 	};
 
 	let host_rewrite = UrlRewrite {
-		authority: Some(HostRedirect::Host("newhost.com".into())),
+		authority: Some(HostRedirect::Host("newhost.com".parse().unwrap())),
 		path: None,
 	};
 
@@ -571,7 +571,7 @@ fn rewrite_test() {
 	};
 
 	let combined_rewrite = UrlRewrite {
-		authority: Some(HostRedirect::Host("newhost.com".into())),
+		authority: Some(HostRedirect::Host("newhost.com".parse().unwrap())),
 		path: Some(PathRedirect::Prefix("/new".into())),
 	};
 
@@ -972,9 +972,13 @@ fn rewrite_test() {
 fn request_header_modifier_lifts_host_to_authority() {
 	let mut req = request_for_uri("http://example.com/path");
 	let modifier = HeaderModifier {
-		add: vec![("host".into(), "new.example.com:8443".into())],
+		add: vec![(
+			http::header::HOST,
+			http::HeaderValue::from_static("new.example.com:8443"),
+		)],
 		set: vec![],
 		remove: vec![],
+		invalid: None,
 	};
 	modifier.apply_request(&mut req).unwrap();
 	assert_eq!(req.uri().to_string(), "http://new.example.com:8443/path");
@@ -990,7 +994,8 @@ fn request_header_modifier_remove_host_keeps_authority() {
 	let modifier = HeaderModifier {
 		add: vec![],
 		set: vec![],
-		remove: vec!["host".into()],
+		remove: vec![http::header::HOST],
+		invalid: None,
 	};
 	modifier.apply_request(&mut req).unwrap();
 	assert_eq!(req.uri().to_string(), "http://example.com/path");

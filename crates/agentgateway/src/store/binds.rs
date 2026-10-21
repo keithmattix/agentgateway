@@ -4381,8 +4381,12 @@ mod tests {
 			policy: PolicyType::Backend(BackendTrafficPolicy::RequestHeaderModifier(
 				HeaderModifier {
 					add: vec![],
-					set: vec![(strng::new("x-foo"), strng::new("bar"))],
+					set: vec![(
+						::http::HeaderName::from_static("x-foo"),
+						::http::HeaderValue::from_static("bar"),
+					)],
 					remove: vec![],
+					invalid: None,
 				},
 			)),
 		};
@@ -4404,8 +4408,12 @@ mod tests {
 			policy: PolicyType::Backend(BackendTrafficPolicy::RequestHeaderModifier(
 				HeaderModifier {
 					add: vec![],
-					set: vec![(strng::new("x-foo"), strng::new("bar3"))],
+					set: vec![(
+						::http::HeaderName::from_static("x-foo"),
+						::http::HeaderValue::from_static("bar3"),
+					)],
 					remove: vec![],
+					invalid: None,
 				},
 			)),
 		};
@@ -4415,8 +4423,12 @@ mod tests {
 		let backend_inline_policies = vec![BackendTrafficPolicy::RequestHeaderModifier(
 			HeaderModifier {
 				add: vec![],
-				set: vec![(strng::new("x-foo"), strng::new("bar2"))],
+				set: vec![(
+					::http::HeaderName::from_static("x-foo"),
+					::http::HeaderValue::from_static("bar2"),
+				)],
 				remove: vec![],
+				invalid: None,
 			},
 		)];
 
@@ -4447,7 +4459,10 @@ mod tests {
 		);
 		assert_eq!(
 			modifier.set[0],
-			(strng::new("x-foo"), strng::new("bar2")),
+			(
+				::http::HeaderName::from_static("x-foo"),
+				::http::HeaderValue::from_static("bar2")
+			),
 			"Inline policy (bar2) should win over backend attached policy (bar)"
 		);
 
@@ -4478,7 +4493,10 @@ mod tests {
 		);
 		assert_eq!(
 			modifier.set[0],
-			(strng::new("x-foo"), strng::new("bar2")),
+			(
+				::http::HeaderName::from_static("x-foo"),
+				::http::HeaderValue::from_static("bar2")
+			),
 			"Inline policy (bar2) should win over section attached policy (bar3)"
 		);
 
@@ -4506,7 +4524,10 @@ mod tests {
 		);
 		assert_eq!(
 			modifier.set[0],
-			(strng::new("x-foo"), strng::new("bar")),
+			(
+				::http::HeaderName::from_static("x-foo"),
+				::http::HeaderValue::from_static("bar")
+			),
 			"Backend attached policy (bar) should be used when no inline policies exist"
 		);
 
@@ -4537,7 +4558,10 @@ mod tests {
 		);
 		assert_eq!(
 			modifier.set[0],
-			(strng::new("x-foo"), strng::new("bar3")),
+			(
+				::http::HeaderName::from_static("x-foo"),
+				::http::HeaderValue::from_static("bar3")
+			),
 			"Section attached policy (bar3) should win over backend attached policy (bar)"
 		);
 	}
