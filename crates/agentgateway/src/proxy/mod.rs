@@ -856,6 +856,15 @@ pub fn resolve_simple_backend_with_policies(
 	b: &SimpleBackendReference,
 	pi: &ProxyInputs,
 ) -> Result<SimpleBackendWithPolicies, ProxyError> {
+	resolve_simple_backend_with_binds(b, pi, None)
+}
+
+/// Like resolve_simple_backend_with_policies, but uses `binds` if the caller already holds the lock.
+pub fn resolve_simple_backend_with_binds(
+	b: &SimpleBackendReference,
+	pi: &ProxyInputs,
+	binds: Option<&store::BindStore>,
+) -> Result<SimpleBackendWithPolicies, ProxyError> {
 	let (backend, inline_policies) = match b {
 		SimpleBackendReference::Service { name, port } => {
 			let svc = pi
@@ -867,11 +876,11 @@ pub fn resolve_simple_backend_with_policies(
 			(SimpleBackend::Service(svc, *port), Vec::default())
 		},
 		SimpleBackendReference::Backend(name) => {
-			let be = pi
-				.stores
-				.read_binds()
-				.backend(name)
-				.ok_or(ProxyError::ServiceNotFound)?;
+			let be = match binds {
+				Some(binds) => binds.backend(name),
+				None => pi.stores.read_binds().backend(name),
+			}
+			.ok_or(ProxyError::ServiceNotFound)?;
 			(
 				SimpleBackend::try_from(be.backend.clone()).map_err(|_| ProxyError::InvalidBackendType)?,
 				be.inline_policies.clone(),

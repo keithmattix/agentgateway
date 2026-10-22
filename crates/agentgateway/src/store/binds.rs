@@ -2132,14 +2132,18 @@ impl StoreUpdater {
 	pub fn new(state: Arc<RwLock<Store>>) -> StoreUpdater {
 		Self { state }
 	}
-	pub fn read(&self) -> std::sync::RwLockReadGuard<'_, Store> {
-		self.state.read().expect("mutex acquired")
+	#[track_caller]
+	pub fn read(&self) -> crate::store::ReadGuard<'_, Store> {
+		thread_local! {
+			static BINDS_READ_DEPTH: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
+		}
+		crate::store::ReadGuard::new(&self.state, &BINDS_READ_DEPTH)
 	}
 	pub fn write(&self) -> std::sync::RwLockWriteGuard<'_, Store> {
 		self.state.write().expect("mutex acquired")
 	}
 	pub fn dump(&self) -> Dump {
-		let store = self.state.read().expect("mutex");
+		let store = self.read();
 
 		// Services all have hostname, so use that as the key
 		let binds: Vec<_> = store
