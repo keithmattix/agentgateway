@@ -7209,7 +7209,7 @@
               "description": "Optional metadata attached to requests authenticated with this key."
             },
             "allowedModels": {
-              "description": "Model patterns this key is allowed to access.\nOmitted means no additional constraint; an empty list denies all models.",
+              "description": "Model patterns this key is allowed to access.\nOmitted means no additional constraint; an empty list denies all models.\nOnly the request's top-level model is checked; models used by provider server-side tools (such as the Anthropic advisor tool) are not.",
               "type": [
                 "array",
                 "null"
@@ -7243,7 +7243,7 @@
               "description": "Optional metadata attached to requests authenticated with this key."
             },
             "allowedModels": {
-              "description": "Model patterns this key is allowed to access.\nOmitted means no additional constraint; an empty list denies all models.",
+              "description": "Model patterns this key is allowed to access.\nOmitted means no additional constraint; an empty list denies all models.\nOnly the request's top-level model is checked; models used by provider server-side tools (such as the Anthropic advisor tool) are not.",
               "type": [
                 "array",
                 "null"

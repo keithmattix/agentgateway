@@ -455,7 +455,7 @@
 |`binds[].listeners[].routes[].policies.apiKey.keys`|[]object|API keys that are accepted by this policy.|
 |`binds[].listeners[].routes[].policies.apiKey.keys[].key`|string|API key value to accept.|
 |`binds[].listeners[].routes[].policies.apiKey.keys[].metadata`|any|Optional metadata attached to requests authenticated with this key.|
-|`binds[].listeners[].routes[].policies.apiKey.keys[].allowedModels`|[]string|Model patterns this key is allowed to access.<br>Omitted means no additional constraint; an empty list denies all models.|
+|`binds[].listeners[].routes[].policies.apiKey.keys[].allowedModels`|[]string|Model patterns this key is allowed to access.<br>Omitted means no additional constraint; an empty list denies all models.<br>Only the request's top-level model is checked; models used by provider server-side tools (such as the Anthropic advisor tool) are not.|
 |`binds[].listeners[].routes[].policies.apiKey.keys[].budgets`|[]object|Independent budgets charged after LLM responses. A request is not charged when its provider<br>does not report the usage or cost required by the budget unit.|
 |`binds[].listeners[].routes[].policies.apiKey.keys[].budgets[].name`|string|Stable name for this budget within its owning API key.|
 |`binds[].listeners[].routes[].policies.apiKey.keys[].budgets[].limit`|object|Maximum usage allowed during the window.|
@@ -1556,7 +1556,7 @@
 |`binds[].listeners[].policies.apiKey.keys`|[]object|API keys that are accepted by this policy.|
 |`binds[].listeners[].policies.apiKey.keys[].key`|string|API key value to accept.|
 |`binds[].listeners[].policies.apiKey.keys[].metadata`|any|Optional metadata attached to requests authenticated with this key.|
-|`binds[].listeners[].policies.apiKey.keys[].allowedModels`|[]string|Model patterns this key is allowed to access.<br>Omitted means no additional constraint; an empty list denies all models.|
+|`binds[].listeners[].policies.apiKey.keys[].allowedModels`|[]string|Model patterns this key is allowed to access.<br>Omitted means no additional constraint; an empty list denies all models.<br>Only the request's top-level model is checked; models used by provider server-side tools (such as the Anthropic advisor tool) are not.|
 |`binds[].listeners[].policies.apiKey.keys[].budgets`|[]object|Independent budgets charged after LLM responses. A request is not charged when its provider<br>does not report the usage or cost required by the budget unit.|
 |`binds[].listeners[].policies.apiKey.keys[].budgets[].name`|string|Stable name for this budget within its owning API key.|
 |`binds[].listeners[].policies.apiKey.keys[].budgets[].limit`|object|Maximum usage allowed during the window.|
@@ -2013,7 +2013,7 @@
 |`policies[].policy.apiKey.keys`|[]object|API keys that are accepted by this policy.|
 |`policies[].policy.apiKey.keys[].key`|string|API key value to accept.|
 |`policies[].policy.apiKey.keys[].metadata`|any|Optional metadata attached to requests authenticated with this key.|
-|`policies[].policy.apiKey.keys[].allowedModels`|[]string|Model patterns this key is allowed to access.<br>Omitted means no additional constraint; an empty list denies all models.|
+|`policies[].policy.apiKey.keys[].allowedModels`|[]string|Model patterns this key is allowed to access.<br>Omitted means no additional constraint; an empty list denies all models.<br>Only the request's top-level model is checked; models used by provider server-side tools (such as the Anthropic advisor tool) are not.|
 |`policies[].policy.apiKey.keys[].budgets`|[]object|Independent budgets charged after LLM responses. A request is not charged when its provider<br>does not report the usage or cost required by the budget unit.|
 |`policies[].policy.apiKey.keys[].budgets[].name`|string|Stable name for this budget within its owning API key.|
 |`policies[].policy.apiKey.keys[].budgets[].limit`|object|Maximum usage allowed during the window.|
@@ -3148,7 +3148,7 @@
 |`routeGroups[].routes[].policies.apiKey.keys`|[]object|API keys that are accepted by this policy.|
 |`routeGroups[].routes[].policies.apiKey.keys[].key`|string|API key value to accept.|
 |`routeGroups[].routes[].policies.apiKey.keys[].metadata`|any|Optional metadata attached to requests authenticated with this key.|
-|`routeGroups[].routes[].policies.apiKey.keys[].allowedModels`|[]string|Model patterns this key is allowed to access.<br>Omitted means no additional constraint; an empty list denies all models.|
+|`routeGroups[].routes[].policies.apiKey.keys[].allowedModels`|[]string|Model patterns this key is allowed to access.<br>Omitted means no additional constraint; an empty list denies all models.<br>Only the request's top-level model is checked; models used by provider server-side tools (such as the Anthropic advisor tool) are not.|
 |`routeGroups[].routes[].policies.apiKey.keys[].budgets`|[]object|Independent budgets charged after LLM responses. A request is not charged when its provider<br>does not report the usage or cost required by the budget unit.|
 |`routeGroups[].routes[].policies.apiKey.keys[].budgets[].name`|string|Stable name for this budget within its owning API key.|
 |`routeGroups[].routes[].policies.apiKey.keys[].budgets[].limit`|object|Maximum usage allowed during the window.|
@@ -4221,7 +4221,7 @@
 |`gateways.*.listeners[].apiKey.keys`|[]object|API keys that are accepted by this policy.|
 |`gateways.*.listeners[].apiKey.keys[].key`|string|API key value to accept.|
 |`gateways.*.listeners[].apiKey.keys[].metadata`|any|Optional metadata attached to requests authenticated with this key.|
-|`gateways.*.listeners[].apiKey.keys[].allowedModels`|[]string|Model patterns this key is allowed to access.<br>Omitted means no additional constraint; an empty list denies all models.|
+|`gateways.*.listeners[].apiKey.keys[].allowedModels`|[]string|Model patterns this key is allowed to access.<br>Omitted means no additional constraint; an empty list denies all models.<br>Only the request's top-level model is checked; models used by provider server-side tools (such as the Anthropic advisor tool) are not.|
 |`gateways.*.listeners[].apiKey.keys[].budgets`|[]object|Independent budgets charged after LLM responses. A request is not charged when its provider<br>does not report the usage or cost required by the budget unit.|
 |`gateways.*.listeners[].apiKey.keys[].budgets[].name`|string|Stable name for this budget within its owning API key.|
 |`gateways.*.listeners[].apiKey.keys[].budgets[].limit`|object|Maximum usage allowed during the window.|
@@ -4462,7 +4462,7 @@
 |`gateways.*.apiKey.keys`|[]object|API keys that are accepted by this policy.|
 |`gateways.*.apiKey.keys[].key`|string|API key value to accept.|
 |`gateways.*.apiKey.keys[].metadata`|any|Optional metadata attached to requests authenticated with this key.|
-|`gateways.*.apiKey.keys[].allowedModels`|[]string|Model patterns this key is allowed to access.<br>Omitted means no additional constraint; an empty list denies all models.|
+|`gateways.*.apiKey.keys[].allowedModels`|[]string|Model patterns this key is allowed to access.<br>Omitted means no additional constraint; an empty list denies all models.<br>Only the request's top-level model is checked; models used by provider server-side tools (such as the Anthropic advisor tool) are not.|
 |`gateways.*.apiKey.keys[].budgets`|[]object|Independent budgets charged after LLM responses. A request is not charged when its provider<br>does not report the usage or cost required by the budget unit.|
 |`gateways.*.apiKey.keys[].budgets[].name`|string|Stable name for this budget within its owning API key.|
 |`gateways.*.apiKey.keys[].budgets[].limit`|object|Maximum usage allowed during the window.|
@@ -4774,7 +4774,7 @@
 |`routes[].policies.apiKey.keys`|[]object|API keys that are accepted by this policy.|
 |`routes[].policies.apiKey.keys[].key`|string|API key value to accept.|
 |`routes[].policies.apiKey.keys[].metadata`|any|Optional metadata attached to requests authenticated with this key.|
-|`routes[].policies.apiKey.keys[].allowedModels`|[]string|Model patterns this key is allowed to access.<br>Omitted means no additional constraint; an empty list denies all models.|
+|`routes[].policies.apiKey.keys[].allowedModels`|[]string|Model patterns this key is allowed to access.<br>Omitted means no additional constraint; an empty list denies all models.<br>Only the request's top-level model is checked; models used by provider server-side tools (such as the Anthropic advisor tool) are not.|
 |`routes[].policies.apiKey.keys[].budgets`|[]object|Independent budgets charged after LLM responses. A request is not charged when its provider<br>does not report the usage or cost required by the budget unit.|
 |`routes[].policies.apiKey.keys[].budgets[].name`|string|Stable name for this budget within its owning API key.|
 |`routes[].policies.apiKey.keys[].budgets[].limit`|object|Maximum usage allowed during the window.|
@@ -6125,7 +6125,7 @@
 |`llm.policies.apiKey.keys`|[]object|API keys that are accepted by this policy.|
 |`llm.policies.apiKey.keys[].key`|string|API key value to accept.|
 |`llm.policies.apiKey.keys[].metadata`|any|Optional metadata attached to requests authenticated with this key.|
-|`llm.policies.apiKey.keys[].allowedModels`|[]string|Model patterns this key is allowed to access.<br>Omitted means no additional constraint; an empty list denies all models.|
+|`llm.policies.apiKey.keys[].allowedModels`|[]string|Model patterns this key is allowed to access.<br>Omitted means no additional constraint; an empty list denies all models.<br>Only the request's top-level model is checked; models used by provider server-side tools (such as the Anthropic advisor tool) are not.|
 |`llm.policies.apiKey.keys[].budgets`|[]object|Independent budgets charged after LLM responses. A request is not charged when its provider<br>does not report the usage or cost required by the budget unit.|
 |`llm.policies.apiKey.keys[].budgets[].name`|string|Stable name for this budget within its owning API key.|
 |`llm.policies.apiKey.keys[].budgets[].limit`|object|Maximum usage allowed during the window.|
@@ -6488,7 +6488,7 @@
 |`mcp.policies.apiKey.keys`|[]object|API keys that are accepted by this policy.|
 |`mcp.policies.apiKey.keys[].key`|string|API key value to accept.|
 |`mcp.policies.apiKey.keys[].metadata`|any|Optional metadata attached to requests authenticated with this key.|
-|`mcp.policies.apiKey.keys[].allowedModels`|[]string|Model patterns this key is allowed to access.<br>Omitted means no additional constraint; an empty list denies all models.|
+|`mcp.policies.apiKey.keys[].allowedModels`|[]string|Model patterns this key is allowed to access.<br>Omitted means no additional constraint; an empty list denies all models.<br>Only the request's top-level model is checked; models used by provider server-side tools (such as the Anthropic advisor tool) are not.|
 |`mcp.policies.apiKey.keys[].budgets`|[]object|Independent budgets charged after LLM responses. A request is not charged when its provider<br>does not report the usage or cost required by the budget unit.|
 |`mcp.policies.apiKey.keys[].budgets[].name`|string|Stable name for this budget within its owning API key.|
 |`mcp.policies.apiKey.keys[].budgets[].limit`|object|Maximum usage allowed during the window.|
@@ -6830,7 +6830,7 @@
 |`ui.policies.apiKey.keys`|[]object|API keys that are accepted by this policy.|
 |`ui.policies.apiKey.keys[].key`|string|API key value to accept.|
 |`ui.policies.apiKey.keys[].metadata`|any|Optional metadata attached to requests authenticated with this key.|
-|`ui.policies.apiKey.keys[].allowedModels`|[]string|Model patterns this key is allowed to access.<br>Omitted means no additional constraint; an empty list denies all models.|
+|`ui.policies.apiKey.keys[].allowedModels`|[]string|Model patterns this key is allowed to access.<br>Omitted means no additional constraint; an empty list denies all models.<br>Only the request's top-level model is checked; models used by provider server-side tools (such as the Anthropic advisor tool) are not.|
 |`ui.policies.apiKey.keys[].budgets`|[]object|Independent budgets charged after LLM responses. A request is not charged when its provider<br>does not report the usage or cost required by the budget unit.|
 |`ui.policies.apiKey.keys[].budgets[].name`|string|Stable name for this budget within its owning API key.|
 |`ui.policies.apiKey.keys[].budgets[].limit`|object|Maximum usage allowed during the window.|
