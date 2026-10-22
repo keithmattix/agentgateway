@@ -1280,6 +1280,7 @@ pub mod to_completions {
 						name: call.name.to_string(),
 						arguments: encode_args(call.args),
 					},
+					extra_content: None,
 				})
 			})
 			.collect();

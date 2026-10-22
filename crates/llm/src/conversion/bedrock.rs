@@ -4355,6 +4355,7 @@ impl ConverseResponseAdapter {
 								name: restore_tool_name(tool_name_map, &tu.name),
 								arguments: args,
 							},
+							..Default::default()
 						},
 					));
 				},
