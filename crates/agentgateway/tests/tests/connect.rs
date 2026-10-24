@@ -479,7 +479,7 @@ async fn incoming_connect_tunnel_exposes_connect_headers_to_cel() {
 }
 
 #[tokio::test]
-async fn connect_tunnel_authorizes_outer_port_before_accepting() {
+async fn connect_tunnel_authorizes_inner_connection() {
 	for token in [Some("allowed"), Some("denied"), None] {
 		let mock = simple_mock().await;
 		let mut outer = simple_bind();
@@ -494,14 +494,11 @@ async fn connect_tunnel_authorizes_outer_port_before_accepting() {
 			.with_bind(inner)
 			.with_route(basic_route(*mock.address()))
 			.with_connect_mode_on_port(frontend::ConnectMode::Tunnel, 15008);
-		t.attach_frontend_policy_with_port(
-			json!({
-				"networkAuthorization": {
-					"rules": ["destination.port == 18080 && source.connectHeaders[\"x-token\"] == \"allowed\""]
-				}
-			}),
-			Some(15008),
-		)
+		t.attach_frontend_policy(json!({
+			"networkAuthorization": {
+				"rules": ["destination.port == 18080 && source.connectHeaders[\"x-token\"] == \"allowed\""]
+			}
+		}))
 		.await;
 		let mut io = t.serve_tunnel(strng::literal!("outer"));
 		let header = token
@@ -528,24 +525,26 @@ async fn connect_tunnel_authorizes_outer_port_before_accepting() {
 		.await
 		.expect("CONNECT response timed out");
 		let response = String::from_utf8_lossy(&response);
-		if token != Some("allowed") {
-			assert!(
-				response.starts_with("HTTP/1.1 403 Forbidden\r\n"),
-				"{response}"
-			);
-			assert!(mock.received_requests().await.unwrap().is_empty());
-			continue;
-		}
 		assert!(response.starts_with("HTTP/1.1 200 OK\r\n"), "{response}");
-		io.write_all(b"GET /foo HTTP/1.1\r\nHost: lo\r\nConnection: close\r\n\r\n")
-			.await
-			.unwrap();
+		if token == Some("allowed") {
+			io.write_all(b"GET /foo HTTP/1.1\r\nHost: lo\r\nConnection: close\r\n\r\n")
+				.await
+				.unwrap();
+		}
 		let mut tunneled = Vec::new();
 		tokio::time::timeout(Duration::from_secs(5), io.read_to_end(&mut tunneled))
 			.await
 			.expect("tunneled response timed out")
 			.unwrap();
-		assert!(String::from_utf8_lossy(&tunneled).starts_with("HTTP/1.1 200 OK\r\n"));
+		if token == Some("allowed") {
+			assert!(String::from_utf8_lossy(&tunneled).starts_with("HTTP/1.1 200 OK\r\n"));
+		} else {
+			assert!(
+				tunneled.is_empty(),
+				"denied connection returned data: {tunneled:?}"
+			);
+			assert!(mock.received_requests().await.unwrap().is_empty());
+		}
 	}
 }
 
@@ -645,15 +644,6 @@ async fn connect_tunnel_terminates_outer_tls() {
 				break;
 			}
 		}
-		if !network_allowed {
-			assert!(
-				String::from_utf8_lossy(&response).starts_with("HTTP/1.1 403 Forbidden\r\n"),
-				"unexpected denied CONNECT response: {}",
-				String::from_utf8_lossy(&response),
-			);
-			assert!(mock.received_requests().await.unwrap().is_empty());
-			return String::new();
-		}
 		assert!(
 			String::from_utf8_lossy(&response).starts_with("HTTP/1.1 200 OK\r\n"),
 			"unexpected CONNECT response: {}",
@@ -661,14 +651,27 @@ async fn connect_tunnel_terminates_outer_tls() {
 		);
 
 		// Inner request over the tunnel (plaintext within the outer TLS).
-		io.write_all(b"GET /foo HTTP/1.1\r\nHost: lo\r\nConnection: close\r\n\r\n")
-			.await
-			.unwrap();
+		if network_allowed {
+			io.write_all(b"GET /foo HTTP/1.1\r\nHost: lo\r\nConnection: close\r\n\r\n")
+				.await
+				.unwrap();
+		}
 		let mut tunneled = Vec::new();
-		tokio::time::timeout(Duration::from_secs(5), io.read_to_end(&mut tunneled))
+		let result = tokio::time::timeout(Duration::from_secs(5), io.read_to_end(&mut tunneled))
 			.await
-			.expect("timed out waiting for tunneled HTTP response")
-			.unwrap();
+			.expect("timed out waiting for tunneled HTTP response");
+		if !network_allowed {
+			if let Err(err) = result {
+				assert_eq!(err.kind(), std::io::ErrorKind::UnexpectedEof);
+			}
+			assert!(
+				tunneled.is_empty(),
+				"denied connection returned data: {tunneled:?}"
+			);
+			assert!(mock.received_requests().await.unwrap().is_empty());
+			return String::new();
+		}
+		result.unwrap();
 		String::from_utf8_lossy(&tunneled).to_string()
 	}
 
