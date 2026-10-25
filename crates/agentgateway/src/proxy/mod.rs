@@ -95,6 +95,7 @@ impl ProxyError {
 			ProxyError::MCP(_) => ProxyResponseReason::MCP,
 			ProxyError::AuthorizationFailed
 			| ProxyError::SubstrateEgressDenied(_)
+			| ProxyError::SubstrateEgressUpgradeDenied(_)
 			| ProxyError::CsrfValidationFailed => ProxyResponseReason::Authorization,
 			ProxyError::BackendAuthenticationFailed(http::auth::BackendAuthError::Local(_)) => {
 				ProxyResponseReason::Internal
@@ -272,6 +273,8 @@ pub enum ProxyError {
 	#[error("{0}")]
 	SubstrateEgressDenied(String),
 	#[error("{0}")]
+	SubstrateEgressUpgradeDenied(&'static str),
+	#[error("{0}")]
 	SubstrateEgressUnavailable(String),
 	#[error("rate limit exceeded")]
 	RateLimitExceeded {
@@ -410,7 +413,8 @@ impl ProxyError {
 			ProxyError::AIRequest(_) => "failed to process LLM request",
 			ProxyError::AIResponse(_) => "failed to process LLM response",
 			ProxyError::SubstrateIngressFailed(..) => "ingress failed",
-			ProxyError::SubstrateEgressDenied(_) => "authorization failed",
+			ProxyError::SubstrateEgressDenied(message) => return message.clone().into(),
+			ProxyError::SubstrateEgressUpgradeDenied(message) => return (*message).into(),
 			ProxyError::SubstrateEgressUnavailable(_) => "service unavailable",
 			ProxyError::RequestLimitExceeded => "request limit exceeded",
 			ProxyError::GuardrailRejected { .. } => "request rejected by guardrail",
@@ -517,7 +521,9 @@ impl ProxyError {
 			ProxyError::APIKeyAuthenticationFailure(_) => StatusCode::UNAUTHORIZED,
 			ProxyError::McpJwtAuthenticationFailure(_, _) => StatusCode::UNAUTHORIZED,
 			ProxyError::AuthorizationFailed => StatusCode::FORBIDDEN,
-			ProxyError::SubstrateEgressDenied(_) => StatusCode::FORBIDDEN,
+			ProxyError::SubstrateEgressDenied(_) | ProxyError::SubstrateEgressUpgradeDenied(_) => {
+				StatusCode::FORBIDDEN
+			},
 			ProxyError::SubstrateEgressUnavailable(_) => StatusCode::SERVICE_UNAVAILABLE,
 			ProxyError::ExternalAuthorizationFailed(status) => status.unwrap_or(StatusCode::FORBIDDEN),
 

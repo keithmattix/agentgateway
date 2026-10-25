@@ -34,6 +34,9 @@ winning rule's effects. For HTTPS, the ClientHello SNI selects the certificate;
 the request authority is authorized independently. Upgrades in Substrate are
 denied (including CONNECT).
 
+Egress authorization failures return HTTP 403 with the body
+`actor egress policy denied`. Detailed failure reasons remain in gateway logs.
+
 WebSocket upgrades return HTTP 403 with the exact body
 `WebSocket egress is not supported` (no trailing newline), for both HTTP and
 intercepted HTTPS. This denial runs even on a rejection route without a

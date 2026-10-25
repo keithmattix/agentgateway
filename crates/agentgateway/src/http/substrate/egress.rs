@@ -171,16 +171,13 @@ pub(crate) fn reject_upgrade(req: &Request) -> Result<(), ProxyError> {
 		.filter_map(|value| value.to_str().ok())
 		.flat_map(|value| value.split(','))
 		.any(|token| token.trim().eq_ignore_ascii_case("websocket"));
-	Err(ProxyError::SubstrateEgressDenied(
-		if websocket {
-			"WebSocket egress is not supported"
-		} else if req.method() == ::http::Method::CONNECT {
-			"CONNECT egress is not supported"
-		} else {
-			"HTTP upgrades, including CONNECT, are denied for actor egress"
-		}
-		.to_owned(),
-	))
+	Err(ProxyError::SubstrateEgressUpgradeDenied(if websocket {
+		"WebSocket egress is not supported"
+	} else if req.method() == ::http::Method::CONNECT {
+		"CONNECT egress is not supported"
+	} else {
+		"HTTP upgrades, including CONNECT, are denied for actor egress"
+	}))
 }
 
 impl SubstrateEgress {

@@ -2587,11 +2587,20 @@ async fn substrate_egress_denies_http_upgrades_without_dialing(
 			"{}",
 			String::from_utf8_lossy(&response)
 		);
-		if upgrading {
+		if upgrading || !policy_allowed {
 			let body = response
 				.split_at(response.windows(4).position(|b| b == b"\r\n\r\n").unwrap() + 4)
 				.1;
-			assert_eq!(body, b"authorization failed");
+			let expected = if !upgrading {
+				"actor egress policy denied destination"
+			} else if upgrade == "CONNECT" {
+				"CONNECT egress is not supported"
+			} else if upgrade.to_ascii_lowercase().contains("websocket") {
+				"WebSocket egress is not supported"
+			} else {
+				"HTTP upgrades, including CONNECT, are denied for actor egress"
+			};
+			assert_eq!(body, expected.as_bytes());
 		}
 		if upgrading || !policy_allowed {
 			assert!(
