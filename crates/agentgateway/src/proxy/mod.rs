@@ -419,7 +419,7 @@ impl ProxyError {
 			ProxyError::AIResponse(_) => "failed to process LLM response",
 			ProxyError::SubstrateIngressFailed(..) => "ingress failed",
 			ProxyError::SubstrateIngressCapacityExhausted => "no worker has room for the actor",
-			ProxyError::SubstrateEgressDenied(message) => return message.clone().into(),
+			ProxyError::SubstrateEgressDenied(_) => "actor egress policy denied",
 			ProxyError::SubstrateEgressUpgradeDenied(message) => return (*message).into(),
 			ProxyError::SubstrateEgressUnavailable(_) => "service unavailable",
 			ProxyError::RequestLimitExceeded => "request limit exceeded",

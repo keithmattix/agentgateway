@@ -2592,7 +2592,7 @@ async fn substrate_egress_denies_http_upgrades_without_dialing(
 				.split_at(response.windows(4).position(|b| b == b"\r\n\r\n").unwrap() + 4)
 				.1;
 			let expected = if !upgrading {
-				"actor egress policy denied destination"
+				"actor egress policy denied"
 			} else if upgrade == "CONNECT" {
 				"CONNECT egress is not supported"
 			} else if upgrade.to_ascii_lowercase().contains("websocket") {
