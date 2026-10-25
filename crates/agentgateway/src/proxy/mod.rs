@@ -82,6 +82,9 @@ impl ProxyError {
 			| ProxyError::Policy(_)
 			| ProxyError::StaleAssignment => ProxyResponseReason::Internal,
 			ProxyError::SubstrateIngressFailed(status, _, _) => substrate_ingress_reason(*status),
+			ProxyError::SubstrateIngressCapacityExhausted => {
+				substrate_ingress_reason(StatusCode::SERVICE_UNAVAILABLE)
+			},
 			ProxyError::AIRequest(error) => classify_ai_request(error).reason,
 			ProxyError::AIResponse(error) => classify_ai_response(error).reason,
 			ProxyError::JwtAuthenticationFailure(_) => ProxyResponseReason::JwtAuth,
@@ -270,6 +273,8 @@ pub enum ProxyError {
 	ProcessingString(String),
 	#[error("{1}")]
 	SubstrateIngressFailed(StatusCode, String, Option<String>),
+	#[error("no worker has room for the actor")]
+	SubstrateIngressCapacityExhausted,
 	#[error("{0}")]
 	SubstrateEgressDenied(String),
 	#[error("{0}")]
@@ -413,6 +418,7 @@ impl ProxyError {
 			ProxyError::AIRequest(_) => "failed to process LLM request",
 			ProxyError::AIResponse(_) => "failed to process LLM response",
 			ProxyError::SubstrateIngressFailed(..) => "ingress failed",
+			ProxyError::SubstrateIngressCapacityExhausted => "no worker has room for the actor",
 			ProxyError::SubstrateEgressDenied(message) => return message.clone().into(),
 			ProxyError::SubstrateEgressUpgradeDenied(message) => return (*message).into(),
 			ProxyError::SubstrateEgressUnavailable(_) => "service unavailable",
@@ -542,6 +548,7 @@ impl ProxyError {
 			ProxyError::ProcessingString(_) => StatusCode::SERVICE_UNAVAILABLE,
 			ProxyError::RequestLimitExceeded => StatusCode::SERVICE_UNAVAILABLE,
 			ProxyError::SubstrateIngressFailed(status, _, _) => status,
+			ProxyError::SubstrateIngressCapacityExhausted => StatusCode::SERVICE_UNAVAILABLE,
 			ProxyError::RateLimitExceeded { .. } => StatusCode::TOO_MANY_REQUESTS,
 			ProxyError::RemoteRateLimitExceeded { .. } => StatusCode::TOO_MANY_REQUESTS,
 			ProxyError::BudgetExceeded(_) => StatusCode::TOO_MANY_REQUESTS,

@@ -56,6 +56,9 @@ Do not read the target from `source.connectHeaders`: HTTP/2 carries it in
 A successful outer CONNECT is not evidence of an inner HTTP
 request's success; intercepted HTTPS must emit its own HTTP access record.
 
+When ingress exhausts its parking budget because no worker can fit the actor,
+it returns HTTP 503 with the body `no worker has room for the actor`.
+
 Both HTTP and TLS passthrough routes require dynamic backends. The gateway
 resolves the authorized HTTP authority or TLS SNI through DNS and uses the
 original CONNECT destination port. The CONNECT IP, an authority port, and a
