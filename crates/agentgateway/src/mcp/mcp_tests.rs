@@ -2715,6 +2715,62 @@ async fn legacy_session_keeps_ping_and_unknown_methods_do_not_return_404() {
 }
 
 #[tokio::test]
+async fn request_method_without_valid_id_is_rejected() {
+	// A missing or unrepresentable id parses as a notification; it must not be forwarded, since
+	// that would skip mcpAuthorization.
+	let mock = mock_streamable_http_server(true).await;
+	let (_bind, io) = setup_proxy(&mock, true, false).await;
+	let client = reqwest::Client::new();
+	let url = format!("http://{io}/mcp");
+
+	let init_body = serde_json::json!({
+		"jsonrpc": "2.0",
+		"id": 1,
+		"method": "initialize",
+		"params": {
+			"protocolVersion": "2025-06-18",
+			"capabilities": {},
+			"clientInfo": {"name": "test-client", "version": "0.0.1"}
+		}
+	});
+	let init = mcp_json_post(&client, &url, &init_body)
+		.header("mcp-protocol-version", "2025-06-18")
+		.send()
+		.await
+		.unwrap();
+	let session_id = init.headers()["mcp-session-id"]
+		.to_str()
+		.unwrap()
+		.to_string();
+
+	for id in [
+		"",
+		r#""id":null,"#,
+		r#""id":1.5,"#,
+		r#""id":18446744073709551616,"#,
+	] {
+		let body = format!(
+			r#"{{"jsonrpc":"2.0",{id}"method":"tools/call","params":{{"name":"echo","arguments":{{}}}}}}"#
+		);
+		let response = client
+			.post(&url)
+			.header("content-type", "application/json")
+			.header("accept", "application/json, text/event-stream")
+			.header("mcp-session-id", &session_id)
+			.header("mcp-protocol-version", "2025-06-18")
+			.body(body)
+			.send()
+			.await
+			.unwrap();
+		assert_eq!(
+			response.status(),
+			reqwest::StatusCode::BAD_REQUEST,
+			"id: {id}"
+		);
+	}
+}
+
+#[tokio::test]
 async fn modern_malformed_known_method_envelope_is_not_method_not_found() {
 	// Typed-parse failures on the modern path go through the `unknown_method_error` fallback;
 	// it must not re-classify a known method (or a non-2.0 envelope) as a 404.
