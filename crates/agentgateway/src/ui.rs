@@ -571,7 +571,8 @@ async fn write_validated_config(
 	file_path: &std::path::Path,
 	yaml_file_content: String,
 ) -> Result<(), ErrorResponse> {
-	if let Err(e) = validate_config_in_task(app, yaml_file_content.clone()).await {
+	let expanded = crate::types::local::expand_env(&yaml_file_content)?;
+	if let Err(e) = validate_config_in_task(app, expanded).await {
 		return Err(ErrorResponse::String(e.to_string()));
 	}
 
@@ -922,8 +923,9 @@ async fn validate_materialized_config(
 	resources: &[crate::config_store::ConfigResource],
 ) -> Result<(), ErrorResponse> {
 	let base = app.cfg()?.read_to_string().await?;
-	let config_content = crate::config_store::materialize_config(base.as_str(), resources)
-		.map_err(resource_api_error)?;
+	let config_content =
+		crate::config_store::materialize_runtime_config(base.as_str(), resources.to_vec())
+			.map_err(resource_api_error)?;
 	validate_config_in_task(app, config_content)
 		.await
 		.map_err(|err| ErrorResponse::Status(StatusCode::UNPROCESSABLE_ENTITY, err.to_string()))?;
@@ -941,7 +943,7 @@ async fn validate_config_in_task(app: &App, config: String) -> anyhow::Result<()
 	// builds the generated config-conversion frames are particularly large, so start a new task to
 	// have Tokio poll the conversion from the scheduler root instead.
 	tokio::spawn(async move {
-		crate::types::local::NormalizedLocalConfig::from(&state, &resources, gateway, config.as_str())
+		crate::types::local::NormalizedLocalConfig::from_expanded(&state, &resources, gateway, config)
 			.await
 			.map(|_| ())
 	})

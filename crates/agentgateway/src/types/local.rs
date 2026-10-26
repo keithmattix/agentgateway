@@ -76,6 +76,12 @@ pub fn default_standalone_config(database_url: &str) -> serde_json::Value {
 #[path = "local_tests.rs"]
 mod tests;
 
+pub fn expand_env(s: &str) -> anyhow::Result<String> {
+	// Avoid shell expanding the comment for schema. Probably there are better ways to do this!
+	let s = s.replace("# yaml-language-server: $schema", "#");
+	Ok(shellexpand::full(&s)?.into_owned())
+}
+
 impl NormalizedLocalConfig {
 	pub async fn from(
 		config: &crate::Config,
@@ -83,9 +89,16 @@ impl NormalizedLocalConfig {
 		gateway_name: ListenerTarget,
 		s: &str,
 	) -> anyhow::Result<NormalizedLocalConfig> {
-		// Avoid shell expanding the comment for schema. Probably there are better ways to do this!
-		let s = s.replace("# yaml-language-server: $schema", "#");
-		let s = shellexpand::full(&s)?;
+		Self::from_expanded(config, resources, gateway_name, expand_env(s)?).await
+	}
+
+	/// Like `from`, for config that already had environment variables expanded.
+	pub async fn from_expanded(
+		config: &crate::Config,
+		resources: &crate::resource_manager::ResourceFetcher,
+		gateway_name: ListenerTarget,
+		s: String,
+	) -> anyhow::Result<NormalizedLocalConfig> {
 		let mut registration_config = config.clone();
 		let registration_policy = Arc::new(config.budget_policy.registration_policy());
 		registration_config.budget_policy = registration_policy.clone();
