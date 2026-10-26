@@ -1812,17 +1812,20 @@ impl AIProvider {
 			.await?;
 		self.apply_model_alias(policies, &mut req);
 
-		// If a user doesn't request usage, we will not get token information which we need
+		// If a user doesn't request usage (or explicitly disables it), we will not get token information which we need
 		// We always set it.
 		// TODO?: this may impact the user, if they make assumptions about the stream NOT including usage.
 		// Notably, this adds a final SSE event.
 		// We could actually go remove that on the response, but it would mean we cannot do passthrough-parsing,
 		// so unless we have a compelling use case for it, for now we keep it.
-		if req.stream.unwrap_or_default() && req.stream_options.is_none() {
-			req.stream_options = Some(types::completions::StreamOptions {
-				include_usage: true,
-				rest: Default::default(),
-			});
+		if req.stream.unwrap_or_default() {
+			req
+				.stream_options
+				.get_or_insert_with(|| types::completions::StreamOptions {
+					include_usage: true,
+					rest: Default::default(),
+				})
+				.include_usage = true;
 		}
 		if matches!(
 			self,
