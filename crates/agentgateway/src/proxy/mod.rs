@@ -75,6 +75,7 @@ impl ProxyError {
 			| ProxyError::Processing(_)
 			| ProxyError::SubstrateEgressUnavailable(_)
 			| ProxyError::RouteCycleDetected
+			| ProxyError::InvalidListener(_)
 			| ProxyError::Body(_)
 			| ProxyError::Http(_)
 			| ProxyError::BackendUnsupportedMirror
@@ -197,6 +198,8 @@ pub enum ProxyError {
 	BindNotFound,
 	#[error("listener not found")]
 	ListenerNotFound,
+	#[error("invalid listener: {0}")]
+	InvalidListener(Strng),
 	#[error("route not found")]
 	RouteNotFound,
 	#[error("route delegation cycle detected")]
@@ -420,6 +423,7 @@ impl ProxyError {
 			ProxyError::ListenerNotFound => "listener not found",
 			ProxyError::RouteNotFound => "route not found",
 			ProxyError::RouteCycleDetected => "route delegation cycle detected",
+			ProxyError::InvalidListener(_) => "invalid listener configuration",
 			ProxyError::MisdirectedRequest => "misdirected request",
 			ProxyError::NoValidBackends
 			| ProxyError::NoHealthyEndpoints
@@ -465,6 +469,7 @@ impl ProxyError {
 			ProxyError::ListenerNotFound => StatusCode::NOT_FOUND,
 			ProxyError::RouteNotFound => StatusCode::NOT_FOUND,
 			ProxyError::RouteCycleDetected => StatusCode::INTERNAL_SERVER_ERROR,
+			ProxyError::InvalidListener(_) => StatusCode::INTERNAL_SERVER_ERROR,
 			ProxyError::MisdirectedRequest => StatusCode::MISDIRECTED_REQUEST,
 			ProxyError::StaleAssignment => StatusCode::SERVICE_UNAVAILABLE,
 			ProxyError::NoValidBackends => StatusCode::INTERNAL_SERVER_ERROR,

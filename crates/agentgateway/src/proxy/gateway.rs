@@ -1196,7 +1196,7 @@ impl Gateway {
 			.read_binds()
 			.get_bind_listener(bind_name, &serving_listener.key)
 		{
-			Some(current) => current.as_ref() != serving_listener,
+			Some(current) => !current.serving_eq(serving_listener),
 			None => true,
 		}
 	}
@@ -1537,6 +1537,7 @@ impl Gateway {
 					},
 					hostname: Default::default(),
 					protocol: ListenerProtocol::HBONE,
+					..Default::default()
 				})
 			});
 

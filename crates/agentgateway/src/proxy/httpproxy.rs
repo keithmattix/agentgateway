@@ -970,10 +970,21 @@ impl HTTPProxy {
 			},
 		};
 
-		let gateway_policies = inputs
-			.stores
-			.read_binds()
-			.gateway_policies(&selected_listener.name);
+		let (listener_error, gateway_policies) = {
+			let binds = inputs.stores.read_binds();
+			// The serving listener may be a snapshot from connection setup; use the current error.
+			let listener_error = binds
+				.get_bind_listener(&bind_name, &selected_listener.key)
+				.map_or_else(|| selected_listener.error.clone(), |l| l.error.clone());
+			(
+				listener_error,
+				binds.gateway_policies(&bind_name, &selected_listener),
+			)
+		};
+		if let Some(e) = listener_error {
+			return Err(ProxyResponse::Error(ProxyError::InvalidListener(e)))
+				.snapshot_on_err(log, &mut req);
+		}
 		gateway_policies.register_cel_expressions(log.cel.ctx());
 		// This is unfortunate but we record the request twice possibly; we want to record it as early as possible
 		// (for logging, etc) and also after we register the expressions since new fields may be available.
@@ -5603,6 +5614,7 @@ mod route_chain_tests {
 				name: Default::default(),
 				hostname: Default::default(),
 				protocol: ListenerProtocol::HTTP,
+				..Default::default()
 			}])),
 		}
 	}

@@ -510,6 +510,7 @@ async fn connect_tunnel_terminates_outer_tls() {
 				name: Default::default(),
 				hostname: strng::new("*.example.com"),
 				protocol: ListenerProtocol::HTTPS(test_server_tls_config()),
+				..Default::default()
 			}]),
 		);
 
@@ -1024,6 +1025,7 @@ async fn connect_tunnel_dynamic_ca_obo_dynamic_backend() {
 			name: Default::default(),
 			hostname: Default::default(),
 			protocol: ListenerProtocol::HTTPS(tls_config),
+			..Default::default()
 		}]),
 	);
 

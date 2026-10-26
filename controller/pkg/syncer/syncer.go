@@ -153,7 +153,7 @@ func (s *Syncer) buildResourceCollections(krtopts krtutil.KrtOptions) {
 		referenceTypes.KnownToReferences,
 		krtopts,
 	))
-	listenerSetInitialStatus, listenerSets := s.buildListenerSetCollection(gatewayClasses, refGrants, krtopts)
+	listenerSetInitialStatus, listenerSets := s.buildListenerSetCollection(gatewayClasses, refGrants, referenceTypes, krtopts)
 	listenerSets, rejectedListenerSets := s.joinExtraListenerSets(listenerSets, krtopts)
 	if s.customResourceCollections != nil {
 		s.customResourceCollections(CustomResourceCollectionsConfig{
@@ -170,7 +170,7 @@ func (s *Syncer) buildResourceCollections(krtopts krtutil.KrtOptions) {
 		})
 	}
 
-	gatewayInitialStatus, gateways := s.buildGatewayCollection(gatewayClasses, listenerSets, refGrants, krtopts)
+	gatewayInitialStatus, gateways := s.buildGatewayCollection(gatewayClasses, listenerSets, refGrants, referenceTypes, krtopts)
 
 	// Build Agw resources for gateway
 	agwResources, routeAttachments, ancestorCollection := s.buildAgwResources(gateways, listenerSets, refGrants, referenceTypes, krtopts)
@@ -369,6 +369,7 @@ func (s *Syncer) buildGatewayCollection(
 	gatewayClasses krt.Collection[translator.GatewayClass],
 	listenerSets krt.Collection[*translator.ListenerSet],
 	refGrants translator.ReferenceGrants,
+	referenceTypes plugins.ReferenceTypes,
 	krtopts krtutil.KrtOptions,
 ) (
 	krt.StatusCollection[*gwv1.Gateway, gwv1.GatewayStatus],
@@ -383,6 +384,9 @@ func (s *Syncer) buildGatewayCollection(
 		Grants:                   refGrants,
 		Secrets:                  s.agwCollections.Secrets,
 		ConfigMaps:               s.agwCollections.ConfigMaps,
+		ClusterTrustBundles:      s.agwCollections.ClusterTrustBundles,
+		References:               referenceTypes,
+		BackendRefGrantMode:      s.agwCollections.Settings.BackendRefGrantMode,
 		KrtOpts:                  krtopts,
 		EnableAgentgatewayModels: s.agwCollections.Settings.EnableAgentgatewayModels,
 	}, s.gatewayCollectionOptions...)
@@ -391,6 +395,7 @@ func (s *Syncer) buildGatewayCollection(
 func (s *Syncer) buildListenerSetCollection(
 	gatewayClasses krt.Collection[translator.GatewayClass],
 	refGrants translator.ReferenceGrants,
+	referenceTypes plugins.ReferenceTypes,
 	krtopts krtutil.KrtOptions,
 ) (
 	krt.StatusCollection[*gwv1.ListenerSet, gwv1.ListenerSetStatus],
@@ -407,6 +412,9 @@ func (s *Syncer) buildListenerSetCollection(
 				refGrants,
 				s.agwCollections.Secrets,
 				s.agwCollections.ConfigMaps,
+				s.agwCollections.ClusterTrustBundles,
+				referenceTypes,
+				s.agwCollections.Settings.BackendRefGrantMode,
 				s.agwCollections.Settings.EnableAgentgatewayModels,
 			)
 		}, krtopts.ToOptions("translator/ListenerSetListeners")...)
@@ -599,16 +607,6 @@ func (s *Syncer) buildAgwResources(
 	}
 	binds := krt.JoinCollection(bindCollections, krtopts.ToOptions("resources/Binds")...)
 
-	// Build listeners
-	baseListeners := krt.NewCollection(filteredGateways, func(ctx krt.HandlerContext, obj *translator.GatewayListener) *agwir.AgwResource {
-		return s.buildListenerFromGateway(obj)
-	}, krtopts.ToOptions("translator/Listeners")...)
-	listenerCollections := []krt.Collection[agwir.AgwResource]{baseListeners}
-	if s.agwPlugins.AddResourceExtension != nil && s.agwPlugins.AddResourceExtension.Listeners != nil {
-		listenerCollections = append(listenerCollections, s.agwPlugins.AddResourceExtension.Listeners)
-	}
-	listeners := krt.JoinCollection(listenerCollections, krtopts.ToOptions("resources/Listeners")...)
-
 	// Build routes
 	var routeParents translator.ParentResolver = translator.BuildRouteParents(routeGateways, krtopts)
 
@@ -649,6 +647,16 @@ func (s *Syncer) buildAgwResources(
 		krtopts,
 	)
 
+	// Build listeners
+	baseListeners := krt.NewCollection(filteredGateways, func(ctx krt.HandlerContext, obj *translator.GatewayListener) *agwir.AgwResource {
+		return s.buildListenerFromGateway(obj)
+	}, krtopts.ToOptions("translator/Listeners")...)
+	listenerCollections := []krt.Collection[agwir.AgwResource]{baseListeners}
+	if s.agwPlugins.AddResourceExtension != nil && s.agwPlugins.AddResourceExtension.Listeners != nil {
+		listenerCollections = append(listenerCollections, s.agwPlugins.AddResourceExtension.Listeners)
+	}
+	listeners := krt.JoinCollection(listenerCollections, krtopts.ToOptions("resources/Listeners")...)
+
 	baseAgwRoutes, routeAttachments, ancestorBackends := translator.AgwRouteCollection(s.statusCollections, s.agwCollections.HTTPRoutes, s.agwCollections.GRPCRoutes, s.agwCollections.TCPRoutes, s.agwCollections.TLSRoutes, routeInputs, krtopts)
 	routeCollections := []krt.Collection[agwir.AgwResource]{baseAgwRoutes}
 	if s.agwCollections.Settings.EnableAgentgatewayModels {
@@ -669,6 +677,14 @@ func (s *Syncer) buildAgwResources(
 	routeAttachmentsIndex := krt.NewIndex(routeAttachments, "from", func(o *plugins.RouteAttachment) []utils.TypedNamespacedName {
 		return []utils.TypedNamespacedName{o.From}
 	}).AsCollection(append(krtopts.ToOptions("translator/RouteAttachmentsBySource"), utils.TypedNamespacedNameIndexCollectionFunc)...)
+
+	listenerFilterAncestors := krt.NewManyCollection(gatewayParents, func(krtctx krt.HandlerContext, object krt.IndexObject[string, *translator.GatewayListener]) []*utils.AncestorBackend {
+		if len(object.Objects) == 0 {
+			return nil
+		}
+		return translator.ListenerFilterAncestorBackends(routeInputs.WithCtx(krtctx), object.Objects[0].ParentGateway, object.Objects)
+	}, krtopts.ToOptions("translator/ListenerFilterAncestors")...)
+	ancestorBackends = krt.JoinCollection([]krt.Collection[*utils.AncestorBackend]{ancestorBackends, listenerFilterAncestors}, krtopts.ToOptions("translator/AncestorBackendsWithListenerFilters")...)
 
 	ancestorsIndex := krt.NewIndex(ancestorBackends, "ancestors", func(o *utils.AncestorBackend) []utils.TypedNamespacedName {
 		return []utils.TypedNamespacedName{o.Backend}
@@ -803,10 +819,14 @@ func (s *Syncer) buildListenerFromGateway(obj *translator.GatewayListener) *agwi
 	}
 	listenerName := utils.ListenerName(obj.ParentGateway.Namespace, obj.ParentGateway.Name, string(obj.ParentInfo.SectionName), ls)
 	l := &api.Listener{
-		Key:      obj.ResourceName(),
-		Name:     listenerName,
-		BindKey:  fmt.Sprint(obj.ParentInfo.Port) + "/" + obj.ParentGateway.Namespace + "/" + obj.ParentGateway.Name,
-		Hostname: obj.ParentInfo.OriginalHostname,
+		Key:             obj.ResourceName(),
+		Name:            listenerName,
+		BindKey:         fmt.Sprint(obj.ParentInfo.Port) + "/" + obj.ParentGateway.Namespace + "/" + obj.ParentGateway.Name,
+		Hostname:        obj.ParentInfo.OriginalHostname,
+		TrafficPolicies: obj.FilterResult.Policies,
+	}
+	if obj.FilterResult.Error != "" {
+		l.Error = &obj.FilterResult.Error
 	}
 
 	// Set protocol and TLS configuration

@@ -2016,6 +2016,7 @@ async fn substrate_egress_replaces_only_requested_credentials(
 			} else {
 				ListenerProtocol::HTTP
 			},
+			..Default::default()
 		}]),
 	);
 	let mut gateway = crate::tests::dfp::setup_dfp_bind()
@@ -2187,18 +2188,21 @@ async fn substrate_tls_gateway(
 				name: Default::default(),
 				hostname: "localhost".into(),
 				protocol: ListenerProtocol::HTTPS(crate::tests::tls::test_server_tls_config()),
+				..Default::default()
 			},
 			Listener {
 				key: tls_listener.clone(),
 				name: Default::default(),
 				hostname: Default::default(),
 				protocol: ListenerProtocol::TLS(None),
+				..Default::default()
 			},
 			Listener {
 				key: tcp_listener.clone(),
 				name: Default::default(),
 				hostname: Default::default(),
 				protocol: ListenerProtocol::TCP,
+				..Default::default()
 			},
 		]),
 	);

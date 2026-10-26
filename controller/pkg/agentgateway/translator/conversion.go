@@ -20,6 +20,7 @@ import (
 	"istio.io/istio/pkg/ptr"
 	"istio.io/istio/pkg/slices"
 	"istio.io/istio/pkg/util/sets"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	klabels "k8s.io/apimachinery/pkg/labels"
@@ -29,6 +30,7 @@ import (
 	gwv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/agentgateway/agentgateway/api"
+	apisettings "github.com/agentgateway/agentgateway/controller/api/settings"
 	"github.com/agentgateway/agentgateway/controller/api/v1alpha1/agentgateway"
 	"github.com/agentgateway/agentgateway/controller/pkg/agentgateway/plugins"
 	"github.com/agentgateway/agentgateway/controller/pkg/agentgateway/utils"
@@ -1110,7 +1112,10 @@ func BuildListener(
 	ctx krt.HandlerContext,
 	secrets krt.Collection[*corev1.Secret],
 	configMaps krt.Collection[*corev1.ConfigMap],
+	clusterTrustBundles krt.Collection[*certificatesv1.ClusterTrustBundle],
 	grants ReferenceGrants,
+	references plugins.ReferenceTypes,
+	backendRefGrantMode apisettings.BackendRefGrantMode,
 	namespaces krt.Collection[*corev1.Namespace],
 	obj controllers.Object,
 	status []gwv1.ListenerStatus,
@@ -1120,7 +1125,7 @@ func BuildListener(
 	portErr error,
 	forListenerSet bool,
 	enableAgentgatewayModels bool,
-) ([]string, *TLSInfo, []gwv1.ListenerStatus, bool) {
+) ([]string, *TLSInfo, ListenerFilterResult, []gwv1.ListenerStatus, bool) {
 	listenerConditions := map[string]*Condition{
 		string(gwv1.ListenerConditionAccepted): {
 			Reason:  string(gwv1.ListenerReasonAccepted),
@@ -1143,7 +1148,7 @@ func BuildListener(
 
 	ok := true
 	gwFrontendTLS, gwBackendTLS := resolveGatewayTLS(l.Port, gw.TLS)
-	tlsInfo, err := buildTLS(ctx, secrets, configMaps, grants, gwFrontendTLS, l.TLS, obj)
+	tlsInfo, err := buildTLS(ctx, secrets, configMaps, clusterTrustBundles, grants, gwFrontendTLS, l.TLS, obj)
 	var backendTLSErr *ConfigError
 	if err == nil {
 		// Resolve backend client cert references for status/reporting. Actual backend TLS behavior
@@ -1209,8 +1214,73 @@ func BuildListener(
 		ok = false
 	}
 
+	parentGVK := wellknown.GatewayGVK
+	if forListenerSet {
+		parentGVK = wellknown.ListenerSetGVK
+	}
+	filterCtx := RouteContext{Krt: ctx, Grants: grants, References: references, BackendRefGrantMode: backendRefGrantMode}
+	filterPolicies, filterCondition, filterErr := buildListenerFilterPolicies(filterCtx, l.Filters, obj.GetNamespace(), parentGVK)
+	filterResult := ListenerFilterResult{Policies: filterPolicies}
+	if filterErr != nil {
+		filterResult.Error = filterErr.Message
+		listenerConditions[string(filterCondition)].Error = filterErr
+		listenerConditions[string(gwv1.ListenerConditionProgrammed)].Error = &ConfigError{
+			Reason:  string(gwv1.ListenerReasonInvalid),
+			Message: filterErr.Message,
+		}
+		ok = false
+	}
+
 	updatedStatus := reportListenerCondition(listenerIndex, l, obj, status, listenerConditions, enableAgentgatewayModels)
-	return hostnames, tlsInfo, updatedStatus, ok
+	return hostnames, tlsInfo, filterResult, updatedStatus, ok
+}
+
+// ListenerFilterResult is the translation of a listener's filters.
+type ListenerFilterResult struct {
+	Policies []*api.TrafficPolicySpec
+	// Error is set if the filters could not be translated.
+	Error string
+}
+
+// buildListenerFilterPolicies translates the listener's filters into inline listener policies, which run before route
+// selection. On failure, it returns the listener condition to report the error on.
+func buildListenerFilterPolicies(
+	ctx RouteContext,
+	filters *gwv1.ListenerFilters,
+	ns string,
+	k schema.GroupVersionKind,
+) ([]*api.TrafficPolicySpec, gwv1.ListenerConditionType, *ConfigError) {
+	if filters == nil {
+		return nil, "", nil
+	}
+	var policies []*api.TrafficPolicySpec
+	for i, f := range filters.Requests {
+		if f.Type != gwv1.ListenerFilterExternalAuth {
+			return nil, gwv1.ListenerConditionAccepted, &ConfigError{
+				Reason:  string(gwv1.ListenerReasonUnsupportedValue),
+				Message: fmt.Sprintf("filters.requests[%d]: unsupported listener filter type %q", i, f.Type),
+			}
+		}
+		if len(policies) > 0 {
+			return nil, gwv1.ListenerConditionAccepted, &ConfigError{
+				Reason:  "InvalidListenerFilter",
+				Message: fmt.Sprintf("filters.requests[%d]: at most one ExternalAuth listener filter is supported", i),
+			}
+		}
+		pol, err := CreateAgwExternalAuthFilter(ctx, f.ExternalAuth, ns, k)
+		if err != nil {
+			reason := "InvalidListenerFilterRef"
+			if err.Reason == gwv1.RouteReasonRefNotPermitted {
+				reason = string(gwv1.ListenerReasonRefNotPermitted)
+			}
+			return nil, gwv1.ListenerConditionResolvedRefs, &ConfigError{
+				Reason:  reason,
+				Message: fmt.Sprintf("filters.requests[%d]: %s", i, err.Message),
+			}
+		}
+		policies = append(policies, pol)
+	}
+	return policies, "", nil
 }
 
 func resolveGatewayTLS(port gwv1.PortNumber, gw *gwv1.GatewayTLSConfig) (*gwv1.TLSConfig, *gwv1.GatewayBackendTLS) {
@@ -1379,6 +1449,7 @@ func bundleCaCertificates(
 	ctx krt.HandlerContext,
 	secrets krt.Collection[*corev1.Secret],
 	configMaps krt.Collection[*corev1.ConfigMap],
+	clusterTrustBundles krt.Collection[*certificatesv1.ClusterTrustBundle],
 	grants ReferenceGrants,
 	gw controllers.Object,
 	caCertRefs []gwv1.ObjectReference,
@@ -1389,7 +1460,7 @@ func bundleCaCertificates(
 	var statusErr *ConfigError
 
 	for _, ref := range caCertRefs {
-		cred, err := buildCaCertificateReference(ctx, ref, gw, configMaps, secrets)
+		cred, err := buildCaCertificateReference(ctx, ref, gw, configMaps, clusterTrustBundles, secrets)
 		if err != nil {
 			statusErr = updateError(statusErr, err)
 			continue
@@ -1427,6 +1498,7 @@ func buildTLS(
 	ctx krt.HandlerContext,
 	secrets krt.Collection[*corev1.Secret],
 	configMaps krt.Collection[*corev1.ConfigMap],
+	clusterTrustBundles krt.Collection[*certificatesv1.ClusterTrustBundle],
 	grants ReferenceGrants,
 	gatewayTLS *gwv1.TLSConfig,
 	tls *gwv1.ListenerTLSConfig,
@@ -1507,7 +1579,7 @@ func buildTLS(
 
 		if gatewayTLS != nil && gatewayTLS.Validation != nil && len(gatewayTLS.Validation.CACertificateRefs) > 0 {
 			// TODO: add 'Mode'
-			caBundle, err := bundleCaCertificates(ctx, secrets, configMaps, grants, gw, gatewayTLS.Validation.CACertificateRefs)
+			caBundle, err := bundleCaCertificates(ctx, secrets, configMaps, clusterTrustBundles, grants, gw, gatewayTLS.Validation.CACertificateRefs)
 			if caBundle == nil && err != nil {
 				return dummyTls, err
 			}
@@ -1564,6 +1636,7 @@ func buildCaCertificateReference(
 	ref gwv1.ObjectReference,
 	gw controllers.Object,
 	configMaps krt.Collection[*corev1.ConfigMap],
+	clusterTrustBundles krt.Collection[*certificatesv1.ClusterTrustBundle],
 	secrets krt.Collection[*corev1.Secret],
 ) (*SecretReference, *ConfigError) {
 	namespace := ptr.OrDefault((*string)(ref.Namespace), gw.GetNamespace())
@@ -1611,10 +1684,28 @@ func buildCaCertificateReference(
 			}
 		}
 		res.Info.CaCert = certInfo.Cert
+	case wellknown.ClusterTrustBundleGVK.GroupKind():
+		if clusterTrustBundles == nil {
+			return nil, &ConfigError{
+				Reason:  InvalidTLSCAKind,
+				Message: fmt.Sprintf("invalid CA certificate reference %v, the cluster does not serve the ClusterTrustBundle API", plainObjectReferenceString(ref)),
+			}
+		}
+		// ClusterTrustBundles are cluster scoped; keep the Gateway namespace so no ReferenceGrant is required.
+		res.Kind = wellknown.ClusterTrustBundleGVK.Kind
+		res.Source.Namespace = gw.GetNamespace()
+		bundle := ptr.Flatten(krt.FetchOne(ctx, clusterTrustBundles, krt.FilterKey(name)))
+		if bundle == nil {
+			return nil, &ConfigError{
+				Reason:  InvalidTLSCA,
+				Message: fmt.Sprintf("invalid CA certificate reference, clustertrustbundle %v not found", name),
+			}
+		}
+		res.Info.CaCert = []byte(bundle.Spec.TrustBundle)
 	default:
 		return nil, &ConfigError{
 			Reason:  InvalidTLSCAKind,
-			Message: fmt.Sprintf("invalid CA certificate reference %v, only secret and configmap are allowed", plainObjectReferenceString(ref)),
+			Message: fmt.Sprintf("invalid CA certificate reference %v, only secret, configmap, and clustertrustbundle are allowed", plainObjectReferenceString(ref)),
 		}
 	}
 

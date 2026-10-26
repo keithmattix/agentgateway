@@ -316,6 +316,7 @@ pub fn simple_bind() -> BindSnapshot {
 			name: Default::default(),
 			hostname: Default::default(),
 			protocol: ListenerProtocol::HTTP,
+			..Default::default()
 		}])),
 	}
 }
@@ -339,6 +340,7 @@ pub fn waypoint_bind(protocol: ListenerProtocol) -> BindSnapshot {
 			},
 			hostname: Default::default(),
 			protocol,
+			..Default::default()
 		}])),
 	}
 }
@@ -358,6 +360,7 @@ pub fn simple_tcp_bind() -> BindSnapshot {
 			name: Default::default(),
 			hostname: Default::default(),
 			protocol: ListenerProtocol::TCP,
+			..Default::default()
 		}])),
 	}
 }

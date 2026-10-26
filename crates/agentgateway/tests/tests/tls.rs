@@ -33,6 +33,7 @@ pub(in crate::tests) fn https_bind() -> BindSnapshot {
 			name: Default::default(),
 			hostname: strng::new("*.example.com"),
 			protocol: ListenerProtocol::HTTPS(test_server_tls_config()),
+			..Default::default()
 		}]),
 	)
 }
@@ -185,6 +186,7 @@ async fn tls_connection_drains_when_listener_changes() {
 			name: Default::default(),
 			hostname: strng::new("*.example.com"),
 			protocol: ListenerProtocol::HTTPS(agentgateway::types::agent::ServerTLSConfig::new_invalid()),
+			..Default::default()
 		},
 		BIND_KEY,
 	);
@@ -459,6 +461,7 @@ fn tls_passthrough_bind() -> BindSnapshot {
 			hostname: strng::new("*.example.com"),
 			// No TLS config: passthrough
 			protocol: ListenerProtocol::TLS(None),
+			..Default::default()
 		}]),
 	)
 }

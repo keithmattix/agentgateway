@@ -3863,6 +3863,7 @@ async fn convert_gateway_listener(
 		name: name.clone(),
 		hostname: hostname.unwrap_or_else(|| strng::new("*")),
 		protocol,
+		..Default::default()
 	};
 	let mut all_policies = Vec::new();
 	if !policies.is_empty() {
@@ -4963,6 +4964,7 @@ async fn convert_llm_config(
 			Some(tls) => ListenerProtocol::HTTPS(tls),
 			None => ListenerProtocol::HTTP,
 		},
+		..Default::default()
 	};
 
 	if !listener_gateway_policies.is_empty() || !listener_route_policies.is_empty() {
@@ -5086,6 +5088,7 @@ async fn convert_mcp_config(
 		name: listener_name,
 		hostname: strng::new("*"),
 		protocol: ListenerProtocol::HTTP,
+		..Default::default()
 	};
 
 	let mut listener_set = ListenerSet::default();
@@ -5274,6 +5277,7 @@ async fn convert_listener(
 		name,
 		hostname,
 		protocol,
+		..Default::default()
 	};
 	Ok((l, rs, trs, all_policies, all_backends))
 }

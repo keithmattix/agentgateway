@@ -96,6 +96,10 @@ message Listener {
   string hostname = 4;
   Protocol protocol = 5;
   TLSConfig tls = 6;
+  // Traffic policies applied to all requests on the listener, before route selection.
+  repeated TrafficPolicySpec traffic_policies = 7;
+  // If set, the listener's configuration is invalid, and every request on it fails.
+  optional string error = 8;
 }
 
 message Route {

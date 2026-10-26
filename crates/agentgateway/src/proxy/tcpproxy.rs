@@ -630,6 +630,7 @@ mod tests {
 			},
 			hostname: Default::default(),
 			protocol: ListenerProtocol::HBONE,
+			..Default::default()
 		})
 	}
 
@@ -873,6 +874,7 @@ mod tests {
 			},
 			hostname: Default::default(),
 			protocol: ListenerProtocol::TLS(None), // Not HBONE
+			..Default::default()
 		});
 
 		let route = super::select_best_route(None, listener, &stores, &network, dst, None);
