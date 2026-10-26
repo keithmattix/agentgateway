@@ -1350,6 +1350,22 @@ impl ResponseType for Response {
 				);
 				continue;
 			}
+			if let OutputItem::Reasoning(reasoning) = o {
+				use async_openai::types::responses as sdk;
+				for sdk::SummaryPart::SummaryText(summary) in &mut reasoning.summary {
+					f(ContentScope::Messages.into(), &mut summary.text);
+				}
+				// encrypted_content may embed this text; a mask would not cover it and would break replay.
+				let content = crate::types::ResponseText {
+					scope: ContentScope::Messages,
+					signed: reasoning.encrypted_content.is_some(),
+				};
+				for sdk::ReasoningItemContent::ReasoningText(text) in reasoning.content.iter_mut().flatten()
+				{
+					f(content, &mut text.text);
+				}
+				continue;
+			}
 			let mut plain = |scope: ContentScope, text: &mut String| f(scope.into(), text);
 			let f = &mut plain;
 			let OutputItem::Message(msg) = o else {

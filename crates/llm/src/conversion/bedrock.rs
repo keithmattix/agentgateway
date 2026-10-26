@@ -305,6 +305,42 @@ fn invalid_request_error(bytes: &[u8]) -> Result<bytes::Bytes, AIError> {
 	))
 }
 
+/// Bedrock reasoning in a Responses reasoning item's `encrypted_content`: a JSON list of Anthropic
+/// thinking blocks. Replay needs only this, as clients may drop `content`.
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
+enum ReasoningCarrier {
+	Thinking { thinking: String, signature: String },
+	RedactedThinking { data: String },
+}
+
+impl ReasoningCarrier {
+	fn encode(self) -> String {
+		serde_json::to_string(&[self]).expect("serializing strings cannot fail")
+	}
+
+	fn decode(carrier: &str) -> Option<Vec<Self>> {
+		serde_json::from_str(carrier).ok()
+	}
+
+	fn into_bedrock(self) -> bedrock::ContentBlock {
+		bedrock::ContentBlock::ReasoningContent(match self {
+			Self::Thinking {
+				thinking,
+				signature,
+			} => bedrock::ReasoningContentBlock::Structured {
+				reasoning_text: bedrock::ReasoningText {
+					text: thinking,
+					signature: Some(signature),
+				},
+			},
+			Self::RedactedThinking { data } => bedrock::ReasoningContentBlock::Redacted {
+				redacted_content: data,
+			},
+		})
+	}
+}
+
 impl From<&bedrock::TokenUsage> for super::ProviderUsage {
 	fn from(u: &bedrock::TokenUsage) -> Self {
 		Self {
@@ -2441,7 +2477,7 @@ pub mod from_responses {
 	use types::bedrock;
 	use types::responses::typed as responses;
 
-	use super::{helpers, responses_output_status};
+	use super::{ReasoningCarrier, helpers, responses_output_status};
 	use crate::bedrock::Provider;
 	use crate::conversion::completions::parse_data_url;
 	use crate::types::ResponseType;
@@ -2930,33 +2966,24 @@ pub mod from_responses {
 					}
 				},
 				InputItem::Item(Item::Reasoning(reasoning)) => {
-					// encrypted_content holds the signature for visible reasoning, or the redacted
-					// content when there is no visible text.
-					let texts = reasoning
-						.content
-						.unwrap_or_default()
-						.into_iter()
-						.map(|part| {
-							let responses::ReasoningItemContent::ReasoningText(text) = part;
-							text.text
-						})
-						.collect::<Vec<_>>();
-					let content = match reasoning.encrypted_content {
-						Some(redacted_content) if texts.is_empty() => {
-							vec![bedrock::ContentBlock::ReasoningContent(
-								bedrock::ReasoningContentBlock::Redacted { redacted_content },
-							)]
-						},
-						Some(signature) => vec![bedrock::ContentBlock::ReasoningContent(
-							bedrock::ReasoningContentBlock::Structured {
-								reasoning_text: bedrock::ReasoningText {
-									text: texts.concat(),
-									signature: Some(signature),
-								},
-							},
-						)],
-						None => texts
+					// Signed reasoning replays from encrypted_content alone; clients may drop content.
+					let content: Vec<_> = match reasoning
+						.encrypted_content
+						.as_deref()
+						.and_then(ReasoningCarrier::decode)
+					{
+						Some(blocks) => blocks
 							.into_iter()
+							.map(ReasoningCarrier::into_bedrock)
+							.collect(),
+						None => reasoning
+							.content
+							.unwrap_or_default()
+							.into_iter()
+							.map(|part| {
+								let responses::ReasoningItemContent::ReasoningText(text) = part;
+								text.text
+							})
 							.map(|text| {
 								bedrock::ContentBlock::ReasoningContent(
 									bedrock::ReasoningContentBlock::Structured {
@@ -3605,20 +3632,27 @@ pub mod from_responses {
 								});
 							events.push(("event", text_done_event));
 						}
-						// encrypted_content carries the redacted content, or the signature alongside visible text.
 						let (content, encrypted_content) = if redacted_content.is_empty() {
+							let encrypted_content = (!signature.is_empty()).then(|| {
+								ReasoningCarrier::Thinking {
+									thinking: reasoning_text.clone(),
+									signature,
+								}
+								.encode()
+							});
 							(
 								Some(vec![ReasoningItemContent::ReasoningText(
 									ReasoningTextContent {
 										text: reasoning_text,
 									},
 								)]),
-								(!signature.is_empty()).then_some(signature),
+								encrypted_content,
 							)
 						} else {
+							let data = base64::prelude::BASE64_STANDARD.encode(redacted_content);
 							(
 								None,
-								Some(base64::prelude::BASE64_STANDARD.encode(redacted_content)),
+								Some(ReasoningCarrier::RedactedThinking { data }.encode()),
 							)
 						};
 						let item = OutputItem::Reasoning(ReasoningItem {
@@ -4489,14 +4523,25 @@ impl ConverseResponseAdapter {
 				},
 				bedrock::ContentBlock::ReasoningContent(reasoning) => {
 					let (text, encrypted_content) = match reasoning {
-						// The signature rides in encrypted_content so it can be replayed on the next turn.
 						bedrock::ReasoningContentBlock::Structured { reasoning_text } => (
 							Some(reasoning_text.text.clone()),
-							reasoning_text.signature.clone(),
+							reasoning_text.signature.clone().map(|signature| {
+								ReasoningCarrier::Thinking {
+									thinking: reasoning_text.text.clone(),
+									signature,
+								}
+								.encode()
+							}),
 						),
-						bedrock::ReasoningContentBlock::Redacted { redacted_content } => {
-							(None, Some(redacted_content.clone()))
-						},
+						bedrock::ReasoningContentBlock::Redacted { redacted_content } => (
+							None,
+							Some(
+								ReasoningCarrier::RedactedThinking {
+									data: redacted_content.clone(),
+								}
+								.encode(),
+							),
+						),
 						bedrock::ReasoningContentBlock::Simple { text } => (Some(text.clone()), None),
 					};
 					outputs.push(responsest::OutputItem::Reasoning(
