@@ -392,6 +392,9 @@ pub struct Rates {
 	/// Cost per page, for document/OCR models.
 	#[serde(default, skip_serializing_if = "Option::is_none")]
 	pub per_page: Option<Money>,
+	/// Cost per minute of input audio, for models billed by duration (such as `whisper-1`).
+	#[serde(default, skip_serializing_if = "Option::is_none")]
+	pub per_audio_minute: Option<Money>,
 	/// Fields not understood by this version.
 	#[serde(flatten, skip_serializing)]
 	#[cfg_attr(feature = "schema", schemars(skip))]
@@ -420,6 +423,7 @@ impl Rates {
 			input_audio: pick(&self.input_audio, &delta.input_audio),
 			output_audio: pick(&self.output_audio, &delta.output_audio),
 			per_page: pick(&self.per_page, &delta.per_page),
+			per_audio_minute: pick(&self.per_audio_minute, &delta.per_audio_minute),
 			unknown: Unknown::new(),
 		}
 	}
@@ -492,6 +496,7 @@ impl From<Money> for String {
 	}
 }
 const TOKENS_PER_UNIT: u64 = 1_000_000;
+const MILLIS_PER_MINUTE: u64 = 60_000;
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
 pub struct Usage {
@@ -505,6 +510,7 @@ pub struct Usage {
 	pub input_audio: u64,
 	pub output_audio: u64,
 	pub pages: u64,
+	pub audio_millis: u64,
 }
 
 impl Usage {
@@ -531,6 +537,7 @@ pub struct Breakdown {
 	pub input_audio: Decimal,
 	pub output_audio: Decimal,
 	pub pages: Decimal,
+	pub audio_duration: Decimal,
 }
 
 impl std::ops::AddAssign for Breakdown {
@@ -545,6 +552,7 @@ impl std::ops::AddAssign for Breakdown {
 		self.input_audio += other.input_audio;
 		self.output_audio += other.output_audio;
 		self.pages += other.pages;
+		self.audio_duration += other.audio_duration;
 	}
 }
 
@@ -560,6 +568,7 @@ impl Breakdown {
 			+ self.input_audio
 			+ self.output_audio
 			+ self.pages
+			+ self.audio_duration
 	}
 }
 
@@ -588,6 +597,8 @@ impl Rates {
 			input_audio: line(usage.input_audio, input_audio_rate) / unit,
 			output_audio: line(usage.output_audio, output_audio_rate) / unit,
 			pages: line(usage.pages, self.per_page.as_ref()),
+			audio_duration: line(usage.audio_millis, self.per_audio_minute.as_ref())
+				/ Decimal::from(MILLIS_PER_MINUTE),
 		}
 	}
 }
@@ -888,6 +899,7 @@ mod tests {
 				input_audio: Some(m("40")),
 				output_audio: Some(m("80")),
 				per_page: None,
+				per_audio_minute: None,
 				unknown: Unknown::new(),
 			},
 			vec![],
@@ -903,6 +915,7 @@ mod tests {
 			input_audio: 50,
 			output_audio: 25,
 			pages: 0,
+			audio_millis: 0,
 		};
 		let b = e.breakdown(&u);
 		assert_eq!(b.input, d("0.003"));
@@ -1156,6 +1169,20 @@ mod tests {
 		});
 		assert_eq!(b.pages, d("0.02"), "a perPage rate is not divided by 1M");
 		assert_eq!(b.total(), d("0.02"));
+	}
+
+	#[test]
+	fn audio_rate_is_priced_per_minute() {
+		let r = Rates {
+			per_audio_minute: Some(m("0.006")),
+			..Default::default()
+		};
+		let b = entry(r, vec![]).breakdown(&Usage {
+			audio_millis: 90_000,
+			..Default::default()
+		});
+		assert_eq!(b.audio_duration, d("0.009"));
+		assert_eq!(b.total(), d("0.009"));
 	}
 
 	#[test]

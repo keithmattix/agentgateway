@@ -90,7 +90,17 @@ static SERVING_ENDPOINTS: LazyLock<Vec<ServingEndpoint>> = LazyLock::new(|| {
 		("/v1/images/generations", Some(Detect), Some(Op::Image)),
 		("/v1/images/edits", Some(Detect), Some(Op::Image)),
 		("/v1/images/variations", Some(Detect), Some(Op::Image)),
-		("/v1/audio/transcriptions", None, None),
+		(
+			"/v1/audio/transcriptions",
+			Some(Detect),
+			Some(Op::Transcription),
+		),
+		(
+			"/v1/audio/translations",
+			Some(Detect),
+			Some(Op::Transcription),
+		),
+		("/v1/audio/speech", Some(Detect), Some(Op::Speech)),
 		("/v1/ocr", Some(Detect), Some(Op::Ocr)),
 		("/v1/systemone", Some(SystemOne), Some(Op::Decisions)),
 		("/v1/decisions", Some(Decisions), Some(Op::Decisions)),
@@ -191,7 +201,7 @@ fn serving_endpoint(path: &str) -> Option<&'static ServingEndpoint> {
 }
 
 pub fn classify_route(path: &str) -> Option<llm::RouteType> {
-	// Audio and Bedrock endpoints deliberately select the model's passthrough mode.
+	// Bedrock endpoints deliberately select the model's passthrough mode.
 	serving_endpoint(path).and_then(|endpoint| endpoint.route_type)
 }
 

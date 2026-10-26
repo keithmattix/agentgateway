@@ -761,6 +761,17 @@
               "type": "null"
             }
           ]
+        },
+        "perAudioMinute": {
+          "description": "Cost per minute of input audio, for models billed by duration (such as `whisper-1`).",
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Money"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "additionalProperties": false

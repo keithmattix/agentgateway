@@ -1400,6 +1400,8 @@ fn gen_ai_operation_name(input_format: InputFormat) -> &'static str {
 			DetectedOperation::Image => "image_generation",
 			DetectedOperation::Ocr => "ocr",
 			DetectedOperation::Compaction => "compaction",
+			DetectedOperation::Transcription => "transcription",
+			DetectedOperation::Speech => "speech",
 		},
 		// The path is not a known serving endpoint; do not assume it is chat.
 		InputFormat::Detect(None) => "unknown",
@@ -1660,6 +1662,10 @@ impl Drop for DropOnLog {
 						("agw.ai.usage.cost.input_audio", b.input_audio.to_string()),
 						("agw.ai.usage.cost.output_audio", b.output_audio.to_string()),
 						("agw.ai.usage.cost.pages", b.pages.to_string()),
+						(
+							"agw.ai.usage.cost.audio_duration",
+							b.audio_duration.to_string(),
+						),
 					];
 					fields.extend(
 						[
@@ -1953,6 +1959,14 @@ impl Drop for DropOnLog {
 						.and_then(|l| l.output_audio_tokens)
 						.map(Into::into),
 				),
+				// Not part of official semconv
+				(
+					"gen_ai.usage.audio_seconds",
+					llm_response
+						.as_ref()
+						.and_then(|l| l.audio_seconds)
+						.map(Into::into),
+				),
 				(
 					"gen_ai.request.temperature",
 					log
@@ -2195,6 +2209,7 @@ impl Drop for DropOnLog {
 							("agw.ai.usage.cost.inputAudio", cost.input_audio),
 							("agw.ai.usage.cost.outputAudio", cost.output_audio),
 							("agw.ai.usage.cost.pages", cost.pages),
+							("agw.ai.usage.cost.audioDuration", cost.audio_duration),
 						];
 						let cache_write_details = [
 							(

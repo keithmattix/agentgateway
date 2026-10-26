@@ -82,6 +82,7 @@ impl<IO> Parser<IO> {
 						inter_chunk_latencies: TokenGapSummary::default(),
 						count_tokens: None,
 						pages: None,
+						audio_seconds: None,
 						reasoning_tokens: None,
 						cache_creation_input_tokens: None,
 						cached_input_tokens: usage
@@ -570,6 +571,7 @@ pub async fn guarded_realtime_proxy<C, S>(
 												inter_chunk_latencies: TokenGapSummary::default(),
 												count_tokens: None,
 												pages: None,
+												audio_seconds: None,
 												reasoning_tokens: None,
 												cache_creation_input_tokens: None,
 												cached_input_tokens: usage_clone

@@ -30,6 +30,7 @@
 |`config.modelCatalog[].inline.providers.*.models.*.rates.inputAudio`|string|Cost per 1M input audio tokens. Falls back to the input rate if unset.|
 |`config.modelCatalog[].inline.providers.*.models.*.rates.outputAudio`|string|Cost per 1M output audio tokens. Falls back to the output rate if unset.|
 |`config.modelCatalog[].inline.providers.*.models.*.rates.perPage`|string|Cost per page, for document/OCR models.|
+|`config.modelCatalog[].inline.providers.*.models.*.rates.perAudioMinute`|string|Cost per minute of input audio, for models billed by duration (such as `whisper-1`).|
 |`config.modelCatalog[].inline.providers.*.models.*.tiers`|[]object|Pricing rules ordered by increasing context threshold within each service tier.|
 |`config.modelCatalog[].inline.providers.*.models.*.tiers[].contextOver`|integer|Context-token threshold above which this rule applies. Defaults to zero.|
 |`config.modelCatalog[].inline.providers.*.models.*.tiers[].serviceTier`|enum|Normalized served service tier; absent matches any service tier.<br>Possible values: `standard`, `flex`, `priority`, `reserved`.|
@@ -43,6 +44,7 @@
 |`config.modelCatalog[].inline.providers.*.models.*.tiers[].rates.inputAudio`|string|Cost per 1M input audio tokens. Falls back to the input rate if unset.|
 |`config.modelCatalog[].inline.providers.*.models.*.tiers[].rates.outputAudio`|string|Cost per 1M output audio tokens. Falls back to the output rate if unset.|
 |`config.modelCatalog[].inline.providers.*.models.*.tiers[].rates.perPage`|string|Cost per page, for document/OCR models.|
+|`config.modelCatalog[].inline.providers.*.models.*.tiers[].rates.perAudioMinute`|string|Cost per minute of input audio, for models billed by duration (such as `whisper-1`).|
 |`config.modelCatalog[].inline.providers.*.models.*.tags`|[]string|Freeform capability/routing tags for this model.|
 |`config.modelCatalog[].inline.providers.*.models.*.limits`|object|Token limits.|
 |`config.modelCatalog[].inline.providers.*.models.*.limits.context`|integer|Total context window, shared by input and output.|

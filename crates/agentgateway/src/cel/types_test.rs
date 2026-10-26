@@ -125,6 +125,7 @@ fn build_test_request() -> crate::http::Request {
 		input_image_tokens: None,
 		input_text_tokens: None,
 		input_audio_tokens: None,
+		audio_seconds: None,
 		output_tokens: Some(50),
 		output_image_tokens: None,
 		output_text_tokens: None,
@@ -349,6 +350,7 @@ fn llm_cost_is_exposed_to_cel_as_floats() {
 		input_audio: dec("0"),
 		output_audio: dec("0"),
 		pages: dec("0.02"),
+		audio_duration: dec("0"),
 	});
 	// Cost per page
 	req

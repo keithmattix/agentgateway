@@ -581,9 +581,24 @@ mod lookups {
 	];
 	pub const PAGES: [&[&str]; 1] = [&["usage_info", "pages_processed"]];
 	pub const INPUT_IMAGE_TOKENS: [&[&str]; 1] = [&["usage", "input_tokens_details", "image_tokens"]];
-	pub const INPUT_TEXT_TOKENS: [&[&str]; 1] = [&["usage", "input_tokens_details", "text_tokens"]];
-	pub const INPUT_AUDIO_TOKENS: [&[&str]; 1] =
-		[&["usage", "prompt_tokens_details", "audio_tokens"]];
+	pub const INPUT_TEXT_TOKENS: [&[&str]; 2] = [
+		&["usage", "input_tokens_details", "text_tokens"],
+		// Audio transcriptions
+		&["usage", "input_token_details", "text_tokens"],
+	];
+	pub const INPUT_AUDIO_TOKENS: [&[&str]; 2] = [
+		&["usage", "prompt_tokens_details", "audio_tokens"],
+		// Audio transcriptions
+		&["usage", "input_token_details", "audio_tokens"],
+	];
+	pub const AUDIO_SECONDS: [&[&str]; 3] = [
+		// OpenAI `usage.type: duration`, OpenRouter
+		&["usage", "seconds"],
+		// Mistral
+		&["usage", "prompt_audio_seconds"],
+		// Transcription verbose_json, which may omit usage
+		&["duration"],
+	];
 	pub const OUTPUT_IMAGE_TOKENS: [&[&str]; 1] =
 		[&["usage", "output_tokens_details", "image_tokens"]];
 	pub const OUTPUT_TEXT_TOKENS: [&[&str]; 1] = [&["usage", "output_tokens_details", "text_tokens"]];
@@ -688,6 +703,7 @@ impl ResponseType for Response {
 			output_audio_tokens: self.lookup(lookups::OUTPUT_AUDIO_TOKENS, |v| v.as_u64()),
 			total_tokens: total_tokens.or_else(|| Some(input_tokens? + output_tokens?)),
 			pages: self.lookup(lookups::PAGES, |v| v.as_u64()),
+			audio_seconds: self.lookup(lookups::AUDIO_SECONDS, |v| v.as_f64()),
 			reasoning_tokens: self.lookup(lookups::REASONING, |v| v.as_u64()),
 			cache_creation_input_tokens: self
 				.lookup(lookups::CACHE_CREATION_INPUT_TOKENS, |v| v.as_u64()),
@@ -802,6 +818,12 @@ pub fn amend_from_stream_response(log: &mut StreamingUsageGuard, f: &StreamRespo
 		|v| v.as_u64(),
 		|l, v| l.response.output_audio_tokens = Some(v),
 	);
+	let audio_seconds = f.set_if(
+		log,
+		lookups::AUDIO_SECONDS,
+		|v| v.as_f64(),
+		|l, v| l.response.audio_seconds = Some(v),
+	);
 	let total_tokens = f.set_if(
 		log,
 		lookups::USAGE_TOTAL_TOKENS,
@@ -855,7 +877,7 @@ pub fn amend_from_stream_response(log: &mut StreamingUsageGuard, f: &StreamRespo
 	}
 	// Reporting usage is one-shot, so wait until output is known; reporting on input alone (e.g.
 	// Anthropic message_start) would drop the output tokens. Drop reports if this never happens.
-	if output_tokens.is_some() || total_tokens.is_some() {
+	if output_tokens.is_some() || total_tokens.is_some() || audio_seconds.is_some() {
 		log.report_usage();
 	}
 }

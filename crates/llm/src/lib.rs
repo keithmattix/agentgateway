@@ -241,6 +241,8 @@ pub enum DetectedOperation {
 	Decisions,
 	Image,
 	Ocr,
+	Transcription,
+	Speech,
 	Compaction,
 }
 
@@ -415,6 +417,9 @@ pub struct LLMResponse {
 	pub total_tokens: Option<u64>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub pages: Option<u64>,
+	/// Seconds of input audio, for models billed by duration rather than tokens.
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub audio_seconds: Option<f64>,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub reasoning_tokens: Option<u64>,
 	#[serde(skip_serializing_if = "Option::is_none")]

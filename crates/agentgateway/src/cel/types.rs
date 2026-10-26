@@ -1616,6 +1616,10 @@ pub struct LLMContext {
 	#[dynamic(rename = "inputAudioTokens")]
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub input_audio_tokens: Option<u64>,
+	/// Seconds of input audio, for models billed by duration rather than tokens (such as `whisper-1`).
+	#[dynamic(rename = "audioSeconds")]
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub audio_seconds: Option<f64>,
 	/// The number of tokens in the input/prompt read from cache (savings)
 	#[dynamic(rename = "cachedInputTokens")]
 	#[serde(skip_serializing_if = "Option::is_none")]
@@ -1737,6 +1741,7 @@ impl LLMContext {
 			input_image_tokens: resp.input_image_tokens,
 			input_text_tokens: resp.input_text_tokens,
 			input_audio_tokens: resp.input_audio_tokens,
+			audio_seconds: resp.audio_seconds,
 			cached_input_tokens: resp.cached_input_tokens,
 			cache_creation_input_tokens: resp.cache_creation_input_tokens,
 			service_tier: resp
@@ -1850,6 +1855,7 @@ impl From<llm::LLMRequest> for LLMContext {
 			input_image_tokens: None,
 			input_text_tokens: None,
 			input_audio_tokens: None,
+			audio_seconds: None,
 			cached_input_tokens: None,
 			cache_creation_input_tokens: None,
 			service_tier: None,
@@ -2566,6 +2572,7 @@ pub fn full_example_executor() -> ExecutorSerde {
 			input_image_tokens: Some(60),
 			input_text_tokens: Some(40),
 			input_audio_tokens: Some(5),
+			audio_seconds: None,
 			cached_input_tokens: Some(20),
 			cache_creation_input_tokens: Some(10),
 			output_tokens: Some(50),

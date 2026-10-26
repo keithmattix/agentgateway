@@ -1014,7 +1014,7 @@ llm:
 
 #[tokio::test]
 async fn llm_model_router_handles_multipart_audio_detect_request() {
-	let mock = body_mock(llm_body!("response/completions/basic.json")).await;
+	let mock = body_mock(br#"{"text":"Hello world","usage":{"type":"duration","seconds":9}}"#).await;
 	let config = format!(
 		r#"
 llm:
@@ -1026,7 +1026,6 @@ llm:
       model: llmRequest.model.stripPrefix("openai/")
     params:
       baseUrl: http://{}/v1
-    passthrough: detect
 "#,
 		mock.address()
 	);
@@ -1054,9 +1053,9 @@ llm:
 	.unwrap();
 	let want = json!({
 		"gen_ai.provider.name": "openai",
-		"gen_ai.response.model": "gpt-3.5-turbo-0125",
-		"gen_ai.usage.input_tokens": 17,
-		"gen_ai.usage.output_tokens": 23
+		"gen_ai.operation.name": "transcription",
+		"gen_ai.request.model": "audio-model",
+		"gen_ai.usage.audio_seconds": 9.0
 	});
 	assert!(is_json_subset(&want, &log), "want={want:#?} got={log:#?}");
 }

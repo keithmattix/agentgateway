@@ -657,6 +657,9 @@ pub struct CostRates {
 	#[serde(skip_serializing_if = "Option::is_none")]
 	#[dynamic(rename = "perPage")]
 	pub per_page: Option<f64>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	#[dynamic(rename = "perAudioMinute")]
+	pub per_audio_minute: Option<f64>,
 }
 
 impl From<&Rates> for CostRates {
@@ -675,6 +678,7 @@ impl From<&Rates> for CostRates {
 			input_audio: f(&r.input_audio),
 			output_audio: f(&r.output_audio),
 			per_page: f(&r.per_page),
+			per_audio_minute: f(&r.per_audio_minute),
 		}
 	}
 }
@@ -715,7 +719,7 @@ fn breakdown_f64(d: Decimal) -> f64 {
 
 impl Breakdown {
 	// (CEL field name, value) pairs. `total` is computed, the rest are stored.
-	fn components(&self) -> [(&'static str, Decimal); 9] {
+	fn components(&self) -> [(&'static str, Decimal); 10] {
 		[
 			("total", self.total()),
 			("input", self.input),
@@ -726,6 +730,7 @@ impl Breakdown {
 			("inputAudio", self.input_audio),
 			("outputAudio", self.output_audio),
 			("pages", self.pages),
+			("audioDuration", self.audio_duration),
 		]
 	}
 
@@ -763,6 +768,9 @@ pub struct CostBreakdown {
 	#[dynamic(rename = "outputAudio")]
 	pub output_audio: f64,
 	pub pages: f64,
+	#[serde(default, skip_serializing_if = "crate::serdes::is_default")]
+	#[dynamic(rename = "audioDuration")]
+	pub audio_duration: f64,
 }
 
 impl From<&Breakdown> for CostBreakdown {
@@ -781,6 +789,7 @@ impl From<&Breakdown> for CostBreakdown {
 			input_audio: breakdown_f64(b.input_audio),
 			output_audio: breakdown_f64(b.output_audio),
 			pages: breakdown_f64(b.pages),
+			audio_duration: breakdown_f64(b.audio_duration),
 		}
 	}
 }
@@ -799,13 +808,14 @@ impl From<CostBreakdown> for Breakdown {
 			input_audio: d(b.input_audio),
 			output_audio: d(b.output_audio),
 			pages: d(b.pages),
+			audio_duration: d(b.audio_duration),
 		}
 	}
 }
 
 impl ::cel::types::dynamic::DynamicType for Breakdown {
 	fn materialize(&self) -> ::cel::Value<'_> {
-		let mut map = vector_map::VecMap::with_capacity(10);
+		let mut map = vector_map::VecMap::with_capacity(11);
 		for (name, value) in self.components() {
 			map.insert(
 				::cel::objects::KeyRef::from(name),
@@ -1033,6 +1043,10 @@ fn usage_for(
 		output_audio,
 		// Pages are billed as pages, so they skip the cache-convention token arithmetic above.
 		pages: resp.pages.unwrap_or(0),
+		audio_millis: resp
+			.audio_seconds
+			.map(|s| (s * 1000.0).round() as u64)
+			.unwrap_or(0),
 	}
 }
 

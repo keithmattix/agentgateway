@@ -63,6 +63,7 @@
 |`llm.inputImageTokens`|integer|The number of image tokens in the input/prompt.|
 |`llm.inputTextTokens`|integer|The number of text tokens in the input/prompt.<br>Note: this field is only set in multi-modal calls where the total token count is split out by<br>text/image/audio; for standard all-text calls, this is unset.|
 |`llm.inputAudioTokens`|integer|The number of audio tokens in the input/prompt.|
+|`llm.audioSeconds`|number|Seconds of input audio, for models billed by duration rather than tokens (such as `whisper-1`).|
 |`llm.cachedInputTokens`|integer|The number of tokens in the input/prompt read from cache (savings)|
 |`llm.cacheCreationInputTokens`|integer|Tokens written to cache (costs)|
 |`llm.outputTokens`|integer|The number of tokens in the output/completion.|
@@ -106,6 +107,7 @@
 |`llm.cost.inputAudio`|number||
 |`llm.cost.outputAudio`|number||
 |`llm.cost.pages`|number||
+|`llm.cost.audioDuration`|number||
 |`llm.costRates`|object|Effective model catalog rates in USD per 1M tokens after tier selection.<br>Unset when the model could not be priced.|
 |`llm.costRates.input`|number||
 |`llm.costRates.output`|number||
@@ -118,6 +120,7 @@
 |`llm.costRates.inputAudio`|number||
 |`llm.costRates.outputAudio`|number||
 |`llm.costRates.perPage`|number||
+|`llm.costRates.perAudioMinute`|number||
 |`llm.model`|object|Model catalog metadata for the model that served the request.<br>Unset when the model is not in the catalog.|
 |`llm.model.id`|string|The catalog model ID the request resolved to.|
 |`llm.model.name`|string|Human-readable display name.|
