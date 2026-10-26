@@ -909,15 +909,12 @@ impl Gateway {
 		if let Some(ch) = stream.ext_mut().remove::<ConnectHeaders>() {
 			src.connect_headers = ch.0;
 		}
-		// A denied TLS destination only serves an HTTP denial; it must not call auth services.
-		let egress_denied = stream.ext::<EgressTlsMode>() == Some(&EgressTlsMode::InterceptDenied);
-		if !egress_denied
-			&& let Some(network_authorization) = policies.network_authorization.as_ref()
+		if let Some(network_authorization) = policies.network_authorization.as_ref()
 			&& let Err(e) = network_authorization.apply(&crate::cel::Executor::new_tcp(Some(&src), &dst))
 		{
 			anyhow::bail!("network authorization denied: {e}");
 		}
-		if !egress_denied && let Some(authz) = policies.network_ext_authz.as_ref() {
+		if let Some(authz) = policies.network_ext_authz.as_ref() {
 			authz
 				.check_network(
 					super::httpproxy::PolicyClient::new(inputs.clone()),
@@ -1251,7 +1248,7 @@ impl Gateway {
 			.await?;
 			let best = listeners
 				.best_match_filtered(sni, |protocol| match egress_mode {
-					Some(EgressTlsMode::Intercept | EgressTlsMode::InterceptDenied) => {
+					Some(EgressTlsMode::Intercept) => {
 						matches!(protocol, ListenerProtocol::HTTPS(_))
 					},
 					Some(EgressTlsMode::Passthrough) => matches!(protocol, ListenerProtocol::TLS(None)),
