@@ -39,6 +39,28 @@ func NewInferencePlugin(agw *AgwCollections) AgwPlugin {
 					}, agw.KrtOpts.ToOptions("policies/InferencePool")...)
 					return ConvertStatusCollection(status, agw.KrtOpts.ToOptions, "policies/InferencePool"), policyCol
 				},
+				// The endpoint picker Service is only reachable through the InferencePool, so record it as a
+				// reference to let policies targeting the Service attach to the pool's Gateways.
+				BuildReferences: func(input PolicyPluginInput) krt.Collection[*PolicyAttachment] {
+					return krt.NewCollection(agw.InferencePools, func(krtctx krt.HandlerContext, pool *inf.InferencePool) **PolicyAttachment {
+						epr := pool.Spec.EndpointPickerRef
+						if epr == nil {
+							return nil
+						}
+						self := utils.TypedNamespacedName{
+							Namespace: pool.Namespace, Name: pool.Name,
+							Kind: wellknown.InferencePoolGVK.Kind,
+						}
+						return new(&PolicyAttachment{
+							Target: self,
+							Backend: utils.TypedNamespacedName{
+								NamespacedName: types.NamespacedName{Namespace: pool.Namespace, Name: string(epr.Name)},
+								Kind:           wellknown.ServiceKind,
+							},
+							Source: self,
+						})
+					}, agw.KrtOpts.ToOptions("references/InferencePoolAttachments")...)
+				},
 			},
 		},
 	}
