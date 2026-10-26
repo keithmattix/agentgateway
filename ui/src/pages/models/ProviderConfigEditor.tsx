@@ -81,13 +81,7 @@ export function ProviderConfigEditor(props: {
 			{
 				...(props.params ?? {}),
 				apiKey: null,
-				...(nextProvider === 'azure' ? { azureResourceType: 'openAI' } : {}),
-				...(nextProvider === 'bedrock' && provider !== 'bedrock'
-					? {
-							bedrockEndpointPreference:
-								props.params?.bedrockEndpointPreference ?? 'mantlePreferred'
-						}
-					: {})
+				...(nextProvider === 'azure' ? { azureResourceType: 'openAI' } : {})
 			}
 		);
 	}
@@ -218,8 +212,8 @@ export function ProviderConfigEditor(props: {
 								value={props.params?.bedrockEndpointPreference ?? 'runtimePreferred'}
 								onChange={bedrockEndpointPreference => patchParams({ bedrockEndpointPreference })}
 								options={[
-									{ value: 'mantlePreferred', label: 'Prefer Mantle' },
 									{ value: 'runtimePreferred', label: 'Prefer Runtime' },
+									{ value: 'mantlePreferred', label: 'Prefer Mantle' },
 									{ value: 'mantleOnly', label: 'Mantle only (advanced)' },
 									{ value: 'runtimeOnly', label: 'Runtime only (advanced)' }
 								]}
