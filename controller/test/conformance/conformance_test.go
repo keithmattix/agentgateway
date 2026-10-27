@@ -83,6 +83,8 @@ func TestConformance(t *testing.T) {
 		options.SkipTests = append(options.SkipTests, string(features.GatewayStaticAddressesFeature.Name))
 	}
 	options.Debug = true
+	// The cluster is torn down after the run, so don't wait on namespace deletion.
+	options.CleanupBaseResources = false
 
 	t.Logf("Running conformance tests with\nprofiles: %+v %v\n", profiles, options.RunTest)
 	conformance.RunConformanceWithOptions(t, options)
