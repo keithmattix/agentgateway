@@ -17,7 +17,6 @@ import { type ReactNode, useEffect, useMemo, useState } from 'react';
 
 import { sendChatCompletion, sendMcpJsonRpc } from '@/api/playgroundApi';
 import { claudeSubscriptionWarning } from '@/claudeSubscription';
-import { CatalogModelSelector } from '@/components/CatalogModelSelector';
 import {
 	Dropdown,
 	Field,
@@ -28,6 +27,7 @@ import {
 	StatusBanner
 } from '@/components/Primitives';
 import { ProviderIcon } from '@/components/ProviderIcon';
+import { WildcardModelSelector } from '@/components/WildcardModelSelector';
 import { providerLabel } from '@/config';
 import { corsNeedsUpdate, currentOrigin, playgroundCorsPolicy, waitForLlmCors } from '@/cors';
 import { hasKeyValue, keyLabel } from '@/credentialDisplay';
@@ -43,8 +43,7 @@ import {
 	isWildcardModelName,
 	modelProviderLabel,
 	resolveModelName,
-	wildcardModelPrefix,
-	wildcardResolvedSuffix
+	wildcardMatchesModel
 } from '@/modelResolution';
 import type { CorsPolicy, LlmModel, LlmProvider, ProviderName } from '@/types';
 
@@ -183,14 +182,6 @@ export function PlaygroundPage() {
 		specificModel,
 		providers
 	);
-	const wildcardPrefix =
-		selectedModelConfig && isWildcardModelName(selectedModelConfig.name)
-			? wildcardModelPrefix(selectedModelConfig.name)
-			: '';
-	const specificModelSuffix =
-		selectedModelConfig && isWildcardModelName(selectedModelConfig.name)
-			? wildcardResolvedSuffix(displayRequestModel, selectedModelConfig.name, wildcardPrefix)
-			: specificModel;
 	const selectedCatalogProvider = selectedModelConfig
 		? modelProviderLabel(selectedModelConfig, providers)
 		: null;
@@ -587,7 +578,10 @@ export function PlaygroundPage() {
 										icon: item.icon,
 										searchText: item.searchText
 									}))}
-									onChange={setModel}
+									onChange={value => {
+										setModel(value);
+										setSpecificModel('');
+									}}
 								/>
 							</FieldGroup>
 							{selectedModelConfig && isWildcardModelName(selectedModelConfig.name) ? (
@@ -596,19 +590,15 @@ export function PlaygroundPage() {
 									hint="Model uses a wildcard; specify the specific model."
 								>
 									{(id, hintId) => (
-										<div className="target-resolved-composite">
-											{wildcardPrefix ? (
-												<span className="target-prefix">{wildcardPrefix}</span>
-											) : null}
-											<CatalogModelSelector
-												id={id}
-												ariaLabel="Specific model"
-												aria-describedby={hintId}
-												value={specificModelSuffix}
-												provider={selectedCatalogProvider}
-												onChange={value => setSpecificModel(`${wildcardPrefix}${value}`)}
-											/>
-										</div>
+										<WildcardModelSelector
+											id={id}
+											ariaLabel="Specific model"
+											aria-describedby={hintId}
+											model={selectedModelConfig}
+											value={specificModel}
+											provider={selectedCatalogProvider}
+											onChange={setSpecificModel}
+										/>
 									)}
 								</Field>
 							) : (
@@ -814,10 +804,7 @@ function playgroundRequestModel(
 function normalizedSpecificModel(model: LlmModel, specificModel: string) {
 	if (!isWildcardModelName(model.name)) return specificModel;
 	const trimmed = specificModel.trim();
-	const prefix = wildcardModelPrefix(model.name);
-	if (!trimmed || trimmed === prefix) return '';
-	if (prefix && !trimmed.startsWith(prefix)) return '';
-	return trimmed;
+	return wildcardMatchesModel(model.name, trimmed) ? trimmed : '';
 }
 
 function ChatMessageView(props: { message: ChatMessage }) {

@@ -13,7 +13,6 @@ import piIcon from '@/assets/pi.svg';
 import githubCopilotIcon from '@/assets/providers/copilot.svg';
 import windsurfIcon from '@/assets/windsurf.svg';
 import { claudeSubscriptionWarning } from '@/claudeSubscription';
-import { CatalogModelSelector } from '@/components/CatalogModelSelector';
 import { FreeformCombobox } from '@/components/FreeformCombobox';
 import {
 	Dropdown,
@@ -24,6 +23,7 @@ import {
 	StatusBanner
 } from '@/components/Primitives';
 import { ProviderIcon } from '@/components/ProviderIcon';
+import { WildcardModelSelector } from '@/components/WildcardModelSelector';
 import { providerLabel } from '@/config';
 import { hasKeyValue, keyLabel, maskKey } from '@/credentialDisplay';
 import { llmGatewayOrigin } from '@/gatewayUrls';
@@ -32,8 +32,8 @@ import {
 	isWildcardModelName,
 	modelProviderLabel,
 	resolveModelName,
-	wildcardModelPrefix,
-	wildcardResolvedSuffix
+	wildcardMatchesModel,
+	wildcardModelPrefix
 } from '@/modelResolution';
 import { requestableDumpModelNames } from '@/pages/models/dumpModels';
 import type { LlmModel, LlmProvider, ProviderName } from '@/types';
@@ -128,13 +128,6 @@ export function ClientSetupPage() {
 	const selectedModelOption = modelOptions.find(item => item.name === selectedModel);
 	const selectedModelConfig =
 		selectedModelOption?.kind === 'model' ? selectedModelOption.config : undefined;
-	const wildcardPrefix =
-		selectedModelConfig && isWildcardModelName(selectedModelConfig.name)
-			? wildcardModelPrefix(selectedModelConfig.name)
-			: '';
-	const specificModelSuffix = selectedModelConfig
-		? wildcardResolvedSuffix(specificModel, selectedModelConfig.name, wildcardPrefix)
-		: '';
 	const selectedCatalogProvider = selectedModelConfig
 		? modelProviderLabel(selectedModelConfig, providers)
 		: null;
@@ -237,7 +230,10 @@ export function ClientSetupPage() {
 									icon: item.icon,
 									searchText: item.searchText
 								}))}
-								onChange={setModel}
+								onChange={value => {
+									setModel(value);
+									setSpecificModel('');
+								}}
 							/>
 						)}
 					</FieldGroup>
@@ -266,18 +262,16 @@ export function ClientSetupPage() {
 					{selectedModelConfig && isWildcardModelName(selectedModelConfig.name) ? (
 						<Field label="Specific model" hint="Model uses a wildcard; specify the specific model.">
 							{(id, hintId) => (
-								<div className="target-resolved-composite">
-									{wildcardPrefix ? <span className="target-prefix">{wildcardPrefix}</span> : null}
-									<CatalogModelSelector
-										id={id}
-										ariaLabel="Specific model"
-										aria-describedby={hintId}
-										value={specificModelSuffix}
-										provider={selectedCatalogProvider}
-										onChange={value => setSpecificModel(`${wildcardPrefix}${value}`)}
-										placeholder="Select or type a model"
-									/>
-								</div>
+								<WildcardModelSelector
+									id={id}
+									ariaLabel="Specific model"
+									aria-describedby={hintId}
+									model={selectedModelConfig}
+									value={specificModel}
+									provider={selectedCatalogProvider}
+									onChange={setSpecificModel}
+									placeholder="Select or type a model"
+								/>
 							)}
 						</Field>
 					) : null}
@@ -379,16 +373,12 @@ function clientSetupRequestModel(
 		return resolveModelName(option.config, specificModel, providers);
 	const normalized = normalizedClientSpecificModel(option.config, specificModel);
 	if (normalized) return resolveModelName(option.config, normalized, providers);
-	const prefix = wildcardModelPrefix(option.config.name);
-	return prefix ? `${prefix}<model>` : '<model>';
+	return option.config.name.replace('*', '<model>');
 }
 
 function normalizedClientSpecificModel(model: LlmModel, specificModel: string) {
 	const trimmed = specificModel.trim();
-	const prefix = wildcardModelPrefix(model.name);
-	if (!trimmed || trimmed === prefix) return '';
-	if (prefix && !trimmed.startsWith(prefix)) return '';
-	return trimmed;
+	return wildcardMatchesModel(model.name, trimmed) ? trimmed : '';
 }
 
 function ClientRecipeCard(props: {

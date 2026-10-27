@@ -30,6 +30,7 @@ import {
 	Tooltip
 } from '@/components/Primitives';
 import { ProviderIcon } from '@/components/ProviderIcon';
+import { WildcardModelSelector } from '@/components/WildcardModelSelector';
 import {
 	invalidProviderApiKey,
 	isDatabaseConfigResource,
@@ -60,9 +61,7 @@ import {
 	concreteModelName,
 	isWildcardModelName,
 	resolvedProviderLabel,
-	selectedConfiguredModelName,
-	wildcardModelPrefix,
-	wildcardResolvedSuffix
+	selectedConfiguredModelName
 } from '@/modelResolution';
 import { DumpModelsView } from '@/pages/models/DumpModelsView';
 import { ModelMatchesEditor, normalizeMatches } from '@/pages/models/ModelMatchesEditor';
@@ -1791,11 +1790,6 @@ function VirtualTargetSelector(props: {
 }) {
 	const selectedModelName = selectedConfiguredModelName(props.targetModel, props.baseModels);
 	const selectedModel = props.baseModels.find(model => model.name === selectedModelName);
-	const wildcard = Boolean(selectedModel && isWildcardModelName(selectedModel.name));
-	const wildcardPrefix = selectedModel ? wildcardModelPrefix(selectedModel.name) : '';
-	const resolvedSuffix = wildcard
-		? wildcardResolvedSuffix(props.targetModel, selectedModelName, wildcardPrefix)
-		: '';
 	const provider = selectedModel
 		? resolvedProviderLabel(selectedModel.provider, props.providers)
 		: null;
@@ -1811,17 +1805,15 @@ function VirtualTargetSelector(props: {
 				placeholder="No configured models"
 				onChange={value => props.onChange(concreteModelName(value, ''))}
 			/>
-			{wildcard ? (
-				<div className="target-resolved-composite">
-					{wildcardPrefix ? <span className="target-prefix">{wildcardPrefix}</span> : null}
-					<CatalogModelSelector
-						ariaLabel="Specific model"
-						value={resolvedSuffix}
-						provider={provider}
-						onChange={value => props.onChange(concreteModelName(selectedModelName, value))}
-						placeholder="claude-haiku-4-5"
-					/>
-				</div>
+			{selectedModel && isWildcardModelName(selectedModel.name) ? (
+				<WildcardModelSelector
+					ariaLabel="Specific model"
+					model={selectedModel}
+					value={props.targetModel}
+					provider={provider}
+					onChange={props.onChange}
+					placeholder="claude-haiku-4-5"
+				/>
 			) : null}
 		</div>
 	);
