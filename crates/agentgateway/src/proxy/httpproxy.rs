@@ -1402,6 +1402,7 @@ impl HTTPProxy {
 					transport,
 					tcp: backend_call.backend_policies.tcp.clone(),
 					max_connection_duration: None,
+					backend: Some(selected_backend.backend.backend.name()),
 				},
 			)
 			.await?;
@@ -1958,6 +1959,7 @@ pub async fn build_transport(
 				transport,
 				tcp: call.backend_policies.tcp.clone(),
 				max_connection_duration: None,
+				backend: None,
 			}),
 			target: call.target.clone(),
 			token,
@@ -3186,6 +3188,7 @@ async fn make_backend_call(
 				.http
 				.as_ref()
 				.and_then(|h| h.max_connection_duration),
+			backend: Some(backend.name()),
 		},
 		dynamic_backend: matches!(backend, Backend::Dynamic(_, _)),
 	};

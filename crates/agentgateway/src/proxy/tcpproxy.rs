@@ -250,6 +250,7 @@ impl TCPProxy {
 					transport,
 					tcp: backend_call.backend_policies.tcp.clone(),
 					max_connection_duration: None,
+					backend: Some(selected_backend.backend.backend.name()),
 				},
 				dynamic_backend: matches!(selected_backend.backend.backend, Backend::Dynamic(_, _)),
 			})
