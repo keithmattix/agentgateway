@@ -30,6 +30,16 @@ pub struct Request {
 	/// Kept as raw JSON so fields we do not model (such as scope) pass through unchanged.
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub cache_control: Option<serde_json::Value>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub output_config: Option<RequestOutputConfig>,
+	#[serde(flatten, default)]
+	pub rest: serde_json::Value,
+}
+
+#[derive(Debug, Deserialize, Clone, Serialize)]
+pub struct RequestOutputConfig {
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub effort: Option<String>,
 	#[serde(flatten, default)]
 	pub rest: serde_json::Value,
 }
@@ -523,6 +533,11 @@ impl RequestType for Request {
 				max_tokens: self.max_tokens,
 				encoding_format: None,
 				dimensions: None,
+				reasoning_effort: self
+					.output_config
+					.as_ref()
+					.and_then(|c| c.effort.as_deref())
+					.and_then(crate::ReasoningEffort::parse),
 			},
 			prompt: Default::default(),
 			provider_state: None,

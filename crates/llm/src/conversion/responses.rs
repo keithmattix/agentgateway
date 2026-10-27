@@ -267,6 +267,7 @@ pub mod from_messages {
 			stream: Some(stream),
 			instructions: None,
 			vendor_extensions: None,
+			reasoning: None,
 			rest: Value::Object(rest),
 		})
 	}

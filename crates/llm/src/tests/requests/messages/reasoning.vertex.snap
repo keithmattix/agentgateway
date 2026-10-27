@@ -36,11 +36,11 @@ info:
     ],
     "anthropic_version": "vertex-2023-10-16",
     "max_tokens": 1024,
-    "thinking": {
-      "type": "adaptive"
-    },
     "output_config": {
       "effort": "high"
+    },
+    "thinking": {
+      "type": "adaptive"
     }
   },
   "parsed": {
@@ -50,7 +50,8 @@ info:
     "provider": "vertex",
     "streaming": false,
     "params": {
-      "max_tokens": 1024
+      "max_tokens": 1024,
+      "reasoning_effort": "high"
     },
     "prompt": [
       {

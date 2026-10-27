@@ -640,7 +640,18 @@ pub struct Request {
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub vendor_extensions: Option<RequestVendorExtensions>,
 
-	// Everything else (tools, reasoning, etc.) - passthrough
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub reasoning: Option<RequestReasoning>,
+
+	// Everything else (tools, etc.) - passthrough
+	#[serde(flatten, default)]
+	pub rest: serde_json::Value,
+}
+
+#[derive(Debug, Deserialize, Clone, Serialize)]
+pub struct RequestReasoning {
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub effort: Option<String>,
 	#[serde(flatten, default)]
 	pub rest: serde_json::Value,
 }
@@ -927,6 +938,11 @@ impl RequestType for Request {
 				max_tokens: self.max_output_tokens.map(Into::into),
 				encoding_format: None,
 				dimensions: None,
+				reasoning_effort: self
+					.reasoning
+					.as_ref()
+					.and_then(|r| r.effort.as_deref())
+					.and_then(crate::ReasoningEffort::parse),
 			},
 			prompt: Default::default(),
 			provider_state: None,
