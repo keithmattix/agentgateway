@@ -2935,6 +2935,8 @@ async fn make_backend_call(
 			if matches!(route_type, RouteType::Detect | RouteType::Passthrough)
 				&& let Some(provider_model) = llm.provider.override_model()
 			{
+				model_router::rewrite_uri_model(&mut req, provider_model.as_str())
+					.map_err(ProxyResponse::DirectResponse)?;
 				Box::pin(model_router::rewrite_multipart_request_model(
 					&mut req,
 					provider_model.as_str(),

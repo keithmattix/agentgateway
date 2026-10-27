@@ -2190,6 +2190,43 @@ impl AIProvider {
 			.await
 	}
 
+	/// A model in the path (Bedrock, Vertex, Gemini) is mutated like a multipart `model`: against a
+	/// stand-in object holding only `model`, with the result written back to the path.
+	/// Returns whether the request has a model in the path.
+	fn mutate_path_model(
+		policies: Option<&Policy>,
+		parts: &mut Parts,
+		log: &mut Option<&mut RequestLog>,
+	) -> Result<bool, AIError> {
+		let Some(original) = types::detect::extract_model_from_path(parts.uri.path()) else {
+			return Ok(false);
+		};
+		let Some(policies) = policies else {
+			return Ok(true);
+		};
+		let mutated = policies
+			.apply_request_body_mutations(serde_json::json!({ "model": original.as_str() }), log)?;
+		let model = mutated
+			.get("model")
+			.and_then(serde_json::Value::as_str)
+			.ok_or_else(|| AIError::MissingField("model not specified".into()))?;
+		let model = policies
+			.resolve_model_alias(model)
+			.map_or(model, |m| m.as_str());
+		if model == original.as_str() {
+			return Ok(true);
+		}
+		if !agent_llm::model_path::is_safe_resource_name(model) {
+			return Err(AIError::UnsupportedModel);
+		}
+		if let Some(path) = model_router::rewrite_path_model(parts.uri.path(), model) {
+			let mut uri = parts.uri.clone().into_parts();
+			Self::set_path_and_query(&mut uri, &path).map_err(|_| AIError::UnsupportedModel)?;
+			parts.uri = ::http::Uri::from_parts(uri).map_err(|_| AIError::UnsupportedModel)?;
+		}
+		Ok(true)
+	}
+
 	pub async fn process_detect_request(
 		&self,
 		backend_info: &crate::http::auth::BackendInfo,
@@ -2208,13 +2245,15 @@ impl AIProvider {
 			.unwrap_or_default();
 		let multipart_boundary = model_router::multipart_boundary(&hreq);
 		let operation = model_router::classify_operation(hreq.uri().path());
-		let (parts, mut managed_body) = hreq.into_parts();
+		let (mut parts, mut managed_body) = hreq.into_parts();
 		let cached = managed_body.remove_extension::<json::ParsedJson>();
 		let Ok(bytes) = http::read_body_with_limit(managed_body.take_content(), buffer).await else {
 			return Err(AIError::RequestTooLarge);
 		};
 
-		let req = if is_json {
+		let path_model = Self::mutate_path_model(policies, &mut parts, log)?;
+
+		let mut req = if is_json {
 			if let Some(json::ParsedJson(value)) = cached {
 				match policies {
 					Some(p) => p.unmarshal_request_value(value, log),
@@ -2260,6 +2299,13 @@ impl AIProvider {
 		} else {
 			types::detect::Request::new_raw(bytes)
 		};
+		// The model lives in the path, so body mutations must not add it to the body.
+		if path_model
+			&& let types::detect::Request::Json(body) = &mut req
+			&& let Some(body) = body.as_object_mut()
+		{
+			body.remove("model");
+		}
 
 		self
 			.process_non_chat_request(
