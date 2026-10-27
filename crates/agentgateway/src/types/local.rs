@@ -1764,6 +1764,15 @@ impl LocalBackend {
 				if tgt.targets.len() <= 1 && tgt.targets.iter().any(|target| target.condition.is_some()) {
 					bail!("mcp target condition requires at least two configured targets");
 				}
+				if let Some(dup) = tgt
+					.targets
+					.iter()
+					.map(|t| t.name.as_str())
+					.duplicates()
+					.next()
+				{
+					bail!("duplicate mcp target name {dup:?}");
+				}
 				let mut targets = vec![];
 				let mut backends = vec![];
 				for (idx, t) in tgt.targets.iter().enumerate() {
