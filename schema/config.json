@@ -8636,10 +8636,10 @@
       "type": "object",
       "properties": {
         "attempts": {
-          "description": "Maximum number of retries after the original request.",
+          "description": "Maximum number of retries after the original request. `0` disables retries.",
           "type": "integer",
           "format": "uint8",
-          "minimum": 1,
+          "minimum": 0,
           "maximum": 255,
           "default": 1
         },

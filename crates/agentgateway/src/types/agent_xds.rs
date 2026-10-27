@@ -2755,8 +2755,7 @@ fn traffic_policy_from_proto(
 				.transpose()?,
 		}),
 		Some(tps::Kind::Retry(r)) => {
-			let attempts = std::num::NonZeroU8::new(r.attempts as u8)
-				.unwrap_or_else(|| std::num::NonZeroU8::new(1).unwrap());
+			let attempts = r.attempts.map(|a| a.clamp(0, 255) as u8).unwrap_or(1);
 			let backoff = r.backoff.as_ref().map(|d| (*d).try_into()).transpose()?;
 			let codes = r
 				.retry_status_codes

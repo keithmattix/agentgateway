@@ -4907,8 +4907,9 @@ func (x *Timeout) GetResponseIdle() *durationpb.Duration {
 type Retry struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	RetryStatusCodes []int32                `protobuf:"varint,1,rep,packed,name=retry_status_codes,json=retryStatusCodes,proto3" json:"retry_status_codes,omitempty"`
-	Attempts         int32                  `protobuf:"varint,2,opt,name=attempts,proto3" json:"attempts,omitempty"`
-	Backoff          *durationpb.Duration   `protobuf:"bytes,3,opt,name=backoff,proto3" json:"backoff,omitempty"`
+	// Number of retries after the original request. Unset defaults to 1; 0 disables retries.
+	Attempts *int32               `protobuf:"varint,2,opt,name=attempts,proto3,oneof" json:"attempts,omitempty"`
+	Backoff  *durationpb.Duration `protobuf:"bytes,3,opt,name=backoff,proto3" json:"backoff,omitempty"`
 	// CEL expression evaluated against the request before any attempt. When it evaluates
 	// to false, retries are disabled (only the initial attempt is made). This avoids
 	// buffering request bodies for replay when the request is known to be non-retriable.
@@ -4958,8 +4959,8 @@ func (x *Retry) GetRetryStatusCodes() []int32 {
 }
 
 func (x *Retry) GetAttempts() int32 {
-	if x != nil {
-		return x.Attempts
+	if x != nil && x.Attempts != nil {
+		return *x.Attempts
 	}
 	return 0
 }
@@ -18757,13 +18758,14 @@ const file_resource_proto_rawDesc = "" +
 	"\aTimeout\x123\n" +
 	"\arequest\x18\x01 \x01(\v2\x19.google.protobuf.DurationR\arequest\x12B\n" +
 	"\x0fbackend_request\x18\x02 \x01(\v2\x19.google.protobuf.DurationR\x0ebackendRequest\x12>\n" +
-	"\rresponse_idle\x18\x03 \x01(\v2\x19.google.protobuf.DurationR\fresponseIdle\"\xc8\x01\n" +
+	"\rresponse_idle\x18\x03 \x01(\v2\x19.google.protobuf.DurationR\fresponseIdle\"\xda\x01\n" +
 	"\x05Retry\x12,\n" +
-	"\x12retry_status_codes\x18\x01 \x03(\x05R\x10retryStatusCodes\x12\x1a\n" +
-	"\battempts\x18\x02 \x01(\x05R\battempts\x123\n" +
+	"\x12retry_status_codes\x18\x01 \x03(\x05R\x10retryStatusCodes\x12\x1f\n" +
+	"\battempts\x18\x02 \x01(\x05H\x00R\battempts\x88\x01\x01\x123\n" +
 	"\abackoff\x18\x03 \x01(\v2\x19.google.protobuf.DurationR\abackoff\x12\"\n" +
 	"\fprecondition\x18\x04 \x01(\tR\fprecondition\x12\x1c\n" +
-	"\tcondition\x18\x05 \x01(\tR\tcondition\"#\n" +
+	"\tcondition\x18\x05 \x01(\tR\tconditionB\v\n" +
+	"\t_attempts\"#\n" +
 	"\x05Delay\x12\x1a\n" +
 	"\bduration\x18\x01 \x01(\tR\bduration\"\x90\x05\n" +
 	"\x11BackendAuthPolicy\x12J\n" +
@@ -20934,6 +20936,7 @@ func file_resource_proto_init() {
 		(*GuardrailBackend_OpenaiModeration)(nil),
 	}
 	file_resource_proto_msgTypes[16].OneofWrappers = []any{}
+	file_resource_proto_msgTypes[18].OneofWrappers = []any{}
 	file_resource_proto_msgTypes[20].OneofWrappers = []any{
 		(*BackendAuthPolicy_Passthrough)(nil),
 		(*BackendAuthPolicy_Key)(nil),

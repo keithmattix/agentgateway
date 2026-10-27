@@ -1158,11 +1158,10 @@ impl HTTPProxy {
 		llm_request_policies.llm = route_llm;
 		let llm_request_policies = Arc::new(llm_request_policies);
 
-		// attempts is the total number of attempts, not the retries
-		let attempts = if substrate_default_retry {
-			3
+		let max_retries = if substrate_default_retry {
+			2
 		} else {
-			retries.as_ref().map(|r| r.attempts.get() + 1).unwrap_or(1)
+			retries.as_ref().map(|r| r.attempts).unwrap_or(0)
 		};
 		let retry_backoff = retries
 			.as_ref()
@@ -1173,21 +1172,22 @@ impl HTTPProxy {
 			.as_ref()
 			.and_then(|t| t.request_timeout);
 		let mut replay_state = None;
-		let body =
-			if attempts > 1 && http_body::Body::size_hint(&body).lower() <= MAX_BUFFERED_BYTES as u64 {
-				// If we are going to attempt a retry we will need to track the incoming bytes for replay
-				let (content, state) = body.into_replay_parts();
-				replay_state = Some(state);
-				Ok(
-					http::retry::ReplayBody::try_new(content, MAX_BUFFERED_BYTES)
-						.expect("body size was checked before separating replay state"),
-				)
-			} else {
-				if attempts > 1 {
-					debug!("initial body is too large to retry, disabling retries");
-				}
-				Err(body)
-			};
+		let body = if max_retries > 0
+			&& http_body::Body::size_hint(&body).lower() <= MAX_BUFFERED_BYTES as u64
+		{
+			// If we are going to attempt a retry we will need to track the incoming bytes for replay
+			let (content, state) = body.into_replay_parts();
+			replay_state = Some(state);
+			Ok(
+				http::retry::ReplayBody::try_new(content, MAX_BUFFERED_BYTES)
+					.expect("body size was checked before separating replay state"),
+			)
+		} else {
+			if max_retries > 0 {
+				debug!("initial body is too large to retry, disabling retries");
+			}
+			Err(body)
+		};
 		let mut substrate_state = None;
 		let mut next = match body {
 			Ok(retry) => Some(retry),
@@ -1223,10 +1223,10 @@ impl HTTPProxy {
 			},
 		};
 		let mut last_res: Option<Result<Response, SnapshottedProxyResponse>> = None;
-		for n in 0..attempts {
-			let last = n == attempts - 1;
+		for n in 0..=max_retries {
+			let last = n == max_retries;
 			let this = next.take().expect("next should be set");
-			debug!("attempt {n}/{}", attempts - 1);
+			debug!("attempt {n}/{max_retries}");
 			if matches!(this.is_capped(), None | Some(true)) {
 				// This could be either too much buffered, or it could mean we got a response before we read the request body.
 				debug!("buffered too much to attempt a retry");
@@ -4047,7 +4047,7 @@ mod tests {
 
 	fn retry_policy(codes: &[u16], condition: Option<&str>) -> crate::http::retry::Policy {
 		crate::http::retry::Policy {
-			attempts: std::num::NonZeroU8::new(2).unwrap(),
+			attempts: 2,
 			backoff: None,
 			codes: codes
 				.iter()
