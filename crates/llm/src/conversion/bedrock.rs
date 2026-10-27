@@ -1856,6 +1856,7 @@ pub mod from_messages {
 							cache_control.or(nested_cache_control),
 						)
 					},
+					messages::ContentBlock::Thinking { signature, .. } if signature.is_empty() => continue,
 					messages::ContentBlock::Thinking {
 						thinking,
 						signature,
@@ -1863,7 +1864,7 @@ pub mod from_messages {
 						bedrock::ContentBlock::ReasoningContent(bedrock::ReasoningContentBlock::Structured {
 							reasoning_text: bedrock::ReasoningText {
 								text: thinking,
-								signature: Some(signature).filter(|s| !s.is_empty()),
+								signature: Some(signature),
 							},
 						}),
 						None,
