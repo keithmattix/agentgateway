@@ -319,7 +319,7 @@ func desiredInferencePoolParentRefs(attachedGateways map[types.NamespacedName]st
 	refs := make([]inf.ParentReference, 0, len(gateways))
 	for _, g := range gateways {
 		refs = append(refs, inf.ParentReference{
-			Group:     ptr.Of(inf.Group(wellknown.GatewayGroup)),
+			Group:     new(inf.Group(wellknown.GatewayGroup)),
 			Kind:      wellknown.GatewayKind,
 			Namespace: inf.Namespace(g.Namespace),
 			Name:      inf.ObjectName(g.Name),
